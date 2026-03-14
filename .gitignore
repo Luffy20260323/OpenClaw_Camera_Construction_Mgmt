@@ -1,0 +1,36 @@
+# Node modules
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+target/
+backend/target/
+
+# Logs
+*.log
+logs/
+/tmp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+
+# Uploads
+uploads/

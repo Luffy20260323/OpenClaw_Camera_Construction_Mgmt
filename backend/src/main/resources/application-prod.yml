@@ -1,0 +1,63 @@
+# 生产环境配置
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:camera_construction_db}?currentSchema=public
+    username: ${DB_USERNAME:camera_admin}
+    password: ${DB_PASSWORD:camera_admin_password}
+    hikari:
+      maximum-pool-size: 50
+      minimum-idle: 10
+      idle-timeout: 300000
+      connection-timeout: 30000
+      max-lifetime: 1200000
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 50
+          max-idle: 20
+          min-idle: 10
+          max-wait: 3000ms
+
+# 文件存储配置（生产环境使用阿里云 OSS）
+file:
+  storage:
+    type: oss
+    oss:
+      endpoint: ${OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+      access-key: ${OSS_ACCESS_KEY:}
+      secret-key: ${OSS_SECRET_KEY:}
+      bucket: ${OSS_BUCKET:camera-system}
+
+# JWT 配置（生产环境使用环境变量）
+jwt:
+  secret: ${JWT_SECRET:camera-lifecycle-system-secret-key-2026-qidian-technology}
+  expiration: 86400000
+  header: Authorization
+  prefix: Bearer 
+
+# 系统配置
+system:
+  batch-operation:
+    max-points: 50
+    max-points-limit: 200
+  captcha:
+    login-enabled: true
+    sms-enabled: true
+
+# 日志配置（生产环境）
+logging:
+  level:
+    root: WARN
+    com.qidian.camera: INFO
+  file:
+    name: /var/log/camera-system/application.log
+    max-size: 100MB
+    max-history: 30
