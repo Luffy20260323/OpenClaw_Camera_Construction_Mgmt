@@ -112,10 +112,10 @@
         <el-input v-model="createForm.username" placeholder="请输入用户名" />
       </el-form-item>
       <el-form-item label="密码" prop="password">
-        <el-input v-model="createForm.password" type="password" placeholder="请输入密码" />
+        <el-input v-model="createForm.password" type="password" placeholder="请输入密码" show-password />
       </el-form-item>
       <el-form-item label="确认密码" prop="confirmPassword">
-        <el-input v-model="createForm.confirmPassword" type="password" placeholder="请确认密码" />
+        <el-input v-model="createForm.confirmPassword" type="password" placeholder="请确认密码" show-password />
       </el-form-item>
       <el-form-item label="姓名" prop="realName">
         <el-input v-model="createForm.realName" placeholder="请输入姓名" />
@@ -203,10 +203,10 @@
         <el-input v-model="resetPasswordForm.username" disabled />
       </el-form-item>
       <el-form-item label="新密码" prop="newPassword">
-        <el-input v-model="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" />
+        <el-input v-model="resetPasswordForm.newPassword" type="password" placeholder="请输入新密码" show-password />
       </el-form-item>
       <el-form-item label="确认密码" prop="confirmPassword">
-        <el-input v-model="resetPasswordForm.confirmPassword" type="password" placeholder="请确认密码" />
+        <el-input v-model="resetPasswordForm.confirmPassword" type="password" placeholder="请确认密码" show-password />
       </el-form-item>
     </el-form>
     <template #footer>
