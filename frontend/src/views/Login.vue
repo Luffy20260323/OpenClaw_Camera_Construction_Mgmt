@@ -519,15 +519,17 @@ const loadCaptchaConfig = async () => {
 const refreshCaptcha = async () => {
   try {
     const res = await request({
-      url: '/auth/captcha/image',
-      method: 'get',
-      responseType: 'blob'
+      url: '/auth/captcha',
+      method: 'get'
     })
     
-    captchaImage.value = URL.createObjectURL(res)
-    captchaId.value = res.headers['x-captcha-id']
-    loginForm.captchaId = captchaId.value
+    // 使用 base64 显示验证码图片
+    captchaImage.value = res.data.imageBase64
+    captchaId.value = res.data.captchaId
+    loginForm.captchaId = res.data.captchaId
     loginForm.captchaType = 'image'
+    
+    console.log('刷新验证码成功:', captchaId.value)
   } catch (error) {
     console.error('刷新验证码失败:', error)
   }
