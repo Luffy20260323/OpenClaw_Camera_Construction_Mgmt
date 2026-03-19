@@ -14,12 +14,17 @@ import com.qidian.camera.module.company.entity.CompanyType;
 import com.qidian.camera.module.company.mapper.CompanyTypeMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -299,6 +304,428 @@ public class UserService {
         private Integer success;
         private Integer failed;
         private List<String> errors;
+        private List<ImportResultDetail> results;
+    }
+
+    /**
+     * 导入结果详情
+     */
+    @lombok.Data
+    @lombok.NoArgsConstructor
+    @lombok.AllArgsConstructor
+    public static class ImportResultDetail {
+        private Integer rowNum;
+        private String username;
+        private boolean success;
+        private String error;
+    }
+
+    /**
+     * 生成导入模板
+     *
+     * @return Excel 模板字节数组
+     */
+    public byte[] generateImportTemplate() {
+        try (Workbook workbook = new XSSFWorkbook()) {
+            // 创建用户数据 Sheet
+            Sheet dataSheet = workbook.createSheet("用户数据");
+            createDataSheet(dataSheet, workbook);
+            
+            // 创建说明信息 Sheet
+            Sheet infoSheet = workbook.createSheet("说明信息");
+            createInfoSheet(infoSheet, workbook);
+            
+            // 写入输出流
+            try (java.io.ByteArrayOutputStream outputStream = new java.io.ByteArrayOutputStream()) {
+                workbook.write(outputStream);
+                return outputStream.toByteArray();
+            }
+        } catch (IOException e) {
+            log.error("生成导入模板失败", e);
+            throw new BusinessException(ErrorCode.ERROR, "生成导入模板失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 创建用户数据 Sheet
+     */
+    private void createDataSheet(Sheet sheet, Workbook workbook) {
+        // 创建表头
+        Row headerRow = sheet.createRow(0);
+        String[] headers = {"username", "password", "realName", "email", "phone", "companyName", "roleNames", "workAreaNames", "gender"};
+        for (int i = 0; i < headers.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(headers[i]);
+            cell.setCellStyle(createHeaderStyle(workbook));
+        }
+        
+        // 设置列宽
+        for (int i = 0; i < headers.length; i++) {
+            sheet.setColumnWidth(i, 20 * 256);
+        }
+    }
+
+    /**
+     * 从 Excel 文件批量导入用户
+     *
+     * @param file Excel 文件
+     * @param operatorId 操作人 ID
+     * @param autoApprove 是否自动审批
+     * @return 导入结果
+     */
+    @Transactional
+    public BatchImportResult batchImportFromExcel(MultipartFile file, Long operatorId, boolean autoApprove) {
+        BatchImportResult result = new BatchImportResult();
+        result.setResults(new ArrayList<>());
+
+        try (InputStream inputStream = file.getInputStream();
+             Workbook workbook = new XSSFWorkbook(inputStream)) {
+
+            Sheet sheet = workbook.getSheetAt(0);
+            int totalRows = sheet.getPhysicalNumberOfRows();
+
+            result.setTotal(totalRows - 1); // 减去表头
+            result.setSuccess(0);
+            result.setFailed(0);
+
+            // 从第 2 行开始读取数据（第 1 行是表头）
+            for (int i = 1; i < totalRows; i++) {
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                try {
+                    BatchImportRequest.ImportUserDTO importUser = parseRow(row, i + 1);
+                    CreateUserRequest createRequest = new CreateUserRequest();
+                    createRequest.setUsername(importUser.getUsername());
+                    createRequest.setPassword(importUser.getPassword());
+                    createRequest.setConfirmPassword(importUser.getPassword());
+                    createRequest.setRealName(importUser.getRealName());
+                    createRequest.setEmail(importUser.getEmail());
+                    createRequest.setPhone(importUser.getPhone());
+                    createRequest.setCompanyId(importUser.getCompanyId());
+                    createRequest.setRoleIds(importUser.getRoleIds());
+                    createRequest.setWorkAreaIds(importUser.getWorkAreaIds());
+                    createRequest.setGender(importUser.getGender());
+                    createRequest.setAutoApprove(autoApprove);
+
+                    createUser(createRequest, operatorId);
+                    result.setSuccess(result.getSuccess() + 1);
+                    result.getResults().add(new ImportResultDetail(i + 1, importUser.getUsername(), true, null));
+                } catch (Exception e) {
+                    result.setFailed(result.getFailed() + 1);
+                    result.getResults().add(new ImportResultDetail(i + 1, 
+                        row.getCell(0) != null ? row.getCell(0).getStringCellValue() : "未知用户", 
+                        false, e.getMessage()));
+                    log.error("批量导入用户失败，第{}行：{}", i + 1, e.getMessage());
+                }
+            }
+
+        } catch (IOException e) {
+            log.error("读取 Excel 文件失败", e);
+            throw new BusinessException(ErrorCode.ERROR, "读取 Excel 文件失败：" + e.getMessage());
+        }
+
+        log.info("批量导入用户完成：总数={}, 成功={}, 失败={}", 
+            result.getTotal(), result.getSuccess(), result.getFailed());
+
+        return result;
+    }
+
+    /**
+     * 解析 Excel 行数据
+     *
+     * @param row Excel 行
+     * @param rowNum 行号
+     * @return 导入用户 DTO
+     */
+    private BatchImportRequest.ImportUserDTO parseRow(Row row, int rowNum) {
+        BatchImportRequest.ImportUserDTO dto = new BatchImportRequest.ImportUserDTO();
+
+        dto.setUsername(getCellValueAsString(row.getCell(0)));
+        dto.setPassword(getCellValueAsString(row.getCell(1)));
+        dto.setRealName(getCellValueAsString(row.getCell(2)));
+        dto.setEmail(getCellValueAsString(row.getCell(3)));
+        dto.setPhone(getCellValueAsString(row.getCell(4)));
+
+        // 公司名称（第 6 列，索引 5）
+        String companyName = getCellValueAsString(row.getCell(5));
+        if (!StringUtils.hasText(companyName)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：公司名称不能为空");
+        }
+        // 根据公司名称查询公司 ID
+        Company company = companyMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Company>()
+            .eq(Company::getCompanyName, companyName));
+        if (company == null) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：公司\"" + companyName + "\"不存在");
+        }
+        dto.setCompanyId(company.getId());
+
+        // 解析角色名称列表（第 7 列，索引 6，分号分隔）
+        Cell roleCell = row.getCell(6);
+        if (roleCell != null) {
+            String roleStr = getCellValueAsString(roleCell);
+            if (StringUtils.hasText(roleStr)) {
+                // 根据角色名称查询角色 ID
+                List<Long> roleIds = new ArrayList<>();
+                for (String roleName : roleStr.split(";")) {
+                    String trimmedName = roleName.trim();
+                    if (StringUtils.hasText(trimmedName)) {
+                        Role role = roleMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Role>()
+                            .eq(Role::getRoleName, trimmedName));
+                        if (role == null) {
+                            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：角色\"" + trimmedName + "\"不存在");
+                        }
+                        roleIds.add(role.getId());
+                    }
+                }
+                dto.setRoleIds(roleIds);
+            }
+        }
+
+        // 解析作业区名称列表（第 8 列，索引 7，分号分隔）
+        Cell workAreaCell = row.getCell(7);
+        if (workAreaCell != null) {
+            String workAreaStr = getCellValueAsString(workAreaCell);
+            if (StringUtils.hasText(workAreaStr)) {
+                // 根据作业区名称查询作业区 ID
+                List<Long> workAreaIds = new ArrayList<>();
+                for (String workAreaName : workAreaStr.split(";")) {
+                    String trimmedName = workAreaName.trim();
+                    if (StringUtils.hasText(trimmedName)) {
+                        Map<String, Object> wa = jdbcTemplate.queryForMap(
+                            "SELECT id FROM work_areas WHERE work_area_name = ?", trimmedName);
+                        if (wa != null) {
+                            workAreaIds.add(((Number) wa.get("id")).longValue());
+                        }
+                    }
+                }
+                dto.setWorkAreaIds(workAreaIds);
+            }
+        }
+
+        // 性别（第 9 列，索引 8）
+        Cell genderCell = row.getCell(8);
+        if (genderCell != null) {
+            try {
+                dto.setGender((int) genderCell.getNumericCellValue());
+            } catch (Exception e) {
+                dto.setGender(0);
+            }
+        } else {
+            dto.setGender(0);
+        }
+
+        return dto;
+    }
+
+    /**
+     * 获取单元格字符串值
+     */
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) return "";
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    return cell.getDateCellValue().toString();
+                }
+                double num = cell.getNumericCellValue();
+                if (num == (int) num) {
+                    return String.valueOf((int) num);
+                }
+                return String.valueOf(num);
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return "";
+        }
+    }
+
+    /**
+     * 创建表头样式
+     */
+    private CellStyle createHeaderStyle(Workbook workbook) {
+        CellStyle style = workbook.createCellStyle();
+        Font font = workbook.createFont();
+        font.setBold(true);
+        font.setFontHeightInPoints((short) 11);
+        style.setFont(font);
+        style.setFillForegroundColor(IndexedColors.GREY_25_PERCENT.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        style.setBorderBottom(BorderStyle.THIN);
+        style.setBorderTop(BorderStyle.THIN);
+        style.setBorderLeft(BorderStyle.THIN);
+        style.setBorderRight(BorderStyle.THIN);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        return style;
+    }
+
+    /**
+     * 创建说明信息 Sheet
+     */
+    private void createInfoSheet(Sheet sheet, Workbook workbook) {
+        int rowNum = 0;
+        
+        // 标题
+        Row titleRow = sheet.createRow(rowNum++);
+        Cell titleCell = titleRow.createCell(0);
+        titleCell.setCellValue("用户导入模板 - 说明信息");
+        CellStyle titleStyle = workbook.createCellStyle();
+        Font titleFont = workbook.createFont();
+        titleFont.setBold(true);
+        titleFont.setFontHeightInPoints((short) 14);
+        titleStyle.setFont(titleFont);
+        titleCell.setCellStyle(titleStyle);
+        
+        rowNum++; // 空行
+        
+        // 字段说明标题
+        Row sectionRow = sheet.createRow(rowNum++);
+        Cell sectionCell = sectionRow.createCell(0);
+        sectionCell.setCellValue("【字段说明】");
+        CellStyle sectionStyle = workbook.createCellStyle();
+        Font sectionFont = workbook.createFont();
+        sectionFont.setBold(true);
+        sectionFont.setFontHeightInPoints((short) 12);
+        sectionStyle.setFont(sectionFont);
+        sectionCell.setCellStyle(sectionStyle);
+        
+        // 字段说明表头
+        Row headerRow = sheet.createRow(rowNum++);
+        String[] infoHeaders = {"字段", "说明", "必填"};
+        for (int i = 0; i < infoHeaders.length; i++) {
+            Cell cell = headerRow.createCell(i);
+            cell.setCellValue(infoHeaders[i]);
+            cell.setCellStyle(createHeaderStyle(workbook));
+        }
+        
+        // 字段说明内容
+        String[][] fieldInfos = {
+            {"username", "用户名（3-50 字符，不能重复）", "是"},
+            {"password", "密码（至少 6 位）", "是"},
+            {"realName", "真实姓名", "是"},
+            {"email", "邮箱（可重复）", "否"},
+            {"phone", "手机号（可重复）", "否"},
+            {"companyName", "公司名称（从公司列表选择）", "是"},
+            {"roleNames", "角色名称（多个用分号隔开）", "否"},
+            {"workAreaNames", "作业区名称（作业区角色必填，多个用分号隔开）", "条件必填"},
+            {"gender", "性别（0:未知 1:男 2:女）", "否"}
+        };
+        
+        for (String[] info : fieldInfos) {
+            Row row = sheet.createRow(rowNum++);
+            for (int i = 0; i < info.length; i++) {
+                row.createCell(i).setCellValue(info[i]);
+            }
+        }
+        
+        rowNum++; // 空行
+        
+        // 公司列表
+        sectionRow = sheet.createRow(rowNum++);
+        sectionCell = sectionRow.createCell(0);
+        sectionCell.setCellValue("【可选公司列表】");
+        sectionCell.setCellStyle(sectionStyle);
+        
+        Row companyHeaderRow = sheet.createRow(rowNum++);
+        companyHeaderRow.createCell(0).setCellValue("公司名称");
+        companyHeaderRow.createCell(1).setCellValue("公司类型");
+        companyHeaderRow.getCell(0).setCellStyle(createHeaderStyle(workbook));
+        companyHeaderRow.getCell(1).setCellStyle(createHeaderStyle(workbook));
+        
+        // 查询公司列表（关联公司类型）
+        String companySql = "SELECT c.company_name, ct.type_name FROM companies c LEFT JOIN company_types ct ON c.type_id = ct.id ORDER BY c.company_name";
+        List<Map<String, Object>> companies = jdbcTemplate.queryForList(companySql);
+        for (Map<String, Object> company : companies) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue((String) company.get("company_name"));
+            row.createCell(1).setCellValue((String) company.get("type_name"));
+        }
+        
+        rowNum++; // 空行
+        
+        // 角色列表
+        sectionRow = sheet.createRow(rowNum++);
+        sectionCell = sectionRow.createCell(0);
+        sectionCell.setCellValue("【可选角色列表】");
+        sectionCell.setCellStyle(sectionStyle);
+        
+        Row roleHeaderRow = sheet.createRow(rowNum++);
+        roleHeaderRow.createCell(0).setCellValue("角色名称");
+        roleHeaderRow.createCell(1).setCellValue("角色编码");
+        roleHeaderRow.createCell(2).setCellValue("公司类型");
+        for (int i = 0; i < 3; i++) {
+            roleHeaderRow.getCell(i).setCellStyle(createHeaderStyle(workbook));
+        }
+        
+        // 查询角色列表（关联公司类型）
+        String roleSql = "SELECT r.role_name, r.role_code, ct.type_name FROM roles r LEFT JOIN company_types ct ON r.company_type_id = ct.id ORDER BY r.role_name";
+        List<Map<String, Object>> roles = jdbcTemplate.queryForList(roleSql);
+        for (Map<String, Object> role : roles) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue((String) role.get("role_name"));
+            row.createCell(1).setCellValue((String) role.get("role_code"));
+            row.createCell(2).setCellValue((String) role.get("type_name"));
+        }
+        
+        rowNum++; // 空行
+        
+        // 作业区列表
+        sectionRow = sheet.createRow(rowNum++);
+        sectionCell = sectionRow.createCell(0);
+        sectionCell.setCellValue("【可选作业区列表（仅甲方公司）】");
+        sectionCell.setCellStyle(sectionStyle);
+        
+        Row workAreaHeaderRow = sheet.createRow(rowNum++);
+        workAreaHeaderRow.createCell(0).setCellValue("作业区名称");
+        workAreaHeaderRow.createCell(1).setCellValue("作业区编码");
+        workAreaHeaderRow.createCell(2).setCellValue("所属公司");
+        for (int i = 0; i < 3; i++) {
+            workAreaHeaderRow.getCell(i).setCellStyle(createHeaderStyle(workbook));
+        }
+        
+        // 查询作业区列表
+        String workAreaSql = "SELECT wa.work_area_name, wa.work_area_code, c.company_name " +
+                            "FROM work_areas wa JOIN companies c ON wa.company_id = c.id " +
+                            "ORDER BY c.company_name, wa.work_area_name";
+        List<Map<String, Object>> workAreas = jdbcTemplate.queryForList(workAreaSql);
+        for (Map<String, Object> wa : workAreas) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue((String) wa.get("work_area_name"));
+            row.createCell(1).setCellValue((String) wa.get("work_area_code"));
+            row.createCell(2).setCellValue((String) wa.get("company_name"));
+        }
+        
+        rowNum++; // 空行
+        
+        // 使用说明
+        sectionRow = sheet.createRow(rowNum++);
+        sectionCell = sectionRow.createCell(0);
+        sectionCell.setCellValue("【使用说明】");
+        sectionCell.setCellStyle(sectionStyle);
+        
+        String[] instructions = {
+            "1. 在用户数据 Sheet 中填写用户信息，每行一个用户",
+            "2. 带 * 号的字段为必填项",
+            "3. 公司名称和角色名称必须从上方列表中选择，完全匹配",
+            "4. 多个角色用分号 (;) 隔开，如：乙方管理员;乙方普通用户",
+            "5. 作业区角色需指定作业区，在 workAreaNames 列填写，多个用分号隔开",
+            "6. 作业区名称必须从上方作业区列表中选择，完全匹配",
+            "7. 单次导入用户数量不能超过 100 个",
+            "8. 保存文件后，在系统中上传导入"
+        };
+        
+        for (String instruction : instructions) {
+            Row row = sheet.createRow(rowNum++);
+            row.createCell(0).setCellValue(instruction);
+        }
+        
+        // 自动调整列宽
+        for (int i = 0; i < 9; i++) {
+            sheet.autoSizeColumn(i);
+        }
     }
 
     /**
