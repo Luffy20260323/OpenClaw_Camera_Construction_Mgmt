@@ -171,6 +171,7 @@
             filterable
             style="width: 100%"
             :disabled="!registerForm.companyId"
+            @change="onRoleChange"
           >
             <el-option
               v-for="role in filteredRoleList"
@@ -194,7 +195,7 @@
             <el-option
               v-for="area in workAreaList"
               :key="area.id"
-              :label="area.areaName"
+              :label="area.workAreaName"
               :value="area.id"
             />
           </el-select>
@@ -301,7 +302,6 @@ const registerRules = {
     { required: true, message: '请输入真实姓名', trigger: 'blur' }
   ],
   email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '邮箱格式不正确', trigger: 'blur' }
   ],
   phone: [
@@ -323,10 +323,9 @@ const showWorkAreaSelect = computed(() => {
   const company = companyList.value.find(c => c.id === registerForm.companyId)
   if (!company || company.typeId !== 1) return false
   
-  // 检查是否选择了作业区相关的角色
-  const workAreaRoleCodes = ['construction_worker', 'safety_officer', 'quality_inspector']
+  // 检查是否选择了作业区相关的角色（角色名称包含"作业区"）
   const selectedRoles = roleList.value.filter(r => registerForm.roleIds.includes(r.id))
-  const hasWorkAreaRole = selectedRoles.some(r => workAreaRoleCodes.includes(r.roleCode))
+  const hasWorkAreaRole = selectedRoles.some(r => r.roleName && r.roleName.includes('作业区'))
   
   return hasWorkAreaRole
 })
@@ -392,9 +391,30 @@ const onCompanyChange = (companyId) => {
   registerForm.workAreaIds = []
   workAreaList.value = []
   
-  // 加载该公司的作业区
+  // 加载该公司的作业区（仅甲方公司）
   if (companyId) {
-    loadWorkAreas(companyId)
+    const company = companyList.value.find(c => c.id === companyId)
+    if (company && company.typeId === 1) {
+      loadWorkAreas(companyId)
+    }
+  }
+}
+
+// 角色改变时触发
+const onRoleChange = (roleIds) => {
+  // 清空作业区选择
+  registerForm.workAreaIds = []
+  
+  // 检查是否选择了作业区角色
+  const company = companyList.value.find(c => c.id === registerForm.companyId)
+  if (company && company.typeId === 1) {
+    const selectedRoles = roleList.value.filter(r => roleIds.includes(r.id))
+    const hasWorkAreaRole = selectedRoles.some(r => r.roleName && r.roleName.includes('作业区'))
+    
+    // 如果有作业区角色且作业区列表为空，加载作业区
+    if (hasWorkAreaRole && workAreaList.value.length === 0) {
+      loadWorkAreas(registerForm.companyId)
+    }
   }
 }
 
