@@ -89,32 +89,6 @@
               </el-button>
             </el-col>
           </el-row>
-          <!-- 显示验证码（开发环境） -->
-          <div class="sms-captcha-tip">
-            <el-alert 
-              v-if="smsCaptchaCode"
-              title="开发环境验证码" 
-              type="info" 
-              :closable="false"
-              show-icon
-            >
-              <template #default>
-                <strong>{{ smsCaptchaCode }}</strong>
-                <span style="margin-left: 10px; color: #999; font-size: 12px;">（点击复制）</span>
-              </template>
-            </el-alert>
-            <el-alert 
-              v-else
-              title="提示" 
-              type="warning" 
-              :closable="false"
-              show-icon
-            >
-              <template #default>
-                点击"获取验证码"按钮生成验证码
-              </template>
-            </el-alert>
-          </div>
         </el-form-item>
         
         <el-form-item>
@@ -257,7 +231,6 @@ const captchaType = ref('none') // none, image, sms
 const captchaImage = ref('')
 const captchaId = ref('')
 const smsCountdown = ref(0)
-const smsCaptchaCode = ref('') // 显示验证码（开发环境）
 
 // 公司列表
 const companyList = ref([])
@@ -564,17 +537,10 @@ const refreshCaptcha = async () => {
 
 // 发送短信验证码
 const sendSmsCode = async () => {
-  // 检查是否正在倒计时
-  if (smsCountdown.value > 0) {
-    ElMessage.warning(`请等待${smsCountdown.value}秒后再试`)
-    return
-  }
-  
   try {
-    // 开发环境：模拟发送成功，直接显示验证码
+    // 开发环境：模拟发送成功
     if (process.env.NODE_ENV === 'development') {
-      smsCaptchaCode.value = '123456'
-      ElMessage.success('验证码已生成（开发环境）')
+      ElMessage.success('验证码已发送，请查看服务器日志')
       console.log('【开发环境】短信验证码：123456')
       startCountdown()
       return
@@ -590,12 +556,7 @@ const sendSmsCode = async () => {
     ElMessage.success('验证码已发送')
     startCountdown()
   } catch (error) {
-    // 处理频率限制错误
-    if (error.message && error.message.includes('频繁')) {
-      ElMessage.warning('操作太频繁，请稍后再试')
-    } else {
-      ElMessage.error('发送失败：' + (error.message || '未知错误'))
-    }
+    ElMessage.error('发送失败：' + error.message)
   }
 }
 
@@ -757,21 +718,6 @@ onMounted(() => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   cursor: pointer;
-}
-
-.sms-captcha-tip {
-  margin-top: 10px;
-  
-  :deep(.el-alert) {
-    padding: 8px 12px;
-    cursor: pointer;
-    transition: all 0.3s;
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    }
-  }
 }
 
 .captcha-image img {

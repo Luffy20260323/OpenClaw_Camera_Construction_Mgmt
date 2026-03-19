@@ -113,10 +113,17 @@ public class CaptchaService {
         redisTemplate.opsForValue().set(intervalKey, String.valueOf(currentTime), 
             RateLimitConstants.SMS_CAPTCHA_INTERVAL_SECONDS, TimeUnit.SECONDS);
 
-        log.info("生成手机验证码：手机号={}, 验证码={}", phone, captchaCode);
+        // 开发环境：固定验证码，方便测试
+        if ("13800138000".equals(phone)) {
+            captchaCode = "123456";
+            redisTemplate.opsForValue().set(key, captchaCode, EXPIRE_MINUTES, TimeUnit.MINUTES);
+        }
+
+        log.info("===========================================");
+        log.info("【开发环境】手机验证码：{}", captchaCode);
+        log.info("===========================================");
 
         // TODO: 实际项目中这里需要调用短信服务商 API 发送短信
-        // 开发环境直接在日志中输出验证码
 
         return phone; // 返回手机号作为 captchaId
     }
