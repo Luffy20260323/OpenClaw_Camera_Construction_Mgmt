@@ -153,4 +153,13 @@ public class UserController {
         UserDTO user = userService.updateUser(id, request, operatorId);
         return Result.success(user);
     }
+
+    @Operation(summary = "删除用户", description = "删除指定用户（系统保护用户不可删除）")
+    @DeleteMapping("/{id}")
+    public Result<Void> deleteUser(
+            @PathVariable Long id,
+            @RequestAttribute("userId") Long operatorId) {
+        userService.deleteUser(id, operatorId);
+        return Result.success();
+    }
 }

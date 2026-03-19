@@ -69,23 +69,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.USERNAME_EXISTS);
         }
 
-        // 3. 检查邮箱是否已存在
-        if (StringUtils.hasText(request.getEmail())) {
-            existingUser = userMapper.selectByEmail(request.getEmail());
-            if (existingUser != null) {
-                throw new BusinessException(ErrorCode.EMAIL_EXISTS);
-            }
-        }
-
-        // 4. 检查手机号是否已存在
-        if (StringUtils.hasText(request.getPhone())) {
-            existingUser = userMapper.selectByPhone(request.getPhone());
-            if (existingUser != null) {
-                throw new BusinessException(ErrorCode.PHONE_EXISTS);
-            }
-        }
-
-        // 5. 验证公司信息
+        // 3. 验证公司信息（邮箱和手机号允许重复，不检查唯一性）
         Company company = null;
         Integer companyTypeId = null;
         if (request.getCompanyId() != null) {
@@ -159,23 +143,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.USERNAME_EXISTS);
         }
 
-        // 3. 检查邮箱是否已存在
-        if (StringUtils.hasText(request.getEmail())) {
-            existingUser = userMapper.selectByEmail(request.getEmail());
-            if (existingUser != null) {
-                throw new BusinessException(ErrorCode.EMAIL_EXISTS);
-            }
-        }
-
-        // 4. 检查手机号是否已存在
-        if (StringUtils.hasText(request.getPhone())) {
-            existingUser = userMapper.selectByPhone(request.getPhone());
-            if (existingUser != null) {
-                throw new BusinessException(ErrorCode.PHONE_EXISTS);
-            }
-        }
-
-        // 5. 验证公司信息
+        // 3. 验证公司信息（邮箱和手机号允许重复，不检查唯一性）
         Company company = null;
         Integer companyTypeId = null;
         if (request.getCompanyId() != null) {
@@ -795,6 +763,38 @@ public class UserService {
         for (int i = 0; i < 9; i++) {
             sheet.autoSizeColumn(i);
         }
+    }
+
+    /**
+     * 删除用户
+     *
+     * @param userId 用户 ID
+     * @param operatorId 操作人 ID
+     */
+    @Transactional
+    public void deleteUser(Long userId, Long operatorId) {
+        // 1. 查询用户
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 2. 检查是否为系统保护用户
+        if (Boolean.TRUE.equals(user.getIsSystemProtected())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "系统保护用户不可删除");
+        }
+
+        // 3. 删除关联数据（级联删除）
+        // 删除用户角色关联
+        jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", userId);
+        
+        // 删除用户作业区关联
+        jdbcTemplate.update("DELETE FROM user_work_areas WHERE user_id = ?", userId);
+
+        // 4. 删除用户
+        userMapper.deleteById(userId);
+
+        log.info("删除用户：userId={}, username={}, operatorId={}", userId, user.getUsername(), operatorId);
     }
 
     /**
