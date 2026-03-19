@@ -538,6 +538,20 @@ public class UserService {
             dto.setGender(1); // 缺省为男
         }
 
+        // 校验手机号格式（如果是数字格式，转换为字符串）
+        if (StringUtils.hasText(dto.getPhone())) {
+            String phone = dto.getPhone().trim();
+            // 如果是科学计数法格式，尝试转换
+            if (phone.contains("E")) {
+                try {
+                    long phoneNum = (long) Double.parseDouble(phone);
+                    dto.setPhone(String.valueOf(phoneNum));
+                } catch (Exception e) {
+                    // 保持原值，让后续校验处理
+                }
+            }
+        }
+
         return dto;
     }
 

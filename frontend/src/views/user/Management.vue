@@ -679,7 +679,7 @@ const showEditDialog = async (user) => {
     companyTypeId: user.companyTypeId || null,
     realName: user.realName,
     email: user.email || '',
-    phone: user.phone || '',
+    phone: user.phone ? String(user.phone) : '',  // 确保手机号是字符串格式
     gender: user.gender || 0,
     approvalStatus: user.approvalStatus,
     rejectionReason: user.rejectionReason || '',
