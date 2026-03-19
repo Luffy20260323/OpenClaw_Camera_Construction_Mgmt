@@ -540,6 +540,9 @@ const sendSmsCode = async () => {
   try {
     // 开发环境：模拟发送成功
     if (process.env.NODE_ENV === 'development') {
+      captchaId.value = '13800138000'
+      loginForm.captchaId = captchaId.value
+      loginForm.captchaType = 'sms'
       ElMessage.success('验证码已发送，请查看服务器日志')
       console.log('【开发环境】短信验证码：123456')
       startCountdown()
@@ -547,11 +550,15 @@ const sendSmsCode = async () => {
     }
     
     // 生产环境：调用真实接口
-    await request({
+    const res = await request({
       url: '/auth/captcha/sms',
       method: 'post',
       data: { phone: '13800138000' }
     })
+    
+    captchaId.value = res.data.captchaId
+    loginForm.captchaId = res.data.captchaId
+    loginForm.captchaType = 'sms'
     
     ElMessage.success('验证码已发送')
     startCountdown()
