@@ -89,6 +89,20 @@
               </el-button>
             </el-col>
           </el-row>
+          <!-- 显示验证码（开发环境） -->
+          <div v-if="smsCaptchaCode" class="sms-captcha-tip">
+            <el-alert 
+              title="开发环境验证码" 
+              type="info" 
+              :closable="false"
+              show-icon
+            >
+              <template #default>
+                <strong>{{ smsCaptchaCode }}</strong>
+                <span style="margin-left: 10px; color: #999; font-size: 12px;">（点击复制）</span>
+              </template>
+            </el-alert>
+          </div>
         </el-form-item>
         
         <el-form-item>
@@ -231,6 +245,7 @@ const captchaType = ref('none') // none, image, sms
 const captchaImage = ref('')
 const captchaId = ref('')
 const smsCountdown = ref(0)
+const smsCaptchaCode = ref('') // 显示验证码（开发环境）
 
 // 公司列表
 const companyList = ref([])
@@ -537,8 +552,40 @@ const refreshCaptcha = async () => {
 
 // 发送短信验证码
 const sendSmsCode = async () => {
-  // TODO: 实现短信验证码发送
-  ElMessage.warning('短信验证码功能暂未开通')
+  try {
+    // 开发环境：模拟发送成功，直接显示验证码
+    if (process.env.NODE_ENV === 'development') {
+      smsCaptchaCode.value = '123456'
+      ElMessage.success('验证码已生成（开发环境）')
+      console.log('【开发环境】短信验证码：123456')
+      startCountdown()
+      return
+    }
+    
+    // 生产环境：调用真实接口
+    await request({
+      url: '/auth/captcha/sms',
+      method: 'post',
+      data: { phone: '13800138000' }
+    })
+    
+    ElMessage.success('验证码已发送')
+    startCountdown()
+  } catch (error) {
+    ElMessage.error('发送失败：' + error.message)
+  }
+}
+
+// 开始倒计时
+const startCountdown = () => {
+  smsCountdown.value = 60
+  const timer = setInterval(() => {
+    smsCountdown.value--
+    if (smsCountdown.value <= 0) {
+      clearInterval(timer)
+      smsCaptchaCode.value = '' // 清除验证码
+    }
+  }, 1000)
 }
 
 // 处理登录
@@ -687,7 +734,21 @@ onMounted(() => {
   border: 1px solid #dcdfe6;
   border-radius: 4px;
   cursor: pointer;
-  overflow: hidden;
+}
+
+.sms-captcha-tip {
+  margin-top: 10px;
+  
+  :deep(.el-alert) {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+  }
 }
 
 .captcha-image img {

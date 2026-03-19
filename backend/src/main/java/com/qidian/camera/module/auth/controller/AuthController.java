@@ -106,8 +106,8 @@ public class AuthController {
             
             return Result.success(response);
         } catch (Exception e) {
-            log.error("获取验证码失败", e);
-            return Result.error(500, "获取验证码失败");
+            log.error("获取验证码失败：{}", e.getMessage(), e);
+            return Result.error(500, "获取验证码失败：" + e.getMessage());
         }
     }
 
