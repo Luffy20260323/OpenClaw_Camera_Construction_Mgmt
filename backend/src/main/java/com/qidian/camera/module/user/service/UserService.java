@@ -350,9 +350,9 @@ public class UserService {
      * 创建用户数据 Sheet
      */
     private void createDataSheet(Sheet sheet, Workbook workbook) {
-        // 创建表头
+        // 创建表头（必填项加星号）
         Row headerRow = sheet.createRow(0);
-        String[] headers = {"username", "password", "realName", "email", "phone", "companyName", "roleNames", "workAreaNames", "gender"};
+        String[] headers = {"username*", "password*", "realName*", "email", "phone", "companyName*", "roleNames*", "workAreaNames**", "gender"};
         for (int i = 0; i < headers.length; i++) {
             Cell cell = headerRow.createCell(i);
             cell.setCellValue(headers[i]);
@@ -363,6 +363,17 @@ public class UserService {
         for (int i = 0; i < headers.length; i++) {
             sheet.setColumnWidth(i, 20 * 256);
         }
+        
+        // 添加必填说明
+        Row noteRow = sheet.createRow(1);
+        Cell noteCell = noteRow.createCell(0);
+        noteCell.setCellValue("* 必填项；** 作业区角色时必填；邮箱电话可为空或重复；性别缺省为 1（男）");
+        CellStyle noteStyle = workbook.createCellStyle();
+        Font noteFont = workbook.createFont();
+        noteFont.setColor(IndexedColors.GREY_50_PERCENT.getIndex());
+        noteFont.setFontHeightInPoints((short) 9);
+        noteStyle.setFont(noteFont);
+        noteCell.setCellStyle(noteStyle);
     }
 
     /**
@@ -441,81 +452,139 @@ public class UserService {
     private BatchImportRequest.ImportUserDTO parseRow(Row row, int rowNum) {
         BatchImportRequest.ImportUserDTO dto = new BatchImportRequest.ImportUserDTO();
 
-        dto.setUsername(getCellValueAsString(row.getCell(0)));
-        dto.setPassword(getCellValueAsString(row.getCell(1)));
-        dto.setRealName(getCellValueAsString(row.getCell(2)));
-        dto.setEmail(getCellValueAsString(row.getCell(3)));
-        dto.setPhone(getCellValueAsString(row.getCell(4)));
-
-        // 公司名称（第 6 列，索引 5）
+        // 必填字段检查
+        String username = getCellValueAsString(row.getCell(0));
+        String password = getCellValueAsString(row.getCell(1));
+        String realName = getCellValueAsString(row.getCell(2));
         String companyName = getCellValueAsString(row.getCell(5));
+        String roleStr = getCellValueAsString(row.getCell(6));
+        
+        if (!StringUtils.hasText(username)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：用户名不能为空");
+        }
+        if (!StringUtils.hasText(password) || password.length() < 6) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：密码不能为空且至少 6 位");
+        }
+        if (!StringUtils.hasText(realName)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：姓名不能为空");
+        }
         if (!StringUtils.hasText(companyName)) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：公司名称不能为空");
         }
-        // 根据公司名称查询公司 ID
+        if (!StringUtils.hasText(roleStr)) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：角色不能为空");
+        }
+
+        dto.setUsername(username);
+        dto.setPassword(password);
+        dto.setRealName(realName);
+        dto.setEmail(getCellValueAsString(row.getCell(3)));
+        dto.setPhone(getCellValueAsString(row.getCell(4)));
+
+        // 查询公司信息
         Company company = companyMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Company>()
             .eq(Company::getCompanyName, companyName));
         if (company == null) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：公司\"" + companyName + "\"不存在");
         }
         dto.setCompanyId(company.getId());
+        Long companyTypeId = company.getTypeId();
 
-        // 解析角色名称列表（第 7 列，索引 6，分号分隔）
-        Cell roleCell = row.getCell(6);
-        if (roleCell != null) {
-            String roleStr = getCellValueAsString(roleCell);
-            if (StringUtils.hasText(roleStr)) {
-                // 根据角色名称查询角色 ID
-                List<Long> roleIds = new ArrayList<>();
-                for (String roleName : roleStr.split(";")) {
-                    String trimmedName = roleName.trim();
-                    if (StringUtils.hasText(trimmedName)) {
-                        Role role = roleMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Role>()
-                            .eq(Role::getRoleName, trimmedName));
-                        if (role == null) {
-                            throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：角色\"" + trimmedName + "\"不存在");
-                        }
-                        roleIds.add(role.getId());
-                    }
+        // 解析角色名称列表（分号分隔）
+        List<Long> roleIds = new ArrayList<>();
+        List<String> roleNames = new ArrayList<>();
+        boolean hasWorkAreaRole = false;
+        
+        for (String roleName : roleStr.split(";")) {
+            String trimmedName = roleName.trim();
+            if (StringUtils.hasText(trimmedName)) {
+                Role role = roleMapper.selectOne(new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<Role>()
+                    .eq(Role::getRoleName, trimmedName));
+                if (role == null) {
+                    throw new BusinessException(ErrorCode.PARAM_ERROR, "第" + rowNum + "行：角色\"" + trimmedName + "\"不存在");
                 }
-                dto.setRoleIds(roleIds);
+                // 校验角色公司类型匹配
+                Long roleCompanyTypeId = role.getCompanyTypeId();
+                if (!roleCompanyTypeId.equals(companyTypeId)) {
+                    throw new BusinessException(ErrorCode.PARAM_ERROR, 
+                        "第" + rowNum + "行：角色\"" + trimmedName + "\"与公司\"" + companyName + "\"类型不匹配（公司是" + 
+                        getCompanyTypeName(companyTypeId) + "，角色要求" + getCompanyTypeName(roleCompanyTypeId) + "）");
+                }
+                roleIds.add(role.getId());
+                roleNames.add(role.getRoleName());
+                // 检查是否为作业区角色
+                if (role.getRoleName().contains("作业区")) {
+                    hasWorkAreaRole = true;
+                }
             }
         }
+        dto.setRoleIds(roleIds);
 
-        // 解析作业区名称列表（第 8 列，索引 7，分号分隔）
-        Cell workAreaCell = row.getCell(7);
-        if (workAreaCell != null) {
-            String workAreaStr = getCellValueAsString(workAreaCell);
-            if (StringUtils.hasText(workAreaStr)) {
-                // 根据作业区名称查询作业区 ID
-                List<Long> workAreaIds = new ArrayList<>();
-                for (String workAreaName : workAreaStr.split(";")) {
-                    String trimmedName = workAreaName.trim();
-                    if (StringUtils.hasText(trimmedName)) {
-                        Map<String, Object> wa = jdbcTemplate.queryForMap(
-                            "SELECT id FROM work_areas WHERE work_area_name = ?", trimmedName);
-                        if (wa != null) {
-                            workAreaIds.add(((Number) wa.get("id")).longValue());
-                        }
-                    }
-                }
-                dto.setWorkAreaIds(workAreaIds);
+        // 解析作业区名称列表（作业区角色必填）
+        String workAreaStr = getCellValueAsString(row.getCell(7));
+        List<Long> workAreaIds = new ArrayList<>();
+        
+        if (hasWorkAreaRole) {
+            if (!StringUtils.hasText(workAreaStr)) {
+                throw new BusinessException(ErrorCode.PARAM_ERROR, 
+                    "第" + rowNum + "行：作业区角色必须指定作业区，请在 workAreaNames 列填写作业区名称");
             }
+            
+            for (String workAreaName : workAreaStr.split(";")) {
+                String trimmedName = workAreaName.trim();
+                if (StringUtils.hasText(trimmedName)) {
+                    Map<String, Object> wa = jdbcTemplate.queryForMap(
+                        "SELECT wa.id, wa.company_id, c.company_name FROM work_areas wa " +
+                        "JOIN companies c ON wa.company_id = c.id WHERE wa.work_area_name = ?", trimmedName);
+                    if (wa == null) {
+                        throw new BusinessException(ErrorCode.PARAM_ERROR, 
+                            "第" + rowNum + "行：作业区\"" + trimmedName + "\"不存在");
+                    }
+                    // 校验作业区所属公司匹配
+                    Long workAreaCompanyId = ((Number) wa.get("company_id")).longValue();
+                    if (!workAreaCompanyId.equals(company.getId().longValue())) {
+                        String workAreaCompanyName = (String) wa.get("company_name");
+                        throw new BusinessException(ErrorCode.PARAM_ERROR, 
+                            "第" + rowNum + "行：作业区\"" + trimmedName + "\"属于\"" + workAreaCompanyName + 
+                            "\"，与当前公司\"" + companyName + "\"不匹配");
+                    }
+                    workAreaIds.add(((Number) wa.get("id")).longValue());
+                }
+            }
+        } else if (StringUtils.hasText(workAreaStr)) {
+            // 非作业区角色但填写了作业区，警告但允许
+            log.warn("第{}行：非作业区角色但填写了作业区，将忽略作业区信息", rowNum);
         }
+        
+        dto.setWorkAreaIds(workAreaIds);
 
-        // 性别（第 9 列，索引 8）
+        // 性别（缺省为 1）
         Cell genderCell = row.getCell(8);
         if (genderCell != null) {
             try {
                 dto.setGender((int) genderCell.getNumericCellValue());
             } catch (Exception e) {
-                dto.setGender(0);
+                dto.setGender(1);
             }
         } else {
-            dto.setGender(0);
+            dto.setGender(1); // 缺省为男
         }
 
         return dto;
+    }
+
+    /**
+     * 获取公司类型名称
+     */
+    private String getCompanyTypeName(Long typeId) {
+        if (typeId == null) return "未知";
+        switch (typeId.intValue()) {
+            case 1: return "甲方公司";
+            case 2: return "乙方公司";
+            case 3: return "监理公司";
+            case 4: return "软件所有者公司";
+            default: return "类型" + typeId;
+        }
     }
 
     /**
@@ -603,15 +672,15 @@ public class UserService {
         
         // 字段说明内容
         String[][] fieldInfos = {
-            {"username", "用户名（3-50 字符，不能重复）", "是"},
-            {"password", "密码（至少 6 位）", "是"},
-            {"realName", "真实姓名", "是"},
-            {"email", "邮箱（可重复）", "否"},
-            {"phone", "手机号（可重复）", "否"},
-            {"companyName", "公司名称（从公司列表选择）", "是"},
-            {"roleNames", "角色名称（多个用分号隔开）", "否"},
-            {"workAreaNames", "作业区名称（作业区角色必填，多个用分号隔开）", "条件必填"},
-            {"gender", "性别（0:未知 1:男 2:女）", "否"}
+            {"username*", "用户名（3-50 字符，不能重复）", "是"},
+            {"password*", "密码（至少 6 位）", "是"},
+            {"realName*", "真实姓名", "是"},
+            {"email", "邮箱（可为空或重复）", "否"},
+            {"phone", "手机号（可为空或重复）", "否"},
+            {"companyName*", "公司名称（从公司列表选择）", "是"},
+            {"roleNames*", "角色名称（多个用分号隔开，必须与公司类型匹配）", "是"},
+            {"workAreaNames**", "作业区名称（作业区角色时必填，多个用分号隔开，必须与公司匹配）", "角色为作业区时必填"},
+            {"gender", "性别（0:未知 1:男 2:女，缺省为 1）", "否"}
         };
         
         for (String[] info : fieldInfos) {
