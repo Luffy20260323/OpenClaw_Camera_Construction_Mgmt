@@ -27,6 +27,7 @@
               <el-dropdown-item v-if="isSystemAdmin" command="role">角色管理</el-dropdown-item>
               <el-dropdown-item v-if="isSystemAdmin" command="workarea">作业区管理</el-dropdown-item>
               <el-dropdown-item v-if="isSystemAdmin" command="company">公司管理</el-dropdown-item>
+              <el-dropdown-item v-if="isSystemAdmin" command="system" divided>系统管理</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -113,8 +114,17 @@ const displayRoles = computed(() => {
   return `· ${roles[0]}`
 })
 
-// 判断是否为系统管理员
-const isSystemAdmin = computed(() => userStore.companyTypeId === 4)
+// 判断是否为系统管理员（优先使用 roles 判断）
+const isSystemAdmin = computed(() => {
+  const _trigger = userStore.userInfo
+  if (_trigger && _trigger.roles && _trigger.roles.length > 0) {
+    return _trigger.roles.includes('system_admin')
+  }
+  if (_trigger && _trigger.companyTypeId) {
+    return _trigger.companyTypeId === 4
+  }
+  return false
+})
 
 // 判断是否为公司管理员（甲方管理员、乙方管理员、监理方管理员）
 const isCompanyAdmin = computed(() => {
@@ -173,6 +183,12 @@ const handleCommand = async (command) => {
       return
     }
     router.push('/company')
+  } else if (command === 'system') {
+    if (!isSystemAdmin.value) {
+      ElMessage.warning('您没有权限访问此功能')
+      return
+    }
+    router.push('/system/config')
   }
 }
 </script>
