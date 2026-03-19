@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
 import javax.imageio.ImageIO;
 import java.io.ByteArrayOutputStream;
 import java.util.Base64;
@@ -61,9 +62,12 @@ public class AuthController {
 
     @Operation(summary = "生成图形验证码", description = "生成图形验证码图片")
     @GetMapping(value = "/captcha/image", produces = MediaType.IMAGE_PNG_VALUE)
-    public byte[] getImageCaptcha() {
+    public byte[] getImageCaptcha(HttpServletResponse response) {
         try {
             CaptchaService.CaptchaData captchaData = captchaService.generateImageCaptcha();
+            
+            // 设置验证码 ID 到响应头
+            response.setHeader("X-Captcha-Id", captchaData.getCaptchaId());
             
             // 将图片转为字节数组
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
