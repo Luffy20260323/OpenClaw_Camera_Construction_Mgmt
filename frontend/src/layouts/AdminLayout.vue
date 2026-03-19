@@ -66,12 +66,18 @@ const displayRoles = computed(() => {
 
 // 判断是否为系统管理员（优先使用 roles 判断，因为 roles 在登录时就已设置）
 const isSystemAdmin = computed(() => {
+  // 强制触发响应式更新
+  const _trigger = userStore.userInfo
+  
   // 方法 1：检查角色列表中是否包含 system_admin
-  if (userStore.roles && userStore.roles.length > 0) {
-    return userStore.roles.includes('system_admin')
+  if (_trigger && _trigger.roles && _trigger.roles.length > 0) {
+    return _trigger.roles.includes('system_admin')
   }
   // 方法 2：检查公司类型 ID（备用方案）
-  return userStore.companyTypeId === 4
+  if (_trigger && _trigger.companyTypeId) {
+    return _trigger.companyTypeId === 4
+  }
+  return false
 })
 
 // 判断是否有用户管理权限
