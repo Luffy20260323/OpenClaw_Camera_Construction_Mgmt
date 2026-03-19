@@ -1080,6 +1080,15 @@ public class UserService {
             user.setGender(request.getGender());
         }
         
+        // 更新邮箱和手机号（允许重复，不检查唯一性）
+        if (request.getEmail() != null) {
+            user.setEmail(request.getEmail());
+        }
+        
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+        
         // 更新审批状态
         if (request.getApprovalStatus() != null) {
             user.setApprovalStatus(request.getApprovalStatus());
@@ -1150,19 +1159,7 @@ public class UserService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // 检查邮箱是否已被其他用户使用
-        User existingUser = userMapper.selectByEmail(request.getEmail());
-        if (existingUser != null && !existingUser.getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.EMAIL_EXISTS);
-        }
-
-        // 检查手机号是否已被其他用户使用
-        existingUser = userMapper.selectByPhone(request.getPhone());
-        if (existingUser != null && !existingUser.getId().equals(userId)) {
-            throw new BusinessException(ErrorCode.PHONE_EXISTS);
-        }
-
-        // 更新用户信息
+        // 更新用户信息（邮箱和手机号允许重复）
         user.setRealName(request.getRealName());
         user.setGender(request.getGender() != null ? request.getGender() : 0);
         user.setEmail(request.getEmail());

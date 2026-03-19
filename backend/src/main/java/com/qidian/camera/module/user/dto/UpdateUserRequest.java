@@ -25,7 +25,6 @@ public class UpdateUserRequest {
     private String email;
 
     @Schema(description = "手机号", example = "13800138000")
-    @Pattern(regexp = "^$|^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
     @Schema(description = "审批状态（0:待审批 1:已通过 2:已拒绝）", example = "1")
