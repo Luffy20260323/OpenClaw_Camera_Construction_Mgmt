@@ -58,6 +58,11 @@ public class CreateUserRequest {
     private List<Long> roleIds;
 
     /**
+     * 作业区 ID 列表
+     */
+    private List<Long> workAreaIds;
+
+    /**
      * 性别（0:未知 1:男 2:女）
      */
     private Integer gender;

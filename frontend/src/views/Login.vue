@@ -5,7 +5,7 @@
         <div class="logo">
           <el-icon :size="40"><VideoPlay /></el-icon>
         </div>
-        <h1>摄像头生命周期管理系统</h1>
+        <h1>视频监控点位施工项目管理系统</h1>
         <p>Camera Lifecycle Management System</p>
       </div>
       

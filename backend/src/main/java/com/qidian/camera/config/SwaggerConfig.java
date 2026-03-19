@@ -20,7 +20,7 @@ public class SwaggerConfig {
     public OpenAPI openAPI() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("摄像头生命周期管理系统 API")
+                        .title("视频监控点位施工项目管理系统 API")
                         .description("摄像头从规划、施工到验收的全生命周期管理平台")
                         .version("v1.0.0")
                         .contact(new Contact()

@@ -362,12 +362,15 @@ public class UserService {
     public Page<UserDTO> queryUsers(UserQueryRequest query) {
         Page<User> page = new Page<>(query.getPageNum(), query.getPageSize());
         
-        // 构建查询条件
+        // 构建查询条件（关联作业区表以便关键字搜索）
         StringBuilder sql = new StringBuilder(
-            "SELECT u.*, c.company_name, c.type_id, ct.type_name as company_type_name " +
+            "SELECT u.*, c.company_name, c.type_id, ct.type_name as company_type_name, " +
+            "STRING_AGG(DISTINCT wa.work_area_name, ',') FILTER (WHERE wa.work_area_name IS NOT NULL) as work_area_names " +
             "FROM users u " +
             "LEFT JOIN companies c ON u.company_id = c.id " +
             "LEFT JOIN company_types ct ON c.type_id = ct.id " +
+            "LEFT JOIN user_work_areas uwa ON u.id = uwa.user_id " +
+            "LEFT JOIN work_areas wa ON uwa.work_area_id = wa.id " +
             "WHERE 1=1"
         );
         
@@ -404,13 +407,19 @@ public class UserService {
         }
         
         if (StringUtils.hasText(query.getKeyword())) {
-            sql.append(" AND (u.username LIKE ? OR u.real_name LIKE ? OR u.phone LIKE ? OR u.email LIKE ?)");
+            // 关键字搜索覆盖：用户名、姓名、手机、邮箱、公司名、作业区名
+            sql.append(" AND (u.username LIKE ? OR u.real_name LIKE ? OR u.phone LIKE ? OR u.email LIKE ? OR c.company_name LIKE ? OR wa.work_area_name LIKE ?)");
             String keyword = "%" + query.getKeyword() + "%";
             params.add(keyword);
             params.add(keyword);
             params.add(keyword);
             params.add(keyword);
+            params.add(keyword);
+            params.add(keyword);
         }
+        
+        // 添加 GROUP BY（因为使用了 STRING_AGG）
+        sql.append(" GROUP BY u.id, c.company_name, c.type_id, ct.type_name");
         
         // 查询总数
         String countSql = "SELECT COUNT(*) FROM (" + sql + ") as tmp";
@@ -428,13 +437,28 @@ public class UserService {
             .map(this::convertMapToDTO)
             .collect(Collectors.toList());
         
-        // 查询每个用户的角色
+        // 查询每个用户的角色和作业区
         for (UserDTO dto : dtoList) {
+            // 查询角色
             List<Role> roles = roleMapper.selectByUserId(dto.getId());
             if (!roles.isEmpty()) {
                 dto.setRoleIds(roles.stream().map(Role::getId).collect(Collectors.toList()));
                 dto.setRoleCodes(roles.stream().map(Role::getRoleCode).collect(Collectors.toList()));
                 dto.setRoleNames(roles.stream().map(Role::getRoleName).collect(Collectors.toList()));
+            }
+            
+            // 查询作业区
+            String workAreaSql = "SELECT wa.id, wa.work_area_name FROM user_work_areas uwa " +
+                                "JOIN work_areas wa ON uwa.work_area_id = wa.id " +
+                                "WHERE uwa.user_id = ? ORDER BY uwa.is_primary DESC, wa.work_area_name ASC";
+            List<Map<String, Object>> workAreaList = jdbcTemplate.queryForList(workAreaSql, dto.getId());
+            if (!workAreaList.isEmpty()) {
+                dto.setWorkAreaIds(workAreaList.stream()
+                    .map(row -> ((Number) row.get("id")).longValue())
+                    .collect(Collectors.toList()));
+                dto.setWorkAreaNames(workAreaList.stream()
+                    .map(row -> (String) row.get("work_area_name"))
+                    .collect(Collectors.toList()));
             }
         }
         
@@ -578,9 +602,26 @@ public class UserService {
             }
         }
 
-        log.info("管理员更新用户信息：userId={}, realName={}, email={}, phone={}, approvalStatus={}, status={}, roleIds={}", 
+        // 更新用户作业区
+        if (request.getWorkAreaIds() != null) {
+            // 删除原有作业区
+            jdbcTemplate.update("DELETE FROM user_work_areas WHERE user_id = ?", userId);
+            // 添加新作业区
+            if (!request.getWorkAreaIds().isEmpty()) {
+                for (int i = 0; i < request.getWorkAreaIds().size(); i++) {
+                    Long workAreaId = request.getWorkAreaIds().get(i);
+                    Boolean isPrimary = (i == 0); // 第一个作业区设为主要作业区
+                    jdbcTemplate.update(
+                        "INSERT INTO user_work_areas (user_id, work_area_id, is_primary) VALUES (?, ?, ?)",
+                        userId, workAreaId, isPrimary
+                    );
+                }
+            }
+        }
+
+        log.info("管理员更新用户信息：userId={}, realName={}, email={}, phone={}, approvalStatus={}, status={}, roleIds={}, workAreaIds={}", 
             userId, request.getRealName(), request.getEmail(), request.getPhone(), 
-            request.getApprovalStatus(), request.getStatus(), request.getRoleIds());
+            request.getApprovalStatus(), request.getStatus(), request.getRoleIds(), request.getWorkAreaIds());
 
         return getUserById(userId);
     }

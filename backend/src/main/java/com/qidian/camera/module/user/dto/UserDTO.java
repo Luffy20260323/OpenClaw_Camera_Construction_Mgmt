@@ -77,6 +77,16 @@ public class UserDTO {
     private List<String> roleNames;
 
     /**
+     * 作业区 ID 列表
+     */
+    private List<Long> workAreaIds;
+
+    /**
+     * 作业区名称列表
+     */
+    private List<String> workAreaNames;
+
+    /**
      * 审批状态（0:待审批 1:通过 2:拒绝）
      */
     private Integer approvalStatus;

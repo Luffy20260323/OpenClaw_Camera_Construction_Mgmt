@@ -9,7 +9,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -76,12 +81,34 @@ public class UserController {
         return Result.success(user);
     }
 
-    @Operation(summary = "批量导入用户", description = "管理员批量导入用户")
+    @Operation(summary = "批量导入用户", description = "管理员批量导入用户（JSON 格式）")
     @PostMapping("/batch-import")
     public Result<UserService.BatchImportResult> batchImport(
             @RequestAttribute("userId") Long operatorId,
             @Valid @RequestBody BatchImportRequest request) {
         UserService.BatchImportResult result = userService.batchImport(request, operatorId);
+        return Result.success(result);
+    }
+
+    @Operation(summary = "下载导入模板", description = "下载 Excel 导入模板")
+    @GetMapping("/import-template")
+    public ResponseEntity<ByteArrayResource> downloadTemplate() {
+        byte[] template = userService.generateImportTemplate();
+        ByteArrayResource resource = new ByteArrayResource(template);
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=yonghu-daoru-moban.xlsx")
+            .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+            .contentLength(template.length)
+            .body(resource);
+    }
+
+    @Operation(summary = "批量导入用户（Excel 文件）", description = "上传 Excel 文件批量导入用户")
+    @PostMapping("/batch-import-file")
+    public Result<UserService.BatchImportResult> batchImportFile(
+            @RequestAttribute("userId") Long operatorId,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "autoApprove", defaultValue = "true") Boolean autoApprove) {
+        UserService.BatchImportResult result = userService.batchImportFromExcel(file, operatorId, autoApprove);
         return Result.success(result);
     }
 

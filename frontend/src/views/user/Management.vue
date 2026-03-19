@@ -23,17 +23,17 @@
 
         <el-form :inline="true" :model="queryForm" class="filter-form">
           <el-form-item label="关键词">
-            <el-input v-model="queryForm.keyword" placeholder="用户名/姓名/手机/邮箱" clearable />
+            <el-input v-model="queryForm.keyword" placeholder="用户名/姓名/手机/邮箱/公司/作业区" clearable style="width: 220px" />
           </el-form-item>
           <el-form-item label="公司类型">
-            <el-select v-model="queryForm.companyTypeId" placeholder="全部" clearable>
+            <el-select v-model="queryForm.companyTypeId" placeholder="全部" clearable style="width: 120px">
               <el-option label="甲方" :value="1" />
               <el-option label="乙方" :value="2" />
               <el-option label="监理方" :value="3" />
             </el-select>
           </el-form-item>
           <el-form-item label="审批状态">
-            <el-select v-model="queryForm.approvalStatus" placeholder="全部" clearable>
+            <el-select v-model="queryForm.approvalStatus" placeholder="全部" clearable style="width: 120px">
               <el-option label="待审批" :value="0" />
               <el-option label="已通过" :value="1" />
               <el-option label="已拒绝" :value="2" />
@@ -46,20 +46,29 @@
         </el-form>
 
         <!-- 用户列表表格 -->
-        <el-table :data="userList" v-loading="loading" style="width: 100%; margin-top: 20px;">
-          <el-table-column prop="username" label="用户名" width="120" />
-          <el-table-column prop="realName" label="姓名" width="100" />
-          <el-table-column prop="email" label="邮箱" width="180" />
-          <el-table-column prop="phone" label="手机号" width="120" />
-          <el-table-column prop="companyName" label="公司" width="200" />
-          <el-table-column label="角色" width="200">
+        <el-table :data="userList" v-loading="loading" style="width: 100%; margin-top: 20px;" :header-cell-style="{background: '#f5f7fa', color: '#606266', fontWeight: 'bold', border: '1px solid #dcdfe6'}" :cell-style="{border: '1px solid #e4e7ed'}">
+          <el-table-column prop="username" label="用户名" width="90" />
+          <el-table-column prop="realName" label="姓名" width="70" />
+          <el-table-column prop="email" label="邮箱" width="150" />
+          <el-table-column prop="phone" label="手机号" width="100" />
+          <el-table-column prop="companyName" label="公司" width="120" />
+          <el-table-column prop="companyTypeName" label="公司类型" width="91" />
+          <el-table-column label="角色" min-width="105">
             <template #default="{ row }">
-              <el-tag v-for="role in row.roleNames" :key="role" size="small" style="margin-right: 4px;">
+              <el-tag v-for="role in row.roleNames" :key="role" size="small" style="margin-right: 4px; margin-bottom: 4px;">
                 {{ role }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="审批状态" width="100">
+          <el-table-column label="作业区" min-width="90">
+            <template #default="{ row }">
+              <el-tag v-if="row.workAreaNames && row.workAreaNames.length > 0" v-for="area in row.workAreaNames" :key="area" size="small" type="info" style="margin-right: 4px; margin-bottom: 4px; font-size: 12px;">
+                {{ area }}
+              </el-tag>
+              <span v-else style="color: #999;">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="审批状态" width="80">
             <template #default="{ row }">
               <el-tag :type="getApprovalStatusType(row.approvalStatus)">
                 {{ getApprovalStatusText(row.approvalStatus) }}
@@ -118,13 +127,18 @@
         <el-input v-model="createForm.phone" placeholder="请输入手机号" maxlength="11" />
       </el-form-item>
       <el-form-item label="公司" prop="companyId">
-        <el-select v-model="createForm.companyId" placeholder="请选择公司" style="width: 100%" :disabled="!isSystemAdmin">
+        <el-select v-model="createForm.companyId" placeholder="请选择公司" style="width: 100%" :disabled="!isSystemAdmin" @change="handleCompanyChange">
           <el-option v-for="c in companyList" :key="c.id" :label="c.companyName" :value="c.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="角色" prop="roleIds">
-        <el-select v-model="createForm.roleIds" multiple placeholder="请选择角色" style="width: 100%">
+        <el-select v-model="createForm.roleIds" multiple placeholder="请选择角色" style="width: 100%" @change="handleRoleChange">
           <el-option v-for="role in filteredRoleList" :key="role.id" :label="role.roleName" :value="role.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="作业区" prop="workAreaIds" v-if="showWorkAreaField">
+        <el-select v-model="createForm.workAreaIds" multiple placeholder="请选择作业区" style="width: 100%">
+          <el-option v-for="area in workAreaList" :key="area.id" :label="area.workAreaName" :value="area.id" />
         </el-select>
       </el-form-item>
     </el-form>
@@ -155,6 +169,11 @@
       <el-form-item label="角色">
         <el-select v-model="editForm.roleIds" multiple placeholder="请选择角色" style="width: 100%">
           <el-option v-for="role in filteredRoleList" :key="role.id" :label="role.roleName" :value="role.id" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="作业区" prop="workAreaIds" v-if="showEditWorkAreaField">
+        <el-select v-model="editForm.workAreaIds" multiple placeholder="请选择作业区" style="width: 100%">
+          <el-option v-for="area in workAreaList" :key="area.id" :label="area.workAreaName" :value="area.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="审批状态">
@@ -255,6 +274,39 @@ const pagination = reactive({
 const userList = ref([])
 const companyList = ref([])
 const roleList = ref([])
+const workAreaList = ref([])
+
+// 判断创建用户时是否需要显示作业区选择字段（甲方公司 + 作业区角色）
+const showWorkAreaField = computed(() => {
+  // 首先检查是否为甲方公司
+  if (!createForm.companyId) return false
+  const selectedCompany = companyList.value.find(c => c.id === createForm.companyId)
+  const companyTypeId = selectedCompany?.typeId || selectedCompany?.companyTypeId || null
+  if (companyTypeId !== 1) return false
+  
+  // 检查是否选择了作业区角色（角色名称包含"作业区"）
+  if (!createForm.roleIds || createForm.roleIds.length === 0) return false
+  
+  const hasWorkAreaRole = createForm.roleIds.some(roleId => {
+    const role = roleList.value.find(r => r.id === roleId)
+    return role && role.roleName.includes('作业区')
+  })
+  
+  return hasWorkAreaRole
+})
+
+// 判断编辑用户时是否需要显示作业区选择字段（有作业区角色）
+const showEditWorkAreaField = computed(() => {
+  // 检查是否选择了作业区角色（角色名称包含"作业区"）
+  if (!editForm.roleIds || editForm.roleIds.length === 0) return false
+  
+  const hasWorkAreaRole = editForm.roleIds.some(roleId => {
+    const role = roleList.value.find(r => r.id === roleId)
+    return role && role.roleName.includes('作业区')
+  })
+  
+  return hasWorkAreaRole
+})
 
 // 过滤后的角色列表（只显示与用户公司类型匹配的角色）
 const filteredRoleList = computed(() => {
@@ -321,6 +373,7 @@ const createForm = reactive({
   phone: '',
   companyId: null,
   roleIds: [],
+  workAreaIds: [],
   autoApprove: true
 })
 
@@ -344,7 +397,8 @@ const editForm = reactive({
   approvalStatus: 1,
   rejectionReason: '',
   status: 1,
-  roleIds: []
+  roleIds: [],
+  workAreaIds: []
 })
 
 const editRules = {
@@ -442,6 +496,21 @@ const loadRoles = async () => {
   }
 }
 
+const loadWorkAreas = async (companyId) => {
+  try {
+    const res = await request({
+      url: '/workarea',
+      method: 'get',
+      params: { companyId: companyId, pageNum: 1, pageSize: 100 }
+    })
+    workAreaList.value = res.data.records || []
+    console.log('作业区列表数据 (companyId=' + companyId + '):', workAreaList.value.map(a => ({id: a.id, name: a.workAreaName})))
+  } catch (error) {
+    console.error('加载作业区列表失败:', error)
+    workAreaList.value = []
+  }
+}
+
 const loadPendingApprovals = async () => {
   try {
     const res = await request({
@@ -486,8 +555,17 @@ const showCreateDialog = async () => {
     phone: '',
     companyId: defaultCompanyId,
     roleIds: [],
+    workAreaIds: [],
     autoApprove: true
   })
+  
+  // 重置作业区列表
+  workAreaList.value = []
+  
+  // 如果默认选择了公司，加载对应的作业区
+  if (defaultCompanyId) {
+    loadWorkAreas(defaultCompanyId)
+  }
 }
 
 // 处理公司选择变化，清空已选角色
@@ -501,9 +579,36 @@ const handleCompanyChange = (companyId) => {
   const selectedCompany = companyList.value.find(c => c.id === companyId)
   console.log('公司选择变化：companyId=', companyId, 'selectedCompany=', selectedCompany)
   
-  // 加载作业区列表
-  if (companyId) {
+  // 只有甲方公司（companyTypeId=1）才需要选择作业区
+  const companyTypeId = selectedCompany?.typeId || selectedCompany?.companyTypeId || null
+  console.log('公司类型 ID:', companyTypeId)
+  
+  // 加载作业区列表（仅甲方公司）
+  if (companyId && companyTypeId === 1) {
     loadWorkAreas(companyId)
+  }
+}
+
+// 处理角色选择变化，判断是否需要加载作业区
+const handleRoleChange = (roleIds) => {
+  console.log('角色选择变化：roleIds=', roleIds)
+  
+  // 检查是否有作业区角色
+  const hasWorkAreaRole = roleIds.some(roleId => {
+    const role = roleList.value.find(r => r.id === roleId)
+    return role && role.roleName.includes('作业区')
+  })
+  
+  console.log('是否有作业区角色:', hasWorkAreaRole)
+  
+  // 如果有作业区角色且已选择公司，确保作业区列表已加载
+  if (hasWorkAreaRole && createForm.companyId) {
+    if (workAreaList.value.length === 0) {
+      loadWorkAreas(createForm.companyId)
+    }
+  } else {
+    // 如果没有作业区角色，清空作业区选择
+    createForm.workAreaIds = []
   }
 }
 
@@ -543,10 +648,28 @@ const showEditDialog = async (user) => {
   console.log('编辑用户 - 原始数据:', JSON.stringify(user, null, 2))
   console.log('编辑用户 - roleIds:', user.roleIds)
   console.log('编辑用户 - companyTypeId:', user.companyTypeId)
+  console.log('编辑用户 - workAreaIds:', user.workAreaIds)
+  console.log('编辑用户 - workAreaNames:', user.workAreaNames)
+  console.log('编辑用户 - companyId:', user.companyId)
   
   // 先设置公司类型跟踪变量（在打开对话框之前）
   editingUserCompanyTypeId.value = user.companyTypeId || null
   console.log('编辑用户 - 设置后的跟踪变量:', editingUserCompanyTypeId.value)
+  
+  // 检查是否有作业区角色
+  const hasWorkAreaRole = user.roleIds && user.roleIds.some(roleId => {
+    const role = roleList.value.find(r => r.id === roleId)
+    return role && role.roleName.includes('作业区')
+  })
+  
+  console.log('编辑用户 - 是否有作业区角色:', hasWorkAreaRole)
+  
+  // 如果有作业区角色或用户已有作业区，先加载作业区列表
+  if ((hasWorkAreaRole || (user.workAreaIds && user.workAreaIds.length > 0)) && user.companyId) {
+    console.log('编辑用户 - 加载作业区列表，companyId:', user.companyId)
+    await loadWorkAreas(user.companyId)
+    console.log('编辑用户 - 作业区列表加载完成，数量:', workAreaList.value.length)
+  }
   
   // 设置表单数据
   Object.assign(editForm, {
@@ -561,12 +684,16 @@ const showEditDialog = async (user) => {
     approvalStatus: user.approvalStatus,
     rejectionReason: user.rejectionReason || '',
     status: user.status,
-    roleIds: user.roleIds || []
+    roleIds: user.roleIds || [],
+    workAreaIds: user.workAreaIds ? [...user.workAreaIds] : []
   })
   
   console.log('编辑用户 - 角色列表:', roleList.value.length)
   console.log('编辑用户 - 过滤后的角色列表:', filteredRoleList.value.length)
   console.log('编辑用户 - editForm.roleIds:', editForm.roleIds)
+  console.log('编辑用户 - editForm.workAreaIds:', editForm.workAreaIds)
+  console.log('编辑用户 - workAreaList:', workAreaList.value.length)
+  console.log('编辑用户 - showEditWorkAreaField:', showEditWorkAreaField.value)
   
   // 最后打开对话框
   editDialogVisible.value = true
@@ -589,7 +716,8 @@ const handleEdit = async () => {
             approvalStatus: editForm.approvalStatus,
             rejectionReason: editForm.rejectionReason,
             status: editForm.status,
-            roleIds: editForm.roleIds
+            roleIds: editForm.roleIds,
+            workAreaIds: editForm.workAreaIds
           }
         })
         ElMessage.success('更新成功')

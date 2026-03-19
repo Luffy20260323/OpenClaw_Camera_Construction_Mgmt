@@ -65,7 +65,7 @@ const router = createRouter({
 // 路由守卫
 router.beforeEach((to, from, next) => {
   // 设置页面标题
-  document.title = to.meta.title ? `${to.meta.title} - 摄像头生命周期管理系统` : '摄像头生命周期管理系统'
+  document.title = to.meta.title ? `${to.meta.title} - 视频监控点位施工项目管理系统` : '视频监控点位施工项目管理系统'
   
   // 检查是否需要登录
   const token = localStorage.getItem('accessToken')

@@ -45,7 +45,7 @@
         
         <div class="welcome-content">
           <h1>👋 欢迎，{{ userStore.realName || userStore.username }}！</h1>
-          <p>摄像头生命周期管理系统 - 项目交付过程管理和最终结算管理平台</p>
+          <p>视频监控点位施工项目管理系统 - 项目交付过程管理和最终结算管理平台</p>
           
           <el-row :gutter="20" class="stats-row">
             <el-col :span="6">

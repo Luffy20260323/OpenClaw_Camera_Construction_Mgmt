@@ -39,4 +39,7 @@ public class UpdateUserRequest {
 
     @Schema(description = "角色 ID 列表")
     private List<Long> roleIds;
+
+    @Schema(description = "作业区 ID 列表")
+    private List<Long> workAreaIds;
 }

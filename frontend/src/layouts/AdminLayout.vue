@@ -4,7 +4,7 @@
     <el-header class="header">
       <div class="header-left">
         <el-icon :size="24"><VideoPlay /></el-icon>
-        <span class="app-title">摄像头生命周期管理系统</span>
+        <span class="app-title">视频监控点位施工项目管理系统</span>
       </div>
       <div class="header-right">
         <!-- 返回首页按钮 -->
