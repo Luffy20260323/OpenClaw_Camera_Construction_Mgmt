@@ -330,6 +330,7 @@ const handleDelete = (row) => {
       getRoleList()
     } catch (error) {
       console.error('删除失败:', error)
+      ElMessage.error(error.message || '删除失败：' + (error.response?.data?.message || '未知错误'))
     }
   }).catch(() => {})
 }
