@@ -204,8 +204,22 @@ public class UserService {
             }
         }
 
-        log.info("管理员创建用户成功：userId={}, username={}, companyId={}, autoApprove={}", 
-            user.getId(), user.getUsername(), request.getCompanyId(), request.getAutoApprove());
+        // 9. 分配作业区
+        if (request.getWorkAreaIds() != null && !request.getWorkAreaIds().isEmpty()) {
+            for (int i = 0; i < request.getWorkAreaIds().size(); i++) {
+                Long workAreaId = request.getWorkAreaIds().get(i);
+                Boolean isPrimary = (i == 0); // 第一个作业区设为主要作业区
+                jdbcTemplate.update(
+                    "INSERT INTO user_work_areas (user_id, work_area_id, is_primary) VALUES (?, ?, ?)",
+                    user.getId(),
+                    workAreaId,
+                    isPrimary
+                );
+            }
+        }
+
+        log.info("管理员创建用户成功：userId={}, username={}, companyId={}, roleIds={}, workAreaIds={}, autoApprove={}", 
+            user.getId(), user.getUsername(), request.getCompanyId(), request.getRoleIds(), request.getWorkAreaIds(), request.getAutoApprove());
 
         return convertToDTO(user);
     }
