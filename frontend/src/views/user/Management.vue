@@ -329,9 +329,10 @@ const filteredRoleList = computed(() => {
       console.log('创建用户 - 公司类型 ID:', targetCompanyTypeId, '公司列表:', companyList.value.length)
     }
   }
-  // 其他情况使用当前用户的公司类型
+  // 其他情况（没有选择公司时）返回所有角色
   else {
-    targetCompanyTypeId = userStore.userInfo?.companyTypeId
+    console.log('创建用户 - 未选择公司，返回所有角色')
+    return roleList.value
   }
   
   console.log('最终目标公司类型:', targetCompanyTypeId)
@@ -562,6 +563,11 @@ const showCreateDialog = async () => {
   // 重置作业区列表
   workAreaList.value = []
   
+  // 如果有默认公司，触发公司选择变化以加载对应的角色和作业区
+  if (defaultCompanyId) {
+    handleCompanyChange(defaultCompanyId)
+  }
+  
   // 如果默认选择了公司，加载对应的作业区
   if (defaultCompanyId) {
     loadWorkAreas(defaultCompanyId)
@@ -587,6 +593,12 @@ const handleCompanyChange = (companyId) => {
   if (companyId && companyTypeId === 1) {
     loadWorkAreas(companyId)
   }
+  
+  // 强制更新角色列表（触发 filteredRoleList 重新计算）
+  // 通过临时修改 companyId 来触发响应式更新
+  const tempId = createForm.companyId
+  createForm.companyId = null
+  createForm.companyId = tempId
 }
 
 // 处理角色选择变化，判断是否需要加载作业区
