@@ -27,6 +27,7 @@
               <el-dropdown-item v-if="isSystemAdmin" command="role">角色管理</el-dropdown-item>
               <el-dropdown-item v-if="isSystemAdmin" command="workarea">作业区管理</el-dropdown-item>
               <el-dropdown-item v-if="isSystemAdmin" command="company">公司管理</el-dropdown-item>
+              <el-dropdown-item v-if="isSystemAdmin" command="system" divided>系统管理</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -101,6 +102,8 @@ const handleCommand = async (command) => {
     router.push('/workarea')
   } else if (command === 'company') {
     router.push('/company')
+  } else if (command === 'system') {
+    router.push('/system/config')
   }
 }
 </script>
