@@ -64,8 +64,15 @@ const displayRoles = computed(() => {
   return `· ${roles[0]}`
 })
 
-// 判断是否为系统管理员
-const isSystemAdmin = computed(() => userStore.companyTypeId === 4)
+// 判断是否为系统管理员（优先使用 roles 判断，因为 roles 在登录时就已设置）
+const isSystemAdmin = computed(() => {
+  // 方法 1：检查角色列表中是否包含 system_admin
+  if (userStore.roles && userStore.roles.length > 0) {
+    return userStore.roles.includes('system_admin')
+  }
+  // 方法 2：检查公司类型 ID（备用方案）
+  return userStore.companyTypeId === 4
+})
 
 // 判断是否有用户管理权限
 const canManageUser = computed(() => userStore.isLoggedIn)

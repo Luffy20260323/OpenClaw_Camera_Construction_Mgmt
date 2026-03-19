@@ -1,6 +1,7 @@
 <template>
-  <div class="system-config">
-    <el-card class="box-card">
+  <AdminLayout>
+    <div class="system-config">
+      <el-card class="box-card">
       <template #header>
         <div class="card-header">
           <span>系统配置管理</span>
@@ -60,12 +61,14 @@
       </el-tabs>
     </el-card>
   </div>
+  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const activeTab = ref('captcha')
 const saving = ref(false)
