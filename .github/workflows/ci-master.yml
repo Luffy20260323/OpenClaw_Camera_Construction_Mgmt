@@ -1,0 +1,324 @@
+#===============================================================================
+# 摄像头生命周期管理系统 - Master 分支 CI/CD 工作流
+#===============================================================================
+# 触发条件：
+# - push: master 分支
+# - pull_request: 目标分支为 master
+# - 从 camera1001 合并到 master 时自动触发
+#
+# 执行任务：
+# 1. 后端编译和测试
+# 2. 前端构建
+# 3. Docker 镜像构建
+# 4. 配置文件检查
+# 5. 自动创建 Release（仅 tag 推送时）
+#===============================================================================
+
+name: CI - master
+
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - master
+
+# 取消正在运行的重复工作流
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 通用配置
+  JAVA_VERSION: '17'
+  NODE_VERSION: '20'
+  MAVEN_VERSION: '3.9.6'
+
+jobs:
+  #-------------------------------------------------------------------------------
+  # 任务 1：代码检查
+  #-------------------------------------------------------------------------------
+  code-check:
+    name: 🔍 代码检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔎 检查敏感信息泄露
+        run: |
+          echo "检查是否包含硬编码密码..."
+          ! grep -r "password.*=.*['\"]postgres['\"]" backend/src/ --include="*.yml" --include="*.yaml" || (echo "❌ 发现硬编码数据库密码" && exit 1)
+          ! grep -r "secret.*=.*['\"]camera-lifecycle" backend/src/ --include="*.yml" --include="*.yaml" || (echo "❌ 发现硬编码 JWT 密钥" && exit 1)
+          ! grep -r "minioadmin" backend/src/ --include="*.yml" --include="*.yaml" || (echo "❌ 发现硬编码 MinIO 密钥" && exit 1)
+          echo "✅ 未发现硬编码敏感信息"
+
+      - name: 📋 检查 .env.example 完整性
+        run: |
+          echo "检查必需的环境变量..."
+          required_vars=("DB_PASSWORD" "JWT_SECRET" "MINIO_ACCESS_KEY" "MINIO_SECRET_KEY")
+          for var in "${required_vars[@]}"; do
+            if ! grep -q "^${var}=" .env.example; then
+              echo "❌ .env.example 缺少必需变量：$var"
+              exit 1
+            fi
+          done
+          echo "✅ .env.example 配置完整"
+
+      - name: 📁 检查必要文件
+        run: |
+          echo "检查必要文件是否存在..."
+          files=(
+            "docker-compose.yml"
+            ".env.example"
+            "backend/Dockerfile"
+            "frontend/Dockerfile"
+            "backend/pom.xml"
+            "frontend/package.json"
+          )
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ 缺少必要文件：$file"
+              exit 1
+            fi
+          done
+          echo "✅ 所有必要文件存在"
+
+  #-------------------------------------------------------------------------------
+  # 任务 2：后端编译和测试
+  #-------------------------------------------------------------------------------
+  backend-build:
+    name: ☕ 后端构建
+    runs-on: ubuntu-latest
+    needs: code-check
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔧 设置 Java 环境
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 📦 缓存 Maven 依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: 🏗️ 编译后端
+        run: |
+          cd backend
+          mvn -B clean compile
+
+      - name: 🧪 运行单元测试
+        run: |
+          cd backend
+          mvn -B test
+
+      - name: 📦 打包后端
+        run: |
+          cd backend
+          mvn -B package -DskipTests
+
+      - name: ⬆️ 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
+          retention-days: 30
+
+  #-------------------------------------------------------------------------------
+  # 任务 3：前端构建
+  #-------------------------------------------------------------------------------
+  frontend-build:
+    name: 🎨 前端构建
+    runs-on: ubuntu-latest
+    needs: code-check
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔧 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 缓存 Node 模块
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 🏗️ 安装依赖
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 🔍 代码检查
+        run: |
+          cd frontend
+          npm run lint || echo "⚠️ Lint 检查未通过（非阻塞）"
+
+      - name: 🎨 构建前端
+        run: |
+          cd frontend
+          npm run build
+
+      - name: ⬆️ 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 30
+
+  #-------------------------------------------------------------------------------
+  # 任务 4：Docker 构建
+  #-------------------------------------------------------------------------------
+  docker-build:
+    name: 🐳 Docker 构建
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⬇️ 下载后端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/
+
+      - name: ⬇️ 下载前端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - name: 🔧 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ 构建后端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: camera-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🏗️ 构建前端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          tags: camera-frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: ✅ 验证 Docker 镜像
+        run: |
+          echo "验证后端镜像..."
+          docker images camera-backend:test
+          echo "验证前端镜像..."
+          docker images camera-frontend:test
+
+  #-------------------------------------------------------------------------------
+  # 任务 5：创建 Release（仅 tag 推送时）
+  #-------------------------------------------------------------------------------
+  create-release:
+    name: 📦 创建 Release
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⬇️ 下载后端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: ./release/
+
+      - name: ⬇️ 下载前端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: ./release/frontend/
+
+      - name: 📝 生成变更日志
+        run: |
+          echo "# Release ${{ github.ref_name }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "## 变更内容" >> release-notes.md
+          echo "" >> release-notes.md
+          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"- %s" >> release-notes.md || echo "- 首次发布" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "## 安装说明" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "1. 复制 .env.example 为 .env 并修改配置" >> release-notes.md
+          echo "2. 运行 docker-compose up -d" >> release-notes.md
+
+      - name: ⬆️ 创建 GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./release/*.jar
+            ./release/frontend/**
+          body_path: release-notes.md
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  #-------------------------------------------------------------------------------
+  # 任务 6：CI 报告
+  #-------------------------------------------------------------------------------
+  ci-report:
+    name: 📊 CI 报告
+    runs-on: ubuntu-latest
+    needs: [code-check, backend-build, frontend-build, docker-build]
+    if: always()
+    steps:
+      - name: 📝 生成 CI 状态报告
+        run: |
+          echo "=========================================="
+          echo "  CI 执行报告"
+          echo "=========================================="
+          echo ""
+          echo "分支：${{ github.ref_name }}"
+          echo "提交：${{ github.sha }}"
+          echo "触发者：${{ github.actor }}"
+          echo ""
+          echo "任务状态："
+          echo "  - 代码检查：${{ needs.code-check.result }}"
+          echo "  - 后端构建：${{ needs.backend-build.result }}"
+          echo "  - 前端构建：${{ needs.frontend-build.result }}"
+          echo "  - Docker 构建：${{ needs.docker-build.result }}"
+          echo ""
+          
+          if [[ "${{ needs.code-check.result }}" == "success" && \
+                "${{ needs.backend-build.result }}" == "success" && \
+                "${{ needs.frontend-build.result }}" == "success" && \
+                "${{ needs.docker-build.result }}" == "success" ]]; then
+            echo "✅ 所有 CI 检查通过！"
+            exit 0
+          else
+            echo "❌ 部分 CI 检查失败"
+            exit 1
+          fi
