@@ -2,78 +2,163 @@
 
 Camera Lifecycle Management System
 
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/RichardQidian/OpenClaw_Camera_Construction_Mgmt/releases/tag/v1.0.0)
+[![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)](LICENSE)
+
+## 📋 项目简介
+
+摄像头生命周期管理系统是一个聚焦**项目交付过程管理**和**最终结算管理**的多角色协作平台。系统支持甲方、乙方、监理三方协作，实现项目从开工到施工、验收、结算、运维的全生命周期管理。
+
+---
+
+## 🚀 快速开始
+
+### 方式一：Docker 部署（推荐 ⭐）
+
+**环境要求：**
+- Docker 20.10+
+- Docker Compose 2.0+
+
+**一键启动：**
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/RichardQidian/OpenClaw_Camera_Construction_Mgmt.git
+cd OpenClaw_Camera_Construction_Mgmt
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件，修改数据库密码和 JWT 密钥
+
+# 3. 启动所有服务
+docker-compose up -d
+
+# 4. 查看日志
+docker-compose logs -f
+
+# 5. 访问系统
+# 前端：http://localhost
+# 后端 API：http://localhost:8080/api
+# MinIO 控制台：http://localhost:9001
+```
+
+**停止服务：**
+
+```bash
+docker-compose down
+```
+
+**清除所有数据（谨慎使用）：**
+
+```bash
+docker-compose down -v
+```
+
+---
+
+### 方式二：手动部署
+
+**环境要求：**
+
+| 软件 | 版本要求 | 说明 |
+|------|----------|------|
+| JDK | 17+ | Java 运行环境 |
+| Maven | 3.9+ | Java 构建工具 |
+| Node.js | 18+ | 前端运行环境 |
+| PostgreSQL | 16+ | 数据库 |
+| Redis | 7+ | 缓存 |
+| Nginx | 1.20+ | Web 服务器 |
+
+**部署步骤：**
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/RichardQidian/OpenClaw_Camera_Construction_Mgmt.git
+cd OpenClaw_Camera_Construction_Mgmt
+
+# 2. 配置环境变量
+cp .env.example .env
+# 编辑 .env 文件
+
+# 3. 初始化数据库
+sudo -u postgres createdb camera_construction_db
+psql -d camera_construction_db < backend/src/main/resources/db/migration/V1__initial_schema.sql
+
+# 4. 构建前端
+cd frontend
+npm install
+npm run build
+
+# 5. 构建后端
+cd ../backend
+mvn clean package -DskipTests
+
+# 6. 启动后端
+java -jar target/*.jar
+
+# 7. 配置 Nginx
+sudo cp ../deploy/nginx-http.conf /etc/nginx/sites-available/camera-system
+sudo ln -sf /etc/nginx/sites-available/camera-system /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+详细部署指南请参考：[deploy/DEPLOYMENT.md](deploy/DEPLOYMENT.md)
+
+---
+
 ## 📁 项目结构
 
 ```
-/var/www/Camera_Construction_Project_Mgmt/
-├── backend/          # 后端代码（Spring Boot + MyBatis Plus）
-├── frontend/         # 前端代码（Vue 3 + Vite + Element Plus）
-├── docs/            # 项目文档
-└── scripts/         # 部署脚本
+OpenClaw_Camera_Construction_Mgmt/
+├── backend/                    # 后端代码（Spring Boot）
+│   ├── src/main/java/         # Java 源代码
+│   ├── src/main/resources/    # 配置文件
+│   ├── Dockerfile             # Docker 构建配置
+│   └── pom.xml                # Maven 配置
+├── frontend/                   # 前端代码（Vue 3）
+│   ├── src/                   # Vue 源代码
+│   ├── public/                # 静态资源
+│   ├── Dockerfile             # Docker 构建配置
+│   └── package.json           # NPM 配置
+├── deploy/                     # 部署配置
+│   ├── .env.example           # 环境变量模板
+│   ├── nginx-*.conf           # Nginx 配置
+│   └── DEPLOYMENT.md          # 部署指南
+├── scripts/                    # 部署脚本
+│   ├── init-server.sh         # 服务器初始化
+│   ├── deploy.sh              # 一键部署
+│   └── setup-https.sh         # HTTPS 配置
+├── docs/                       # 项目文档
+├── docker-compose.yml          # Docker Compose 配置
+├── .env.example               # 环境变量模板
+└── README.md                   # 本文件
 ```
 
-## 🚀 快速部署
-
-### 前端部署
-
-```bash
-# 方式 1：使用部署脚本
-/var/www/Camera_Construction_Project_Mgmt/scripts/deploy-frontend.sh
-
-# 方式 2：手动部署
-cd /var/www/Camera_Construction_Project_Mgmt/frontend
-npm run build
-sudo nginx -s reload
-```
-
-### 后端部署
-
-```bash
-cd /var/www/Camera_Construction_Project_Mgmt/backend
-mvn clean package
-# 运行 jar 包或使用 mvn spring-boot:run
-```
+---
 
 ## 🔧 技术栈
 
 ### 后端
-- Spring Boot 3.2.4
-- MyBatis Plus 3.5.5
-- PostgreSQL
-- Redis
-- JWT 认证
+- **框架：** Spring Boot 3.2.4
+- **ORM：** MyBatis Plus 3.5.5
+- **数据库：** PostgreSQL 16
+- **缓存：** Redis 7
+- **认证：** JWT
+- **API 文档：** Knife4j
 
 ### 前端
-- Vue 3
-- Vite
-- Element Plus
-- Pinia (状态管理)
-- Vue Router
+- **框架：** Vue 3
+- **构建工具：** Vite
+- **UI 组件：** Element Plus
+- **状态管理：** Pinia
+- **路由：** Vue Router
 
-## 📋 功能模块
+### 运维
+- **容器：** Docker + Docker Compose
+- **Web 服务器：** Nginx
+- **文件存储：** MinIO / 阿里云 OSS
 
-### 已实现
-- ✅ 用户登录/认证
-- ✅ 用户管理（创建、审批、批量导入）
-- ✅ 角色管理
-- ✅ 公司管理
-- ✅ 作业区管理
-- ✅ 系统配置
-
-### 用户管理功能
-1. **三种注册方式**
-   - 用户自主注册（需审批）
-   - 管理员手动创建
-   - 管理员批量导入
-
-2. **分级审批**
-   - 系统管理员可审批所有用户
-   - 甲方管理员只能审批甲方用户
-   - 乙方管理员只能审批乙方用户
-   - 监理方管理员只能审批监理方用户
-
-3. **权限控制**
-   - 管理员只能创建/管理自己公司范围内的用户
+---
 
 ## 🔐 默认账号
 
@@ -81,36 +166,104 @@ mvn clean package
 |--------|------|------|------|
 | admin | Admin@2026 | 系统管理员 | 最高权限 |
 
+**⚠️ 安全提醒：** 首次登录后请立即修改默认密码！
+
+---
+
 ## 🌐 访问地址
 
-- **前端**: http://localhost/
-- **API 文档**: http://localhost/doc.html
-- **后端 API**: http://localhost/api/
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| 前端 | http://localhost | Web 应用 |
+| 后端 API | http://localhost:8080/api | REST API |
+| API 文档 | http://localhost:8080/api/doc.html | Knife4j |
+| MinIO | http://localhost:9000 | 对象存储 API |
+| MinIO Console | http://localhost:9001 | 对象存储管理 |
 
-## 📖 详细文档
+---
 
-查看 `docs/` 目录下的详细文档：
-- 用户管理功能说明.md
-- 用户管理功能实现总结.md
-- test-user-management.sql
+## 📖 文档
 
-## 🔧 Nginx 配置
+| 文档 | 说明 |
+|------|------|
+| [部署指南](deploy/DEPLOYMENT.md) | 详细部署步骤和配置说明 |
+| [用户手册](docs/用户手册_v1.1.0_2026-03-19.md) | 最终用户使用指南 |
+| [维护手册](docs/维护手册_v1.1.0_2026-03-19.md) | 系统维护和故障排查 |
+| [测试指南](docs/测试指南_v1.1.0_2026-03-19.md) | 测试用例和执行方法 |
 
-配置文件：`/etc/nginx/sites-available/camera-system`
+---
 
-主要配置：
-- 静态文件：`/var/www/Camera_Construction_Project_Mgmt/frontend/dist`
-- API 代理：`http://localhost:8080/api/`
+## 🔒 安全配置
+
+### 必须修改的配置
+
+部署前请确保修改以下配置：
+
+1. **数据库密码** - 在 `.env` 文件中设置 `DB_PASSWORD`
+2. **JWT 密钥** - 在 `.env` 文件中设置 `JWT_SECRET`（使用强随机字符串）
+3. **MinIO 密钥** - 在 `.env` 文件中设置 `MINIO_ACCESS_KEY` 和 `MINIO_SECRET_KEY`
+4. **默认管理员密码** - 首次登录后立即修改
+
+### 生成安全密钥
+
+```bash
+# 生成 JWT 密钥（32 位随机字符串）
+openssl rand -base64 32
+
+# 生成数据库密码
+openssl rand -base64 16
+```
+
+---
+
+## 🧪 测试
+
+```bash
+# 后端测试
+cd backend
+mvn test
+
+# 前端测试
+cd frontend
+npm test
+```
+
+---
 
 ## 📝 更新日志
 
-### 2026-03-11
-- ✅ 实现用户管理功能
-- ✅ 添加三种用户注册方式
-- ✅ 实现分级审批流程
-- ✅ 添加批量导入功能
-- ✅ 创建用户管理前端页面
-- ✅ 规范项目目录结构
+### v1.0.0 (2026-03-20)
+- ✅ 完整的用户管理功能（注册、审批、批量导入）
+- ✅ 角色管理和权限控制
+- ✅ 公司管理和作业区管理
+- ✅ 手机验证码登录
+- ✅ Docker 一键部署
+- ✅ 完整的部署文档和测试报告
+
+[查看完整更新日志](docs/)
+
+---
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+---
+
+## 📄 许可证
+
+Apache License 2.0
+
+---
+
+## 👥 开发团队
+
+北京其点技术服务有限公司
+
+## 📞 联系方式
+
+- 邮箱：support@qidian.com
+- 官网：https://www.qidian.com
 
 ---
 

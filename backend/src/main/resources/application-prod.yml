@@ -1,10 +1,12 @@
 # 生产环境配置
+# 所有敏感配置必须从环境变量读取
+
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:camera_construction_db}?currentSchema=public
-    username: ${DB_USERNAME:camera_admin}
-    password: ${DB_PASSWORD:camera_admin_password}
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?currentSchema=public
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     hikari:
       maximum-pool-size: 50
       minimum-idle: 10
@@ -14,7 +16,7 @@ spring:
 
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}
       database: 0
@@ -26,20 +28,27 @@ spring:
           min-idle: 10
           max-wait: 3000ms
 
-# 文件存储配置（生产环境使用阿里云 OSS）
+# 文件存储配置（生产环境推荐使用 OSS 或本地存储）
 file:
   storage:
-    type: oss
+    type: ${FILE_STORAGE_TYPE:local}
+    local:
+      upload-dir: ${FILE_UPLOAD_DIR:/var/www/uploads}
     oss:
-      endpoint: ${OSS_ENDPOINT:oss-cn-beijing.aliyuncs.com}
+      endpoint: ${OSS_ENDPOINT:}
       access-key: ${OSS_ACCESS_KEY:}
       secret-key: ${OSS_SECRET_KEY:}
-      bucket: ${OSS_BUCKET:camera-system}
+      bucket: ${OSS_BUCKET:}
+    minio:
+      endpoint: ${MINIO_ENDPOINT:}
+      access-key: ${MINIO_ACCESS_KEY:}
+      secret-key: ${MINIO_SECRET_KEY:}
+      bucket: ${MINIO_BUCKET:camera-system}
 
-# JWT 配置（生产环境使用环境变量）
+# JWT 配置（生产环境必须设置环境变量）
 jwt:
-  secret: ${JWT_SECRET:camera-lifecycle-system-secret-key-2026-qidian-technology}
-  expiration: 86400000
+  secret: ${JWT_SECRET}  # ⚠️ 必须设置，建议使用强随机字符串
+  expiration: ${JWT_EXPIRATION:86400000}
   header: Authorization
   prefix: Bearer 
 
@@ -58,6 +67,6 @@ logging:
     root: WARN
     com.qidian.camera: INFO
   file:
-    name: /var/log/camera-system/application.log
+    name: ${LOG_FILE:/var/log/camera-system/application.log}
     max-size: 100MB
     max-history: 30

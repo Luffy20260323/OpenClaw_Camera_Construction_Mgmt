@@ -1,0 +1,37 @@
+# Docker ignore for backend
+
+# Build output
+target/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Environment
+.env
+.env.*
+
+# Test
+*.test
+coverage/
+
+# Misc
+*.md
+!README.md

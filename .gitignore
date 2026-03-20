@@ -12,6 +12,7 @@ backend/target/
 *.log
 logs/
 /tmp/
+/var/log/
 
 # OS files
 .DS_Store
@@ -22,15 +23,39 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+*.iml
 
-# Environment
+# Environment files (IMPORTANT: Never commit these!)
 .env
 .env.local
 .env.*.local
+.env.production
+.env.docker
+
+# Secrets and credentials
+*.pem
+*.key
+*.crt
+secrets/
+credentials/
 
 # Database
 *.db
 *.sqlite
+*.sql.gz
 
 # Uploads
 uploads/
+files/
+
+# Docker
+.docker/
+
+# Test coverage
+coverage/
+*.lcov
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
