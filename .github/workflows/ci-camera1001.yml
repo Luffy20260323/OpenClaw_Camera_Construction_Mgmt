@@ -257,23 +257,23 @@ jobs:
 
       - name: 🔍 验证 docker-compose.yml 语法
         run: |
-          docker-compose config
+          docker compose config
 
       - name: 🚀 启动服务（测试模式）
         run: |
           # 仅启动数据库和 Redis 进行验证
-          docker-compose up -d postgres redis
+          docker compose up -d postgres redis
           sleep 10
 
       - name: ✅ 验证服务健康状态
         run: |
-          docker-compose ps
-          docker-compose logs postgres
-          docker-compose logs redis
+          docker compose ps
+          docker compose logs postgres
+          docker compose logs redis
 
       - name: 🛑 停止服务
         run: |
-          docker-compose down
+          docker compose down
 
   #-------------------------------------------------------------------------------
   # 任务 6：生成报告
