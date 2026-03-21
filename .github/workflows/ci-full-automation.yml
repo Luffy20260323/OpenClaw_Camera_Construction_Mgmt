@@ -1,0 +1,565 @@
+#===============================================================================
+# 摄像头生命周期管理系统 - 完整自动化测试 CI/CD
+#===============================================================================
+# 触发条件：
+# - push: main, develop, camera1001 分支
+# - pull_request: 目标分支为 main, develop
+# - 手动触发
+#
+# 执行任务：
+# 1. 后端编译和测试
+# 2. 前端构建
+# 3. 启动后端服务
+# 4. 运行 38 条 API 自动化测试
+# 5. 运行 39 条前端 E2E 测试
+# 6. 生成完整测试报告
+#===============================================================================
+
+name: CI - Full Automation (77 Tests)
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - camera1001
+  pull_request:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+    inputs:
+      test_scope:
+        description: '测试范围'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - api-only
+          - e2e-only
+
+# 取消正在运行的重复工作流
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # 通用配置
+  JAVA_VERSION: '17'
+  NODE_VERSION: '20'
+  MAVEN_VERSION: '3.9.6'
+  BACKEND_PORT: 8080
+  DB_HOST: localhost
+  DB_PORT: 5432
+  DB_NAME: camera_construction_db
+  DB_USER: postgres
+  DB_PASSWORD: postgres
+  JWT_SECRET: test-jwt-secret-for-ci
+  FILE_STORAGE_TYPE: local
+  FILE_UPLOAD_DIR: /tmp/uploads
+
+jobs:
+  #-------------------------------------------------------------------------------
+  # 任务 1：代码检查
+  #-------------------------------------------------------------------------------
+  code-check:
+    name: 🔍 代码检查
+    runs-on: ubuntu-latest
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔎 检查敏感信息泄露
+        run: |
+          echo "检查硬编码密码..."
+          ! grep -r "password.*=.*['\"]postgres['\"]" backend/src/ --include="*.yml" --include="*.yaml" || (echo "❌ 发现硬编码数据库密码" && exit 1)
+          ! grep -r "secret.*=.*['\"]camera-lifecycle" backend/src/ --include="*.yml" --include="*.yaml" || (echo "❌ 发现硬编码 JWT 密钥" && exit 1)
+          ! grep -r "minioadmin" backend/src/ --include="*.yml" --include="*.yaml" || (echo "❌ 发现硬编码 MinIO 密钥" && exit 1)
+          echo "✅ 未发现硬编码敏感信息"
+
+      - name: 📋 检查必要文件
+        run: |
+          files=("docker-compose.yml" ".env.example" "backend/Dockerfile" "frontend/Dockerfile" "backend/pom.xml" "frontend/package.json")
+          for file in "${files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ 缺少必要文件：$file"
+              exit 1
+            fi
+          done
+          echo "✅ 所有必要文件存在"
+
+  #-------------------------------------------------------------------------------
+  # 任务 2：后端编译和打包
+  #-------------------------------------------------------------------------------
+  backend-build:
+    name: ☕ 后端构建
+    runs-on: ubuntu-latest
+    needs: code-check
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔧 设置 Java 环境
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 📦 缓存 Maven 依赖
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: 🏗️ 编译后端
+        run: |
+          cd backend
+          mvn -B clean compile
+
+      - name: 🧪 运行单元测试
+        run: |
+          cd backend
+          mvn -B test
+
+      - name: 📦 打包后端
+        run: |
+          cd backend
+          mvn -B package -DskipTests
+
+      - name: ⬆️ 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/*.jar
+          retention-days: 30
+
+  #-------------------------------------------------------------------------------
+  # 任务 3：前端构建
+  #-------------------------------------------------------------------------------
+  frontend-build:
+    name: 🎨 前端构建
+    runs-on: ubuntu-latest
+    needs: code-check
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔧 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 缓存 Node 模块
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 🏗️ 安装依赖
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 🔍 代码检查
+        run: |
+          cd frontend
+          npm run lint || echo "⚠️ Lint 检查未通过（非阻塞）"
+
+      - name: 🎨 构建前端
+        run: |
+          cd frontend
+          npm run build
+
+      - name: ⬆️ 上传构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          retention-days: 30
+
+  #-------------------------------------------------------------------------------
+  # 任务 4：API 自动化测试 (38 条)
+  #-------------------------------------------------------------------------------
+  api-automation-test:
+    name: 🧪 API 自动化测试 (38 条)
+    runs-on: ubuntu-latest
+    needs: backend-build
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⬇️ 下载后端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/
+
+      - name: 🔧 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🚀 启动后端服务
+        run: |
+          echo "启动后端服务..."
+          
+          export DB_HOST=${{ env.DB_HOST }}
+          export DB_PORT=${{ env.DB_PORT }}
+          export DB_NAME=${{ env.DB_NAME }}
+          export DB_USER=${{ env.DB_USER }}
+          export DB_PASSWORD=${{ env.DB_PASSWORD }}
+          export JWT_SECRET=${{ env.JWT_SECRET }}
+          export FILE_STORAGE_TYPE=${{ env.FILE_STORAGE_TYPE }}
+          export FILE_UPLOAD_DIR=${{ env.FILE_UPLOAD_DIR }}
+          
+          cd backend
+          nohup java -jar target/*.jar > /tmp/backend.log 2>&1 &
+          BACKEND_PID=$!
+          echo "后端进程 ID: $BACKEND_PID"
+          echo $BACKEND_PID > /tmp/backend.pid
+          
+          echo "等待后端启动..."
+          for i in {1..60}; do
+            if curl -s http://localhost:${{ env.BACKEND_PORT }}/api/auth/captcha > /dev/null 2>&1; then
+              echo "✅ 后端启动成功！"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ 后端启动超时"
+              echo "后端日志:"
+              tail -50 /tmp/backend.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: 🧪 运行 API 自动化测试脚本
+        run: |
+          echo "=========================================="
+          echo "API 自动化测试 - 38 条用例"
+          echo "=========================================="
+          
+          bash /root/.openclaw/workspace/OpenClaw_Camera_Construction_Mgmt/scripts/run-api-tests.sh
+          
+          echo "=========================================="
+          echo "API 测试完成"
+          echo "=========================================="
+
+      - name: ⬆️ 上传 API 测试结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-results
+          path: /tmp/api-test-results/
+          retention-days: 30
+
+      - name: 📄 上传后端日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-log
+          path: /tmp/backend.log
+          retention-days: 7
+
+  #-------------------------------------------------------------------------------
+  # 任务 5：前端 E2E 自动化测试 (39 条)
+  #-------------------------------------------------------------------------------
+  e2e-automation-test:
+    name: 🎭 前端 E2E 测试 (39 条)
+    runs-on: ubuntu-latest
+    needs: backend-build
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ${{ env.DB_NAME }}
+          POSTGRES_USER: ${{ env.DB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DB_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⬇️ 下载后端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/
+
+      - name: 🔧 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: package-lock.json
+
+      - name: 📦 安装依赖
+        run: |
+          echo "📦 安装项目依赖..."
+          npm ci
+          
+          echo "📦 安装 Playwright 浏览器..."
+          npx playwright install chromium --with-deps
+          
+          echo "✅ 依赖安装完成"
+
+      - name: 🚀 启动后端服务
+        run: |
+          echo "启动后端服务..."
+          
+          export DB_HOST=${{ env.DB_HOST }}
+          export DB_PORT=${{ env.DB_PORT }}
+          export DB_NAME=${{ env.DB_NAME }}
+          export DB_USER=${{ env.DB_USER }}
+          export DB_PASSWORD=${{ env.DB_PASSWORD }}
+          export JWT_SECRET=${{ env.JWT_SECRET }}
+          export FILE_STORAGE_TYPE=${{ env.FILE_STORAGE_TYPE }}
+          export FILE_UPLOAD_DIR=${{ env.FILE_UPLOAD_DIR }}
+          
+          cd backend
+          nohup java -jar target/*.jar > /tmp/backend-e2e.log 2>&1 &
+          BACKEND_PID=$!
+          echo "后端进程 ID: $BACKEND_PID"
+          echo $BACKEND_PID > /tmp/backend-e2e.pid
+          
+          echo "等待后端启动..."
+          for i in {1..60}; do
+            if curl -s http://localhost:${{ env.BACKEND_PORT }}/api/auth/captcha > /dev/null 2>&1; then
+              echo "✅ 后端启动成功！"
+              break
+            fi
+            if [ $i -eq 60 ]; then
+              echo "❌ 后端启动超时"
+              echo "后端日志:"
+              tail -50 /tmp/backend-e2e.log
+              exit 1
+            fi
+            sleep 2
+          done
+
+      - name: 🎭 运行 Playwright E2E 测试
+        run: |
+          echo "=========================================="
+          echo "前端 E2E 自动化测试 - 39 条用例"
+          echo "=========================================="
+          
+          # 根据输入选择测试范围
+          TEST_SCOPE="${{ github.event.inputs.test_scope || 'all' }}"
+          
+          case $TEST_SCOPE in
+            api-only)
+              echo "跳过 E2E 测试（仅 API 模式）"
+              ;;
+            e2e-only)
+              echo "运行所有 E2E 测试..."
+              npm run e2e
+              ;;
+            all|*)
+              echo "运行所有 E2E 测试..."
+              npm run e2e
+              ;;
+          esac
+          
+          echo "=========================================="
+          echo "E2E 测试完成"
+          echo "=========================================="
+
+      - name: ⬆️ 上传 Playwright 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/results/html/
+          retention-days: 30
+
+      - name: ⬆️ 上传 JUnit 结果
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-junit
+          path: e2e/results/results.xml
+          retention-days: 30
+
+      - name: 📄 上传后端日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-e2e-log
+          path: /tmp/backend-e2e.log
+          retention-days: 7
+
+  #-------------------------------------------------------------------------------
+  # 任务 6：Docker 构建验证
+  #-------------------------------------------------------------------------------
+  docker-build:
+    name: 🐳 Docker 构建
+    runs-on: ubuntu-latest
+    needs: [backend-build, frontend-build]
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⬇️ 下载后端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jar
+          path: backend/target/
+
+      - name: ⬇️ 下载前端构建产物
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+
+      - name: 🔧 设置 Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 🏗️ 构建后端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          load: true
+          tags: camera-backend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🏗️ 构建前端镜像
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          load: true
+          tags: camera-frontend:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: ✅ 验证 Docker 镜像
+        run: |
+          echo "验证后端镜像..."
+          docker images camera-backend:test
+          echo "验证前端镜像..."
+          docker images camera-frontend:test
+
+  #-------------------------------------------------------------------------------
+  # 任务 7：生成完整测试报告
+  #-------------------------------------------------------------------------------
+  test-report:
+    name: 📊 生成测试报告
+    runs-on: ubuntu-latest
+    needs: [api-automation-test, e2e-automation-test]
+    if: always()
+
+    steps:
+      - name: ⬇️ 下载 API 测试结果
+        uses: actions/download-artifact@v4
+        with:
+          name: api-test-results
+          path: ./api-results/
+
+      - name: ⬇️ 下载 Playwright JUnit 结果
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-junit
+          path: ./e2e-results/
+
+      - name: 📝 生成测试总结报告
+        run: |
+          echo "=========================================="
+          echo "  完整自动化测试报告"
+          echo "=========================================="
+          echo ""
+          echo "分支：${{ github.ref_name }}"
+          echo "提交：${{ github.sha }}"
+          echo "触发者：${{ github.actor }}"
+          echo ""
+          echo "=========================================="
+          echo "  测试结果汇总"
+          echo "=========================================="
+          echo ""
+          
+          # API 测试结果
+          echo "### API 自动化测试 (38 条)"
+          if [ -f "api-results/summary.txt" ]; then
+            cat api-results/summary.txt
+          else
+            echo "API 测试结果：${{ needs.api-automation-test.result }}"
+          fi
+          echo ""
+          
+          # E2E 测试结果
+          echo "### 前端 E2E 测试 (39 条)"
+          if [ -f "e2e-results/results.xml" ]; then
+            TESTS=$(grep -o 'tests="[0-9]*"' e2e-results/results.xml | head -1 | cut -d'"' -f2)
+            FAILURES=$(grep -o 'failures="[0-9]*"' e2e-results/results.xml | head -1 | cut -d'"' -f2)
+            ERRORS=$(grep -o 'errors="[0-9]*"' e2e-results/results.xml | head -1 | cut -d'"' -f2)
+            echo "总测试数：$TESTS"
+            echo "失败数：$FAILURES"
+            echo "错误数：$ERRORS"
+            if [ "$FAILURES" = "0" ] && [ "$ERRORS" = "0" ]; then
+              echo "✅ 所有 E2E 测试通过！"
+            else
+              echo "❌ 有测试失败，请检查"
+            fi
+          else
+            echo "E2E 测试结果：${{ needs.e2e-automation-test.result }}"
+          fi
+          echo ""
+          echo "=========================================="
+          echo "  总计：77 条自动化用例"
+          echo "=========================================="
+
+      - name: 📄 发布到 GitHub Summary
+        if: always()
+        run: |
+          echo "## 🎯 完整自动化测试报告 (77 条用例)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**分支**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**提交**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**触发者**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 测试结果" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| 测试类型 | 用例数 | 状态 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API 自动化 | 38 | ${{ needs.api-automation-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 前端 E2E | 39 | ${{ needs.e2e-automation-test.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **总计** | **77** | - |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 测试报告" >> $GITHUB_STEP_SUMMARY
+          echo "- [API 测试结果](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Playwright HTML 报告](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
