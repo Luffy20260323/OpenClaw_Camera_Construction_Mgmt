@@ -19,6 +19,9 @@ COPY package*.json ./
 # 安装依赖（使用官方 registry，避免镜像源网络问题）
 RUN npm ci --registry=https://registry.npmjs.org/
 
+# 安装 Rollup 可选依赖（Alpine Linux 需要）
+RUN npm install @rollup/rollup-linux-x64-musl --registry=https://registry.npmjs.org/
+
 # 复制源代码
 COPY . .
 
