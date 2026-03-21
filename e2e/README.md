@@ -87,34 +87,64 @@ npx playwright show-report e2e/results/html
 
 ## 📊 测试用例清单
 
-### 用户注册联动测试 (6 条)
+### 用户注册联动测试 (12 条) ✅
 
-| 编号 | 用例名称 | 状态 |
+| 编号 | 用例名称 | 文件 |
 |------|----------|------|
-| UI-REG-001 | 选择甲方公司 - 角色联动更新 | ✅ 已实现 |
-| UI-REG-004 | 切换公司 - 角色列表刷新 | ✅ 已实现 |
-| UI-REG-005 | 选择甲方作业区角色 - 显示作业区 | ✅ 已实现 |
-| UI-REG-006 | 选择甲方非作业区角色 - 不显示作业区 | ✅ 已实现 |
-| UI-REG-007 | 选择乙方角色 - 不显示作业区 | ✅ 已实现 |
-| UI-REG-009 | 切换角色 - 作业区框动态显示/隐藏 | ✅ 已实现 |
+| UI-REG-001 | 选择甲方公司 - 角色联动更新 | registration.spec.ts |
+| UI-REG-002 | 选择乙方公司 - 角色联动更新 | registration-advanced.spec.ts |
+| UI-REG-003 | 选择监理公司 - 角色联动更新 | registration-advanced.spec.ts |
+| UI-REG-004 | 切换公司 - 角色列表刷新 | registration.spec.ts |
+| UI-REG-005 | 选择甲方作业区角色 - 显示作业区 | registration.spec.ts |
+| UI-REG-006 | 选择甲方非作业区角色 - 不显示作业区 | registration.spec.ts |
+| UI-REG-007 | 选择乙方角色 - 不显示作业区 | registration.spec.ts |
+| UI-REG-008 | 选择监理角色 - 不显示作业区 | registration-advanced.spec.ts |
+| UI-REG-009 | 切换角色 - 作业区框动态显示/隐藏 | registration.spec.ts |
+| UI-REG-010 | 未选择公司 - 角色下拉框状态 | registration-advanced.spec.ts |
+| UI-REG-011 | 作业区角色判断逻辑 | registration-advanced.spec.ts |
+| UI-REG-012 | 多选角色 - 作业区逻辑 | registration-advanced.spec.ts |
 
-### 数据隔离测试 (4 条)
+### 数据隔离测试 (12 条) ✅
 
-| 编号 | 用例名称 | 状态 |
+| 编号 | 用例名称 | 文件 |
 |------|----------|------|
-| TC-ISO-001 | 甲方管理员 - 公司列表验证 | ✅ 已实现 |
-| TC-ISO-002 | 甲方管理员 - 角色列表验证 | ✅ 已实现 |
-| TC-ISO-009 | API 越权测试 - 创建乙方用户 | ✅ 已实现 |
-| TC-ISO-012 | 作业区数据隔离验证 | ✅ 已实现 |
+| TC-ISO-001 | 甲方管理员 - 公司列表验证 | isolation.spec.ts |
+| TC-ISO-002 | 甲方管理员 - 角色列表验证 | isolation.spec.ts |
+| TC-ISO-003 | 乙方管理员 - 公司列表验证 | isolation-advanced.spec.ts |
+| TC-ISO-004 | 乙方管理员 - 角色列表验证 | isolation-advanced.spec.ts |
+| TC-ISO-005 | 监理管理员 - 公司列表验证 | isolation-advanced.spec.ts |
+| TC-ISO-006 | 监理管理员 - 角色列表验证 | isolation-advanced.spec.ts |
+| TC-ISO-007 | 系统管理员 - 公司列表验证 | isolation-advanced.spec.ts |
+| TC-ISO-008 | 系统管理员 - 角色联动验证 | isolation-advanced.spec.ts |
+| TC-ISO-009 | API 越权测试 - 创建乙方用户 | isolation.spec.ts |
+| TC-ISO-010 | API 越权测试 - 创建甲方用户 | isolation-advanced.spec.ts |
+| TC-ISO-011 | API 越权测试 - 创建乙方用户 | isolation-advanced.spec.ts |
+| TC-ISO-012 | 作业区数据隔离验证 | isolation.spec.ts |
 
-### 匿名注册配置测试 (4 条)
+### 匿名注册配置测试 (10 条) ✅
 
-| 编号 | 用例名称 | 状态 |
+| 编号 | 用例名称 | 文件 |
 |------|----------|------|
-| TC-ANON-001 | 登录页面公司列表过滤 | ✅ 已实现 |
-| TC-ANON-003 | 禁止匿名注册的公司不显示 | ✅ 已实现 |
-| TC-ANON-006 | 系统保护公司配置字段禁用 | ✅ 已实现 |
-| TC-ANON-009 | 普通公司允许修改配置 | ✅ 已实现 |
+| TC-ANON-001 | 登录页面公司列表过滤 | anonymous.spec.ts |
+| TC-ANON-002 | 修改配置后列表更新 | anonymous-advanced.spec.ts |
+| TC-ANON-003 | 禁止匿名注册的公司不显示 | anonymous.spec.ts |
+| TC-ANON-004 | 所有公司禁止时的边界情况 | anonymous-advanced.spec.ts |
+| TC-ANON-005 | API 测试 - 注册时公司权限验证 | anonymous-advanced.spec.ts |
+| TC-ANON-006 | 系统保护公司 - 配置字段状态 | anonymous.spec.ts |
+| TC-ANON-007 | 系统保护公司 - API 修改配置 | anonymous-advanced.spec.ts |
+| TC-ANON-008 | 系统保护公司 - 普通管理员也无法修改 | anonymous-advanced.spec.ts |
+| TC-ANON-009 | 普通公司 - 允许修改配置 | anonymous.spec.ts |
+| TC-ANON-010 | 系统保护公司 - 数据库直接修改验证 | anonymous-advanced.spec.ts |
+
+### 界面与体验测试 (5 条) ✅
+
+| 编号 | 用例名称 | 文件 |
+|------|----------|------|
+| UI-001 | 响应式布局测试 | ui-experience.spec.ts |
+| UI-002 | 移动端适配测试 | ui-experience.spec.ts |
+| UI-003 | 功能一致性测试 | ui-experience.spec.ts |
+| UI-004 | 页面加载性能 | ui-experience.spec.ts |
+| UI-005 | 无障碍访问测试 | ui-experience.spec.ts |
 
 ---
 
