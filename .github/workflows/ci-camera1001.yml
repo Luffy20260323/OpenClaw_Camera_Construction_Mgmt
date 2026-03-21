@@ -227,6 +227,7 @@ jobs:
           tags: camera-frontend:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          no-cache: true
 
       - name: ✅ 验证 Docker 镜像
         run: |
