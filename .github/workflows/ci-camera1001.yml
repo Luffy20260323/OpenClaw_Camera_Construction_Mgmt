@@ -152,7 +152,9 @@ jobs:
       - name: 📦 缓存 Node 模块
         uses: actions/cache@v4
         with:
-          path: frontend/node_modules
+          path: |
+            frontend/node_modules
+            ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
@@ -160,7 +162,7 @@ jobs:
       - name: 🏗️ 安装依赖
         run: |
           cd frontend
-          npm ci
+          npm ci --legacy-peer-deps || npm install
 
       - name: 🔍 代码检查
         run: |
