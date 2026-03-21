@@ -10,14 +10,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /build
 
+# 降级 npm（修复 Exit handler never called bug）
+RUN npm install -g npm@9.8.1
+
 # 复制 package 文件（利用 Docker 缓存）
 COPY package*.json ./
 
 # 安装依赖（包括 devDependencies，因为构建需要 vite）
-RUN npm ci && \
-    echo "=== Checking vite installation ===" && \
-    ls -la node_modules/.bin/vite && \
-    ./node_modules/.bin/vite --version
+RUN npm ci
 
 # 复制源代码
 COPY . .
