@@ -14,7 +14,10 @@ WORKDIR /build
 COPY package*.json ./
 
 # 安装依赖（包括 devDependencies，因为构建需要 vite）
-RUN npm ci
+RUN npm ci && \
+    echo "=== Checking vite installation ===" && \
+    ls -la node_modules/.bin/vite && \
+    ./node_modules/.bin/vite --version
 
 # 复制源代码
 COPY . .
