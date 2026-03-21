@@ -1,0 +1,27 @@
+{
+  "name": "openclaw_camera_construction_mgmt",
+  "version": "1.0.0",
+  "description": "Camera Lifecycle Management System",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:debug": "playwright test --debug",
+    "e2e:report": "playwright show-report e2e/results/html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RichardQidian/OpenClaw_Camera_Construction_Mgmt.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RichardQidian/OpenClaw_Camera_Construction_Mgmt/issues"
+  },
+  "homepage": "https://github.com/RichardQidian/OpenClaw_Camera_Construction_Mgmt#readme"
+}

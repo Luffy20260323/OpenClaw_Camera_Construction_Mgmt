@@ -1,0 +1,88 @@
+#===============================================================================
+# 摄像头生命周期管理系统 - 简化 Docker Compose 配置
+# 仅运行后端和前端，复用本地 PostgreSQL 和 Redis
+#===============================================================================
+
+version: '3.8'
+
+services:
+  #-------------------------------------------------------------------------------
+  # Spring Boot 后端
+  #-------------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: camera-backend
+    restart: unless-stopped
+    environment:
+      # 数据库配置（使用本地 PostgreSQL）
+      DB_HOST: host.docker.internal
+      DB_PORT: 5432
+      DB_NAME: camera_construction_db
+      DB_USERNAME: postgres
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Redis 配置（使用本地 Redis）
+      REDIS_HOST: host.docker.internal
+      REDIS_PORT: 6379
+      REDIS_PASSWORD:
+      # JWT 配置
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+      # 文件存储配置（本地存储）
+      FILE_STORAGE_TYPE: local
+      FILE_UPLOAD_DIR: /var/uploads
+      # 日志配置
+      LOG_FILE: /var/log/application.log
+      # Spring 配置
+      SPRING_PROFILES_ACTIVE: prod
+    volumes:
+      - backend_logs:/var/log
+      - ./uploads:/var/uploads
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - camera-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  #-------------------------------------------------------------------------------
+  # Nginx 前端
+  #-------------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: camera-frontend
+    restart: unless-stopped
+    volumes:
+      - ./deploy/nginx-http.conf:/etc/nginx/conf.d/default.conf:ro
+      - frontend_logs:/var/log/nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - camera-network
+
+#-------------------------------------------------------------------------------
+# 网络配置
+#-------------------------------------------------------------------------------
+networks:
+  camera-network:
+    driver: bridge
+
+#-------------------------------------------------------------------------------
+# 数据卷配置
+#-------------------------------------------------------------------------------
+volumes:
+  backend_logs:
+    driver: local
+  frontend_logs:
+    driver: local
