@@ -1,0 +1,133 @@
+#===============================================================================
+# Docker 镜像同步到阿里云容器镜像服务
+# 使用说明：
+# 1. 在 GitHub Settings → Secrets and variables → Actions 中添加：
+#    - ACR_USERNAME: 阿里云容器镜像服务用户名
+#    - ACR_PASSWORD: 阿里云容器镜像服务密码
+#    - ACR_NAMESPACE: 阿里云命名空间
+# 2. 手动触发工作流（Workflow dispatch）
+#===============================================================================
+
+name: Sync Docker Images to Aliyun ACR
+
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      images:
+        description: '要同步的镜像（逗号分隔）'
+        required: false
+        default: 'postgres,redis,minio'
+  schedule:
+    - cron: '0 0 1 * *'  # 每月 1 号自动同步
+
+env:
+  ACR_REGISTRY: registry.cn-hangzhou.aliyuncs.com
+
+jobs:
+  sync-images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(inputs.images != '' && format('["{0}"]', join(fromJSON(format('["{0}"]', inputs.images)), '","')) || '["postgres","redis","minio"]') }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Login to Aliyun ACR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_REGISTRY }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      #-------------------------------------------------------------------------------
+      # PostgreSQL
+      #-------------------------------------------------------------------------------
+      - name: Sync PostgreSQL
+        if: matrix.image == 'postgres'
+        run: |
+          echo "🔄 Syncing postgres:16-alpine..."
+          docker pull postgres:16-alpine
+          docker tag postgres:16-alpine ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/postgres:16-alpine
+          docker push ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/postgres:16-alpine
+          echo "✅ PostgreSQL synced successfully!"
+
+      #-------------------------------------------------------------------------------
+      # Redis
+      #-------------------------------------------------------------------------------
+      - name: Sync Redis
+        if: matrix.image == 'redis'
+        run: |
+          echo "🔄 Syncing redis:7-alpine..."
+          docker pull redis:7-alpine
+          docker tag redis:7-alpine ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/redis:7-alpine
+          docker push ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/redis:7-alpine
+          echo "✅ Redis synced successfully!"
+
+      #-------------------------------------------------------------------------------
+      # MinIO
+      #-------------------------------------------------------------------------------
+      - name: Sync MinIO
+        if: matrix.image == 'minio'
+        run: |
+          echo "🔄 Syncing minio/minio:RELEASE.2024-01-01T16-36-33Z..."
+          docker pull minio/minio:RELEASE.2024-01-01T16-36-33Z
+          docker tag minio/minio:RELEASE.2024-01-01T16-36-33Z ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/minio:RELEASE.2024-01-01T16-36-33Z
+          docker push ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/minio:RELEASE.2024-01-01T16-36-33Z
+          echo "✅ MinIO synced successfully!"
+
+      #-------------------------------------------------------------------------------
+      # Nginx
+      #-------------------------------------------------------------------------------
+      - name: Sync Nginx
+        if: matrix.image == 'nginx'
+        run: |
+          echo "🔄 Syncing nginx:alpine..."
+          docker pull nginx:alpine
+          docker tag nginx:alpine ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/nginx:alpine
+          docker push ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/nginx:alpine
+          echo "✅ Nginx synced successfully!"
+
+      #-------------------------------------------------------------------------------
+      # Node.js
+      #-------------------------------------------------------------------------------
+      - name: Sync Node.js
+        if: matrix.image == 'node'
+        run: |
+          echo "🔄 Syncing node:20-alpine..."
+          docker pull node:20-alpine
+          docker tag node:20-alpine ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/node:20-alpine
+          docker push ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/node:20-alpine
+          echo "✅ Node.js synced successfully!"
+
+  #-------------------------------------------------------------------------------
+  # 完成报告
+  #-------------------------------------------------------------------------------
+  sync-complete:
+    runs-on: ubuntu-latest
+    needs: sync-images
+    steps:
+      - name: Print summary
+        run: |
+          echo "## 🎉 Docker 镜像同步完成！" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "所有镜像已成功推送到阿里云容器镜像服务：" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/postgres:16-alpine\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/redis:7-alpine\`" >> $GITHUB_STEP_SUMMARY
+          echo "- \`${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/minio:RELEASE.2024-01-01T16-36-33Z\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 使用方法" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```yaml' >> $GITHUB_STEP_SUMMARY
+          echo "services:" >> $GITHUB_STEP_SUMMARY
+          echo "  postgres:" >> $GITHUB_STEP_SUMMARY
+          echo "    image: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/postgres:16-alpine" >> $GITHUB_STEP_SUMMARY
+          echo "  redis:" >> $GITHUB_STEP_SUMMARY
+          echo "    image: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/redis:7-alpine" >> $GITHUB_STEP_SUMMARY
+          echo "  minio:" >> $GITHUB_STEP_SUMMARY
+          echo "    image: ${{ env.ACR_REGISTRY }}/${{ secrets.ACR_NAMESPACE }}/minio:RELEASE.2024-01-01T16-36-33Z" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
