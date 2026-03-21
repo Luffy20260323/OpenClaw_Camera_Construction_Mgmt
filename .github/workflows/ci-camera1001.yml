@@ -151,14 +151,20 @@ jobs:
 
       - name: 🏗️ 安装依赖
         run: |
+          set -e
           cd frontend
           echo "Node version: $(node --version)"
           echo "npm version: $(npm --version)"
+          echo "package-lock.json exists: $(test -f package-lock.json && echo yes || echo no)"
           echo "Installing dependencies..."
-          npm ci
+          npm ci --verbose
           echo "Verifying vite installation..."
-          ls -la node_modules/.bin/vite
-          npx vite --version
+          if [ ! -f "node_modules/.bin/vite" ]; then
+            echo "❌ vite not found in node_modules/.bin/"
+            ls -la node_modules/ | grep vite || echo "vite folder not found"
+            exit 1
+          fi
+          ./node_modules/.bin/vite --version
 
       - name: 🔍 代码检查
         run: |
