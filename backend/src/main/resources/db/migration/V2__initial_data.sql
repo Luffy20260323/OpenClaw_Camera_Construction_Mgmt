@@ -83,10 +83,15 @@ ON CONFLICT (config_key) DO NOTHING;
 -------------------------------------------------------------------------------
 -- 6. 作业区示例数据（可选）
 -------------------------------------------------------------------------------
-INSERT INTO work_areas (id, area_name, area_code, company_id, description, status) VALUES
-    (1, '示例作业区 A', 'AREA-A', 2, '甲方示例作业区', 'active'),
-    (2, '示例作业区 B', 'AREA-B', 3, '乙方示例作业区', 'active')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO work_areas (id, work_area_name, work_area_code, company_id, max_capacity, description) VALUES
+    (1, '示例作业区 A', 'AREA-A', 2, 1000, '甲方示例作业区'),
+    (2, '示例作业区 B', 'AREA-B', 3, 1000, '乙方示例作业区')
+ON CONFLICT (id) DO UPDATE SET 
+    work_area_name = EXCLUDED.work_area_name,
+    work_area_code = EXCLUDED.work_area_code,
+    company_id = EXCLUDED.company_id,
+    max_capacity = EXCLUDED.max_capacity,
+    description = EXCLUDED.description;
 
 -------------------------------------------------------------------------------
 -- 数据验证查询（注释掉，仅用于调试）
