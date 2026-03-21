@@ -146,6 +146,16 @@ npx playwright show-report e2e/results/html
 | UI-004 | 页面加载性能 | ui-experience.spec.ts |
 | UI-005 | 无障碍访问测试 | ui-experience.spec.ts |
 
+### 系统配置测试 (5 条) ✅
+
+| 编号 | 用例名称 | 文件 |
+|------|----------|------|
+| SYS-002-001 | 配置为"不要验证码" | system-config.spec.ts |
+| SYS-002-002 | 配置为"图形验证码" | system-config.spec.ts |
+| SYS-002-003 | 配置为"手机短信验证码" | system-config.spec.ts |
+| SYS-002-004 | 验证码配置切换测试 | system-config.spec.ts |
+| SYS-002-005 | 系统保护配置项验证 | system-config.spec.ts |
+
 ---
 
 ## ⚙️ 配置说明
