@@ -16,8 +16,8 @@ RUN npm install -g npm@9.8.1
 # 复制 package 文件（利用 Docker 缓存）
 COPY package*.json ./
 
-# 安装依赖（包括 devDependencies，因为构建需要 vite）
-RUN npm ci
+# 安装依赖（使用官方 registry，避免镜像源网络问题）
+RUN npm ci --registry=https://registry.npmjs.org/
 
 # 复制源代码
 COPY . .
