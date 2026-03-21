@@ -13,8 +13,8 @@ WORKDIR /build
 # 复制 package 文件（利用 Docker 缓存）
 COPY package*.json ./
 
-# 安装依赖
-RUN npm ci --only=production
+# 安装依赖（包括 devDependencies，因为构建需要 vite）
+RUN npm ci
 
 # 复制源代码
 COPY . .
