@@ -51,7 +51,4 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
 # Nginx 在前台运行
-STAY_INFLIGHT=true
-
-# 启动 Nginx
 CMD ["nginx", "-g", "daemon off;"]
