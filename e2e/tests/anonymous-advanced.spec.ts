@@ -49,7 +49,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     console.log('测试公司:', forbiddenCompany);
     
     // 步骤 3: 修改配置为允许匿名注册
-    const updateResp = await request.put(`/api/company/${forbiddenCompany.id}`, {
+    const updateResp = await request.put(`${baseURL}/api/company/${forbiddenCompany.id}`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -77,7 +77,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     expect(pageCompanies).toContain(forbiddenCompany.id.toString());
     
     // 步骤 5: 恢复配置
-    await request.put(`/api/company/${forbiddenCompany.id}`, {
+    await request.put(`${baseURL}/api/company/${forbiddenCompany.id}`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
