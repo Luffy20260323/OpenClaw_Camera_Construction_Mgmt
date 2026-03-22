@@ -57,7 +57,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     console.log('【SYS-002-001】测试开始：配置为不要验证码');
     
     // 步骤 1: 系统管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -70,7 +70,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect(token).toBeTruthy();
     
     // 步骤 2: 修改系统配置为"不要验证码"
-    const updateResp = await request.put(`${baseURL}/api/system/config', {
+    const updateResp = await request.put(``${baseURL}/api/system/config`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -86,7 +86,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect([200, 201]).toContain(updateResp.status());
     
     // 步骤 3: 退出登录
-    await request.post(`${baseURL}/api/auth/logout', {
+    await request.post(``${baseURL}/api/auth/logout`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -118,7 +118,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     console.log('【SYS-002-002】测试开始：配置为图形验证码');
     
     // 步骤 1: 系统管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -131,7 +131,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect(token).toBeTruthy();
     
     // 步骤 2: 修改系统配置为"图形验证码"
-    const updateResp = await request.put(`${baseURL}/api/system/config', {
+    const updateResp = await request.put(``${baseURL}/api/system/config`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -145,7 +145,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect([200, 201]).toContain(updateResp.status());
     
     // 步骤 3: 退出登录
-    await request.post(`${baseURL}/api/auth/logout', {
+    await request.post(``${baseURL}/api/auth/logout`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -184,7 +184,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     console.log('【SYS-002-003】测试开始：配置为手机短信验证码');
     
     // 步骤 1: 系统管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -197,7 +197,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect(token).toBeTruthy();
     
     // 步骤 2: 修改系统配置为"手机短信验证码"
-    const updateResp = await request.put(`${baseURL}/api/system/config', {
+    const updateResp = await request.put(``${baseURL}/api/system/config`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -211,7 +211,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect([200, 201]).toContain(updateResp.status());
     
     // 步骤 3: 退出登录
-    await request.post(`${baseURL}/api/auth/logout', {
+    await request.post(``${baseURL}/api/auth/logout`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -259,7 +259,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     console.log('【SYS-002-004】测试开始：验证码配置切换测试');
     
     // 步骤 1: 系统管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -272,7 +272,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect(token).toBeTruthy();
     
     // 步骤 2: 先配置为"不要验证码"
-    await request.put(`${baseURL}/api/system/config', {
+    await request.put(``${baseURL}/api/system/config`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -288,7 +288,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     expect(isVisible).toBeFalsy();
     
     // 步骤 4: 修改配置为"图形验证码"
-    await request.put(`${baseURL}/api/system/config', {
+    await request.put(``${baseURL}/api/system/config`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -313,7 +313,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     console.log('【SYS-002-005】测试开始：系统保护配置项验证');
     
     // 系统管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -325,7 +325,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     const token = loginData.data?.token;
     
     // 尝试修改系统保护配置项
-    const updateResp = await request.put(`${baseURL}/api/system/config', {
+    const updateResp = await request.put(``${baseURL}/api/system/config`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

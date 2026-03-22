@@ -233,7 +233,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-010】测试开始：乙方管理员 API 越权测试');
     
     // 乙方管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'yifang_admin',
         password: 'password123',
@@ -246,7 +246,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     expect(token).toBeTruthy();
     
     // 尝试创建甲方用户
-    const createResp = await request.post(`${baseURL}/api/user', {
+    const createResp = await request.post(``${baseURL}/api/user`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -274,7 +274,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-011】测试开始：监理管理员 API 越权测试');
     
     // 监理管理员登录
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'jianli_admin',
         password: 'password123',
@@ -287,7 +287,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     expect(token).toBeTruthy();
     
     // 尝试创建乙方用户
-    const createResp = await request.post(`${baseURL}/api/user', {
+    const createResp = await request.post(``${baseURL}/api/user`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

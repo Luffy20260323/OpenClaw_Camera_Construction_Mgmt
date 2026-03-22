@@ -42,7 +42,7 @@ test.describe('匿名注册配置与系统保护', () => {
     console.log('【TC-ANON-003】测试开始：禁止匿名注册的公司不显示');
     
     // 步骤 1: 通过 API 获取禁止匿名注册的公司
-    const loginResp = await request.post(`${baseURL}/api/auth/login', {
+    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -59,7 +59,7 @@ test.describe('匿名注册配置与系统保护', () => {
     }
     
     // 获取公司列表
-    const companiesResp = await request.get(`${baseURL}/api/company', {
+    const companiesResp = await request.get(``${baseURL}/api/company`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
