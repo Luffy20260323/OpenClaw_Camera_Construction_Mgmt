@@ -91,7 +91,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     });
     
     // 步骤 4: 测试登录无需验证码
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     
@@ -150,7 +150,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     });
     
     // 步骤 4: 测试登录需要图形验证码
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.waitForLoadState('networkidle');
     
     // 验证验证码输入框显示
@@ -216,7 +216,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     });
     
     // 步骤 4: 测试登录需要短信验证码
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.waitForLoadState('networkidle');
     
     // 验证短信验证码输入框显示
@@ -281,7 +281,7 @@ test.describe('SYS-002: 系统配置修改 - 登录验证码方式', () => {
     });
     
     // 步骤 3: 打开登录页面，验证无验证码输入框
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     let captchaInput = page.locator('input[name="captcha"]');
     let isVisible = await captchaInput.isVisible().catch(() => false);
     console.log('  配置为"不要验证码"时，验证码框显示:', isVisible);

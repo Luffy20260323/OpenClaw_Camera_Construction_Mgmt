@@ -14,7 +14,7 @@ test.describe('用户注册联动 - 补充测试', () => {
   test('UI-REG-002: 选择乙方公司后，角色列表仅显示乙方角色', async ({ page }) => {
     console.log('【UI-REG-002】测试开始：选择乙方公司 - 角色联动更新');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -46,7 +46,7 @@ test.describe('用户注册联动 - 补充测试', () => {
   test('UI-REG-003: 选择监理公司后，角色列表仅显示监理角色', async ({ page }) => {
     console.log('【UI-REG-003】测试开始：选择监理公司 - 角色联动更新');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -78,7 +78,7 @@ test.describe('用户注册联动 - 补充测试', () => {
   test('UI-REG-008: 选择监理公司角色后，不显示作业区选择框', async ({ page }) => {
     console.log('【UI-REG-008】测试开始：选择监理角色 - 不显示作业区');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -101,7 +101,7 @@ test.describe('用户注册联动 - 补充测试', () => {
   test('UI-REG-010: 未选择公司时，角色下拉框禁用或为空', async ({ page }) => {
     console.log('【UI-REG-010】测试开始：未选择公司 - 角色下拉框状态');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -128,7 +128,7 @@ test.describe('用户注册联动 - 补充测试', () => {
   test('UI-REG-011: 作业区角色判断逻辑验证', async ({ page }) => {
     console.log('【UI-REG-011】测试开始：作业区角色判断逻辑');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -172,7 +172,7 @@ test.describe('用户注册联动 - 补充测试', () => {
   test('UI-REG-012: 多选角色时，作业区选择逻辑验证', async ({ page }) => {
     console.log('【UI-REG-012】测试开始：多选角色 - 作业区逻辑');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     

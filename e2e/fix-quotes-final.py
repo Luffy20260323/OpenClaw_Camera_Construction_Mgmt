@@ -14,8 +14,8 @@ for filename in os.listdir(test_dir):
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     
-    # 修复双反引号问题：``${baseURL} 应该为 `${baseURL}
-    content = re.sub(r'``\$', r'`$', content)
+    # 修复 `${baseURL}/xxx' 为 `${baseURL}/xxx`
+    content = re.sub(r'\$\{baseURL\}/([^\'`]+)\'', r'`${baseURL}/\1`', content)
     
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(content)

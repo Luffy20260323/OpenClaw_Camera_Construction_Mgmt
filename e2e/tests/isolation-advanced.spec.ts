@@ -15,7 +15,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-003】测试开始：乙方管理员 - 公司列表验证');
     
     // 乙方管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'yifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -45,7 +45,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-004】测试开始：乙方管理员 - 角色列表验证');
     
     // 乙方管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'yifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -81,7 +81,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-005】测试开始：监理管理员 - 公司列表验证');
     
     // 监理管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'jianli_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -109,7 +109,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-006】测试开始：监理管理员 - 角色列表验证');
     
     // 监理管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'jianli_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -145,7 +145,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-007】测试开始：系统管理员 - 公司列表验证');
     
     // 系统管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
@@ -184,7 +184,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-008】测试开始：系统管理员 - 角色联动验证');
     
     // 系统管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');

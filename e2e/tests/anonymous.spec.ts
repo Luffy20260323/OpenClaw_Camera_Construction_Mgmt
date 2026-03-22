@@ -14,7 +14,7 @@ test.describe('匿名注册配置与系统保护', () => {
   test('TC-ANON-001: 登录页面注册表单中，只显示允许匿名注册的公司', async ({ page }) => {
     console.log('【TC-ANON-001】测试开始：登录页面公司列表过滤');
     
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -77,7 +77,7 @@ test.describe('匿名注册配置与系统保护', () => {
     console.log('禁止匿名注册的公司:', forbiddenCompany);
     
     // 步骤 2: 打开注册页面验证
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -99,7 +99,7 @@ test.describe('匿名注册配置与系统保护', () => {
     console.log('【TC-ANON-006】测试开始：系统保护公司配置字段状态');
     
     // 系统管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
@@ -142,7 +142,7 @@ test.describe('匿名注册配置与系统保护', () => {
     console.log('【TC-ANON-009】测试开始：普通公司配置可修改');
     
     // 系统管理员登录
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');

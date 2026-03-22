@@ -62,7 +62,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     console.log('更新配置响应状态:', updateResp.status());
     
     // 步骤 4: 打开登录页面验证
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -98,7 +98,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     // 这里只做验证，不实际修改
     
     // 打开注册页面
-    await page.goto(`${baseURL}/login');
+    await page.goto(`${baseURL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
