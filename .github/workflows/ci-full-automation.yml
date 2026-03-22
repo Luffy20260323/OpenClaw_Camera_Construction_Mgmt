@@ -132,11 +132,10 @@ jobs:
 
       - name: ⬆️ 上传构建产物
         uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'  # 仅手动触发时上传
         with:
           name: backend-jar
           path: backend/target/*.jar
-          retention-days: 1
+          retention-days: 1  # 仅保留 1 天，节省空间
 
   #-------------------------------------------------------------------------------
   # 任务 3：前端构建
@@ -181,11 +180,10 @@ jobs:
 
       - name: ⬆️ 上传构建产物
         uses: actions/upload-artifact@v4
-        if: github.event_name == 'workflow_dispatch'  # 仅手动触发时上传
         with:
           name: frontend-dist
           path: frontend/dist/
-          retention-days: 1
+          retention-days: 1  # 仅保留 1 天，节省空间
 
   #-------------------------------------------------------------------------------
   # 任务 4：API 自动化测试 (38 条) - 可选测试
