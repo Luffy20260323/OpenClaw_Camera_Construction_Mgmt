@@ -29,8 +29,8 @@ export default defineConfig({
   
   // 共享配置
   use: {
-    // 基础 URL
-    baseURL: process.env.CI ? 'http://localhost:8080' : 'http://localhost',
+    // 基础 URL - 优先使用环境变量，其次检测 CI 环境
+    baseURL: process.env.BASE_URL || (process.env.CI ? 'http://localhost:8080' : 'http://localhost:8080'),
     
     // 截图
     screenshot: 'only-on-failure',

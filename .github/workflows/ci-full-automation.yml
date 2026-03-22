@@ -411,10 +411,13 @@ jobs:
           done
 
       - name: 🎭 运行 Playwright E2E 测试
+        env:
+          BASE_URL: http://localhost:8080
         run: |
           echo "=========================================="
           echo "前端 E2E 自动化测试 - 39 条用例"
           echo "=========================================="
+          echo "BASE_URL: $BASE_URL"
           
           # 根据输入选择测试范围
           TEST_SCOPE="${{ github.event.inputs.test_scope || 'all' }}"
@@ -425,11 +428,11 @@ jobs:
               ;;
             e2e-only)
               echo "运行所有 E2E 测试..."
-              npm run e2e
+              npx playwright test --reporter=list
               ;;
             all|*)
               echo "运行所有 E2E 测试..."
-              npm run e2e
+              npx playwright test --reporter=list
               ;;
           esac
           
