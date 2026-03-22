@@ -24,7 +24,7 @@ test.describe('界面与体验', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       
       // 打开登录页面
-      await page.goto('/login');
+      await page.goto(`${baseURL}/login');
       
       // 验证页面元素正常显示
       await expect(page.locator('body')).toBeVisible();
@@ -49,7 +49,7 @@ test.describe('界面与体验', () => {
     await page.setViewportSize({ width: 375, height: 667 });
     
     // 打开登录页面
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     
     // 验证触摸操作
     const usernameInput = page.locator('input[name="username"]');
@@ -79,7 +79,7 @@ test.describe('界面与体验', () => {
     
     // 测试桌面端
     await page.setViewportSize({ width: 1920, height: 1080 });
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     
     const desktopElements = await page.$$eval('form input, form button, form select', 
       elements => elements.map(el => el.getAttribute('name') || el.textContent).filter(Boolean)
@@ -87,7 +87,7 @@ test.describe('界面与体验', () => {
     
     // 测试移动端
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     
     const mobileElements = await page.$$eval('form input, form button, form select', 
       elements => elements.map(el => el.getAttribute('name') || el.textContent).filter(Boolean)
@@ -110,7 +110,7 @@ test.describe('界面与体验', () => {
     // 开始性能测试
     const startTime = Date.now();
     
-    await page.goto('/login', { waitUntil: 'networkidle' });
+    await page.goto(`${baseURL}/login', { waitUntil: 'networkidle' });
     
     const loadTime = Date.now() - startTime;
     console.log(`  页面加载时间：${loadTime}ms`);
@@ -140,7 +140,7 @@ test.describe('界面与体验', () => {
   test('UI-005: 无障碍访问测试 - 基本可访问性', async ({ page }) => {
     console.log('【UI-005】测试开始：无障碍访问测试');
     
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     
     // 验证所有输入框都有 label
     const inputs = await page.$$eval('input', inputs => {

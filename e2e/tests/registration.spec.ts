@@ -5,6 +5,9 @@
 
 import { test, expect } from '@playwright/test';
 
+// 配置 baseURL
+const baseURL = process.env.BASE_URL || 'http://localhost:8080';
+
 test.describe('用户注册 - 公司角色联动', () => {
   
   // UI-REG-001: 选择甲方公司 - 角色联动更新
@@ -12,7 +15,7 @@ test.describe('用户注册 - 公司角色联动', () => {
     console.log('【UI-REG-001】测试开始：选择甲方公司 - 角色联动更新');
     
     // 打开注册页面
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.click('text=注册');
     
     // 等待页面加载
@@ -48,7 +51,7 @@ test.describe('用户注册 - 公司角色联动', () => {
   test('UI-REG-005: 选择甲方作业区角色后，显示作业区选择框', async ({ page }) => {
     console.log('【UI-REG-005】测试开始：选择甲方作业区角色 - 显示作业区');
     
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -75,7 +78,7 @@ test.describe('用户注册 - 公司角色联动', () => {
   test('UI-REG-006: 选择甲方非作业区角色后，不显示作业区选择框', async ({ page }) => {
     console.log('【UI-REG-006】测试开始：选择甲方非作业区角色 - 不显示作业区');
     
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -98,7 +101,7 @@ test.describe('用户注册 - 公司角色联动', () => {
   test('UI-REG-007: 选择乙方公司角色后，不显示作业区选择框', async ({ page }) => {
     console.log('【UI-REG-007】测试开始：选择乙方角色 - 不显示作业区');
     
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -121,7 +124,7 @@ test.describe('用户注册 - 公司角色联动', () => {
   test('UI-REG-009: 切换角色时，作业区选择框动态显示/隐藏', async ({ page }) => {
     console.log('【UI-REG-009】测试开始：切换角色 - 作业区框动态响应');
     
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -158,7 +161,7 @@ test.describe('用户注册 - 公司角色联动', () => {
   test('UI-REG-004: 切换公司后，角色列表立即刷新', async ({ page }) => {
     console.log('【UI-REG-004】测试开始：切换公司 - 角色列表刷新');
     
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     

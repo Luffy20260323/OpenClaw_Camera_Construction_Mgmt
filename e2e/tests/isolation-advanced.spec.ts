@@ -5,6 +5,9 @@
 
 import { test, expect } from '@playwright/test';
 
+// 配置 baseURL
+const baseURL = process.env.BASE_URL || 'http://localhost:8080';
+
 test.describe('管理员数据隔离 - 补充测试', () => {
   
   // TC-ISO-003: 乙方管理员 - 公司列表验证
@@ -12,7 +15,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-003】测试开始：乙方管理员 - 公司列表验证');
     
     // 乙方管理员登录
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.fill('input[name="username"]', 'yifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -42,7 +45,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-004】测试开始：乙方管理员 - 角色列表验证');
     
     // 乙方管理员登录
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.fill('input[name="username"]', 'yifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -78,7 +81,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-005】测试开始：监理管理员 - 公司列表验证');
     
     // 监理管理员登录
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.fill('input[name="username"]', 'jianli_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -106,7 +109,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-006】测试开始：监理管理员 - 角色列表验证');
     
     // 监理管理员登录
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.fill('input[name="username"]', 'jianli_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -142,7 +145,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-007】测试开始：系统管理员 - 公司列表验证');
     
     // 系统管理员登录
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
@@ -181,7 +184,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-008】测试开始：系统管理员 - 角色联动验证');
     
     // 系统管理员登录
-    await page.goto('/login');
+    await page.goto(`${baseURL}/login');
     await page.fill('input[name="username"]', 'admin');
     await page.fill('input[name="password"]', 'admin123');
     await page.click('button[type="submit"]');
@@ -230,7 +233,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-010】测试开始：乙方管理员 API 越权测试');
     
     // 乙方管理员登录
-    const loginResp = await request.post('/api/auth/login', {
+    const loginResp = await request.post(`${baseURL}/api/auth/login', {
       data: {
         username: 'yifang_admin',
         password: 'password123',
@@ -243,7 +246,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     expect(token).toBeTruthy();
     
     // 尝试创建甲方用户
-    const createResp = await request.post('/api/user', {
+    const createResp = await request.post(`${baseURL}/api/user', {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -271,7 +274,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     console.log('【TC-ISO-011】测试开始：监理管理员 API 越权测试');
     
     // 监理管理员登录
-    const loginResp = await request.post('/api/auth/login', {
+    const loginResp = await request.post(`${baseURL}/api/auth/login', {
       data: {
         username: 'jianli_admin',
         password: 'password123',
@@ -284,7 +287,7 @@ test.describe('管理员数据隔离 - 补充测试', () => {
     expect(token).toBeTruthy();
     
     // 尝试创建乙方用户
-    const createResp = await request.post('/api/user', {
+    const createResp = await request.post(`${baseURL}/api/user', {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
