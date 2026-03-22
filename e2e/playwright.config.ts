@@ -30,7 +30,7 @@ export default defineConfig({
   // 共享配置
   use: {
     // 基础 URL
-    baseURL: 'http://localhost',
+    baseURL: process.env.CI ? 'http://localhost:8080' : 'http://localhost',
     
     // 截图
     screenshot: 'only-on-failure',
