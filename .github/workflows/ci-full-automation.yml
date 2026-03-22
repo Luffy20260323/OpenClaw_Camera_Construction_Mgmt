@@ -264,7 +264,8 @@ jobs:
           echo "API 自动化测试 - 38 条用例"
           echo "=========================================="
           
-          bash /root/.openclaw/workspace/OpenClaw_Camera_Construction_Mgmt/scripts/run-api-tests.sh
+          chmod +x scripts/run-api-tests.sh
+          bash scripts/run-api-tests.sh
           
           echo "=========================================="
           echo "API 测试完成"
@@ -324,8 +325,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: package-lock.json
 
       - name: 📦 安装依赖
         run: |
