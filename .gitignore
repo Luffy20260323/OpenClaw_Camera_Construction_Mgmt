@@ -1,61 +1,19 @@
-# Node modules
-node_modules/
-frontend/node_modules/
-
-# Build outputs
-dist/
-frontend/dist/
-target/
+# Java 编译产物
 backend/target/
+backend/*.jar
+*.class
 
-# Logs
-*.log
-logs/
-/tmp/
-/var/log/
+# Node.js 依赖
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
 
-# OS files
+# IDE 文件
+.idea/
+*.iml
+.vscode/
+.settings/
+
+# 系统文件
 .DS_Store
 Thumbs.db
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*.iml
-
-# Environment files (IMPORTANT: Never commit these!)
-.env
-.env.local
-.env.*.local
-.env.production
-.env.docker
-
-# Secrets and credentials
-*.pem
-*.key
-*.crt
-secrets/
-credentials/
-
-# Database
-*.db
-*.sqlite
-*.sql.gz
-
-# Uploads
-uploads/
-files/
-
-# Docker
-.docker/
-
-# Test coverage
-coverage/
-*.lcov
-
-# Maven
-.mvn/
-mvnw
-mvnw.cmd
