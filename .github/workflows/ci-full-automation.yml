@@ -235,6 +235,15 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: 🗄️ 初始化数据库表结构
+        run: |
+          echo "初始化数据库表结构..."
+          PGPASSWORD=postgres psql -h localhost -U postgres -d camera_construction_db -f backend/src/main/resources/db/migration/V1__initial_schema.sql
+          echo "插入初始数据..."
+          PGPASSWORD=postgres psql -h localhost -U postgres -d camera_construction_db -f backend/src/main/resources/db/migration/V2__initial_data.sql
+          PGPASSWORD=postgres psql -h localhost -U postgres -d camera_construction_db -f backend/src/main/resources/db/migration/V3__publish_initial_companies_and_work_areas.sql
+          echo "✅ 数据库初始化完成"
+
       - name: 🚀 启动后端服务
         run: |
           echo "启动后端服务..."
@@ -347,6 +356,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🗄️ 初始化数据库表结构
+        run: |
+          echo "初始化数据库表结构..."
+          PGPASSWORD=postgres psql -h localhost -U postgres -d camera_construction_db -f backend/src/main/resources/db/migration/V1__initial_schema.sql
+          echo "插入初始数据..."
+          PGPASSWORD=postgres psql -h localhost -U postgres -d camera_construction_db -f backend/src/main/resources/db/migration/V2__initial_data.sql
+          PGPASSWORD=postgres psql -h localhost -U postgres -d camera_construction_db -f backend/src/main/resources/db/migration/V3__publish_initial_companies_and_work_areas.sql
+          echo "✅ 数据库初始化完成"
 
       - name: 📦 安装依赖
         run: |
