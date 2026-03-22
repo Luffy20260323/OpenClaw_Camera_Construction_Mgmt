@@ -8,6 +8,7 @@ import { test, expect } from '@playwright/test';
 test.describe('匿名注册配置与系统保护 - 补充测试', () => {
   // 配置 baseURL
   const baseURL = process.env.BASE_URL || 'http://localhost:8080';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
   
   // TC-ANON-002: 修改公司配置后列表更新
   test('TC-ANON-002: 修改公司匿名注册配置后，登录页面公司列表立即更新', async ({ page, request }) => {
@@ -62,7 +63,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     console.log('更新配置响应状态:', updateResp.status());
     
     // 步骤 4: 打开登录页面验证
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${FRONTEND_URL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     
@@ -98,7 +99,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     // 这里只做验证，不实际修改
     
     // 打开注册页面
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${FRONTEND_URL}/login`);
     await page.click('text=注册');
     await page.waitForLoadState('networkidle');
     

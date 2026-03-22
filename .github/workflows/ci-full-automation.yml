@@ -374,6 +374,9 @@ jobs:
           echo "📦 安装 Playwright 浏览器..."
           npx playwright install chromium --with-deps
           
+          echo "📦 安装 serve 用于托管前端..."
+          npm install -g serve
+          
           echo "✅ 依赖安装完成"
 
       - name: 🚀 启动后端服务
@@ -410,9 +413,36 @@ jobs:
             sleep 2
           done
 
+      - name: 🚀 启动前端服务
+        run: |
+          echo "启动前端服务..."
+          
+          # 使用 serve 托管前端构建产物
+          cd frontend/dist
+          nohup serve -s -l 3000 > /tmp/frontend.log 2>&1 &
+          FRONTEND_PID=$!
+          echo "前端进程 ID: $FRONTEND_PID"
+          echo $FRONTEND_PID > /tmp/frontend.pid
+          
+          echo "等待前端启动..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null 2>&1; then
+              echo "✅ 前端启动成功！http://localhost:3000"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "❌ 前端启动超时"
+              echo "前端日志:"
+              tail -20 /tmp/frontend.log
+              exit 1
+            fi
+            sleep 1
+          done
+
       - name: 🎭 运行 Playwright E2E 测试
         env:
           BASE_URL: http://localhost:8080
+          FRONTEND_URL: http://localhost:3000
         run: |
           echo "=========================================="
           echo "前端 E2E 自动化测试 - 39 条用例"

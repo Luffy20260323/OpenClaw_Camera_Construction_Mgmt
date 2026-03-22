@@ -7,6 +7,7 @@ import { test, expect } from '@playwright/test';
 
 // 配置 baseURL
 const baseURL = process.env.BASE_URL || 'http://localhost:8080';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 test.describe('管理员创建用户 - 数据隔离', () => {
   
@@ -15,7 +16,7 @@ test.describe('管理员创建用户 - 数据隔离', () => {
     console.log('【TC-ISO-001】测试开始：甲方管理员 - 公司列表验证');
     
     // 甲方管理员登录（需要真实账号）
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${FRONTEND_URL}/login`);
     await page.fill('input[name="username"]', 'jifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -53,7 +54,7 @@ test.describe('管理员创建用户 - 数据隔离', () => {
     console.log('【TC-ISO-002】测试开始：甲方管理员 - 角色列表验证');
     
     // 甲方管理员登录
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${FRONTEND_URL}/login`);
     await page.fill('input[name="username"]', 'jifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
@@ -137,7 +138,7 @@ test.describe('管理员创建用户 - 数据隔离', () => {
     console.log('【TC-ISO-012】测试开始：作业区数据隔离验证');
     
     // 甲方管理员登录
-    await page.goto(`${baseURL}/login`);
+    await page.goto(`${FRONTEND_URL}/login`);
     await page.fill('input[name="username"]', 'jifang_admin');
     await page.fill('input[name="password"]', 'password123');
     await page.click('button[type="submit"]');
