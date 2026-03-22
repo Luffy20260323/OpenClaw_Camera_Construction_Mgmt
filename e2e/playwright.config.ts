@@ -30,7 +30,12 @@ export default defineConfig({
   // 共享配置
   use: {
     // 基础 URL - 优先使用环境变量，其次检测 CI 环境
-    baseURL: process.env.BASE_URL || (process.env.CI ? 'http://localhost:8080' : 'http://localhost:8080'),
+    baseURL: process.env.BASE_URL || 'http://localhost:8080',
+    
+    // API 请求基础 URL
+    extraHTTPHeaders: {
+      'Accept': 'application/json',
+    },
     
     // 截图
     screenshot: 'only-on-failure',
@@ -40,6 +45,11 @@ export default defineConfig({
     
     // 追踪
     trace: 'retain-on-failure',
+  },
+  
+  // 为 API 请求配置 baseURL
+  expect: {
+    timeout: 5000
   },
   
   // 浏览器项目
