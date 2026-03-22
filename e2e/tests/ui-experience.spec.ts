@@ -110,7 +110,7 @@ test.describe('界面与体验', () => {
     // 开始性能测试
     const startTime = Date.now();
     
-    await page.goto(``${baseURL}/login`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseURL}/login`, { waitUntil: 'networkidle' });
     
     const loadTime = Date.now() - startTime;
     console.log(`  页面加载时间：${loadTime}ms`);

@@ -89,7 +89,7 @@ test.describe('管理员创建用户 - 数据隔离', () => {
     console.log('【TC-ISO-009】测试开始：API 越权测试');
     
     // 甲方管理员登录获取 token
-    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
+    const loginResp = await request.post(`${baseURL}/api/auth/login`, {
       data: {
         username: 'jifang_admin',
         password: 'password123',
@@ -104,7 +104,7 @@ test.describe('管理员创建用户 - 数据隔离', () => {
     expect(token).toBeTruthy();
     
     // 尝试创建乙方用户（companyId=6）
-    const createResp = await request.post(``${baseURL}/api/user`, {
+    const createResp = await request.post(`${baseURL}/api/user`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'

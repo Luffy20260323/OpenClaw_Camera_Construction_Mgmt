@@ -32,7 +32,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     }
     
     // 步骤 2: 获取公司列表，找到一个禁止匿名注册的公司
-    const companiesResp = await request.get(``${baseURL}/api/company`, {
+    const companiesResp = await request.get(`${baseURL}/api/company`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -120,7 +120,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     console.log('【TC-ANON-005】测试开始：API 注册权限验证');
     
     // 获取公司列表，找到一个禁止匿名注册的公司
-    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
+    const loginResp = await request.post(`${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -136,7 +136,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
       return;
     }
     
-    const companiesResp = await request.get(``${baseURL}/api/company`, {
+    const companiesResp = await request.get(`${baseURL}/api/company`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -153,7 +153,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     console.log('禁止匿名注册的公司:', forbiddenCompany);
     
     // 尝试注册
-    const registerResp = await request.post(``${baseURL}/api/auth/register`, {
+    const registerResp = await request.post(`${baseURL}/api/auth/register`, {
       data: {
         username: 'test_anonymous_' + Date.now(),
         password: 'Test123!',
@@ -179,7 +179,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     console.log('【TC-ANON-007】测试开始：系统保护公司 API 修改配置');
     
     // 系统管理员登录
-    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
+    const loginResp = await request.post(`${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -191,7 +191,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     const token = loginData.data?.token;
     
     // 尝试修改系统保护公司（ID=1）的匿名注册配置
-    const updateResp = await request.put(``${baseURL}/api/company/1`, {
+    const updateResp = await request.put(`${baseURL}/api/company/1`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -219,7 +219,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     // 这里假设存在这样的账号
     
     // 尝试用普通系统管理员登录（如果存在）
-    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
+    const loginResp = await request.post(`${baseURL}/api/auth/login`, {
       data: {
         username: 'sys_admin', // 假设的普通系统管理员
         password: 'password123',
@@ -236,7 +236,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     const token = loginData.data?.token;
     
     // 尝试修改系统保护公司
-    const updateResp = await request.put(``${baseURL}/api/company/1`, {
+    const updateResp = await request.put(`${baseURL}/api/company/1`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -263,7 +263,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     // 而不仅仅依赖数据库字段
     
     // 系统管理员登录
-    const loginResp = await request.post(``${baseURL}/api/auth/login`, {
+    const loginResp = await request.post(`${baseURL}/api/auth/login`, {
       data: {
         username: 'admin',
         password: 'admin123',
@@ -275,7 +275,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     const token = loginData.data?.token;
     
     // 获取系统保护公司信息
-    const companyResp = await request.get(``${baseURL}/api/company/1`, {
+    const companyResp = await request.get(`${baseURL}/api/company/1`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     
@@ -288,7 +288,7 @@ test.describe('匿名注册配置与系统保护 - 补充测试', () => {
     expect(company.isSystemProtected).toBeTruthy();
     
     // 尝试通过编辑接口修改
-    const updateResp = await request.put(``${baseURL}/api/company/1`, {
+    const updateResp = await request.put(`${baseURL}/api/company/1`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
