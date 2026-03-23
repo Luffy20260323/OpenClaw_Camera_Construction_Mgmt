@@ -56,10 +56,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Keep only last 10 workflow runs
-          gh run list --limit 100 --json databaseId --jq '.[10:] | .[].databaseId' | xargs -I {} gh run delete {} || true
+          # Keep only last 5 workflow runs, delete the rest
+          gh run list --limit 100 --json databaseId --jq '.[5:] | .[].databaseId' | xargs -I {} gh run delete {} || true
           
-          # Cleanup old artifacts (older than 7 days)
-          gh api /repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[] | select(.created_at < (now - 604800)) | .id' | xargs -I {} gh api -X DELETE /repos/${{ github.repository }}/actions/artifacts/{} || true
+          # Keep artifacts only from the most recent workflow run, delete others
+          # Get the most recent run ID
+          LATEST_RUN_ID=$(gh run list --limit 1 --json databaseId --jq '.[0].databaseId')
           
-          echo "✅ Cleanup completed"
+          # Delete all artifacts not belonging to the latest run
+          gh api /repos/${{ github.repository }}/actions/artifacts --paginate --jq '.artifacts[] | select(.workflow_run.id != '"$LATEST_RUN_ID"') | .id' | xargs -I {} gh api -X DELETE /repos/${{ github.repository }}/actions/artifacts/{} || true
+          
+          echo "✅ Cleanup completed: Kept last 5 workflow runs, kept artifacts only from the most recent run"
