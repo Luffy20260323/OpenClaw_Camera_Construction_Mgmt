@@ -31,7 +31,7 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD || 'testpassword123' }}
           MYSQL_DATABASE: camera_construction
         options: >-
           --health-cmd "mysqladmin ping"
@@ -62,8 +62,9 @@ jobs:
     - name: Wait for MySQL
       run: |
         echo "Waiting for MySQL to be ready..."
+        MYSQL_ROOT_PWD="${{ secrets.MYSQL_ROOT_PASSWORD || 'testpassword123' }}"
         for i in {1..30}; do
-          if mysql -h 127.0.0.1 -P 3306 -uroot -proot -e "SELECT 1" &> /dev/null; then
+          if mysql -h 127.0.0.1 -P 3306 -uroot -p"$MYSQL_ROOT_PWD" -e "SELECT 1" &> /dev/null; then
             echo "MySQL is ready!"
             exit 0
           fi
@@ -78,7 +79,7 @@ jobs:
         DB_HOST: 127.0.0.1
         DB_PORT: 3306
         DB_USER: root
-        DB_PASSWORD: root
+        DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD || 'testpassword123' }}
         DB_NAME: camera_construction
       run: npm run migrate
     
@@ -88,9 +89,9 @@ jobs:
         DB_HOST: 127.0.0.1
         DB_PORT: 3306
         DB_USER: root
-        DB_PASSWORD: root
+        DB_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD || 'testpassword123' }}
         DB_NAME: camera_construction
-        JWT_SECRET: test-jwt-secret
+        JWT_SECRET: ${{ secrets.JWT_SECRET || 'test-jwt-secret-for-ci' }}
         PORT: 8080
       run: |
         npm start &
@@ -142,7 +143,7 @@ jobs:
       with:
         name: test-results
         path: backend/tests/reports/
-        retention-days: 30
+        retention-days: 1
     
     - name: Publish test report
       if: always()

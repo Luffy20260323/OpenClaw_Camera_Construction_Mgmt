@@ -252,7 +252,7 @@ jobs:
           cp .env.example .env
           echo "DB_PASSWORD=test_password_123!" >> .env
           echo "JWT_SECRET=$(openssl rand -base64 32)" >> .env
-          echo "MINIO_ACCESS_KEY=testaccesskey" >> .env
+          echo "MINIO_ACCESS_KEY=${{ secrets.MINIO_ACCESS_KEY || 'testaccesskey' }}" >> .env
           echo "MINIO_SECRET_KEY=$(openssl rand -hex 20)" >> .env
 
       - name: 🔍 验证 docker-compose.yml 语法
