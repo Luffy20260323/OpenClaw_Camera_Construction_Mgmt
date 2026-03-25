@@ -4,15 +4,17 @@
         <template #header>
           <div class="card-header">
             <span>公司管理</span>
-            <el-button 
-              v-if="canManageCompany"
-              type="primary" 
-              @click="showCreateDialog"
-            >
-              <el-icon><Plus /></el-icon>
-              新建公司
-            </el-button>
-            <el-tag v-if="!canManageCompany" type="info">👁️ 只读模式</el-tag>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <el-tag v-if="!canManageCompany" type="info">👁️ 只读模式</el-tag>
+              <el-button 
+                v-if="canManageCompany"
+                type="primary" 
+                @click="showCreateDialog"
+              >
+                <el-icon><Plus /></el-icon>
+                新建公司
+              </el-button>
+            </div>
           </div>
         </template>
 
@@ -125,6 +127,81 @@
         @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: flex-end"
       />
+
+      <!-- 创建/编辑对话框 -->
+      <el-dialog
+        v-model="dialogVisible"
+        :title="dialogTitle"
+        width="600px"
+        :close-on-click-modal="false"
+        @closed="resetForm"
+      >
+        <el-form
+          ref="companyFormRef"
+          :model="companyForm"
+          :rules="rules"
+          label-width="140px"
+        >
+          <el-form-item label="公司名称" prop="companyName">
+            <el-input v-model="companyForm.companyName" placeholder="请输入公司名称" />
+          </el-form-item>
+          
+          <el-form-item label="公司类型" prop="typeId">
+            <el-select v-model="companyForm.typeId" placeholder="请选择公司类型" style="width: 100%">
+              <el-option
+                v-for="type in companyTypes"
+                :key="type.id"
+                :label="type.typeName"
+                :value="type.id"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="统一社会信用代码">
+            <el-input v-model="companyForm.unifiedSocialCreditCode" placeholder="请输入统一社会信用代码" />
+          </el-form-item>
+          
+          <el-form-item label="联系人">
+            <el-input v-model="companyForm.contactPerson" placeholder="请输入联系人姓名" />
+          </el-form-item>
+          
+          <el-form-item label="联系电话">
+            <el-input v-model="companyForm.contactPhone" placeholder="请输入联系电话" />
+          </el-form-item>
+          
+          <el-form-item label="联系邮箱">
+            <el-input v-model="companyForm.contactEmail" placeholder="请输入联系邮箱" />
+          </el-form-item>
+          
+          <el-form-item label="地址">
+            <el-input v-model="companyForm.address" placeholder="请输入公司地址" type="textarea" :rows="2" />
+          </el-form-item>
+          
+          <el-form-item label="描述">
+            <el-input v-model="companyForm.description" placeholder="请输入公司描述" type="textarea" :rows="3" />
+          </el-form-item>
+          
+          <el-form-item label="状态">
+            <el-radio-group v-model="companyForm.status">
+              <el-radio label="active">正常</el-radio>
+              <el-radio label="inactive">禁用</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          
+          <el-form-item label="允许匿名注册">
+            <el-switch v-model="companyForm.allowAnonymousRegister" />
+          </el-form-item>
+          
+          <el-form-item label="系统保护">
+            <el-switch v-model="companyForm.isSystemProtected" />
+          </el-form-item>
+        </el-form>
+        
+        <template #footer>
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        </template>
+      </el-dialog>
     </el-card>
   </AdminLayout>
 </template>
@@ -141,22 +218,39 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // 权限验证：只有系统管理员可以访问
-onMounted(() => {
+const checkPermissions = () => {
+  // 确保用户信息已从 localStorage 加载
+  if (!userStore.userInfo || Object.keys(userStore.userInfo).length === 0) {
+    const savedUserInfo = localStorage.getItem('userInfo')
+    if (savedUserInfo) {
+      try {
+        userStore.userInfo = JSON.parse(savedUserInfo)
+      } catch (e) {
+        console.error('解析用户信息失败:', e)
+      }
+    }
+  }
+  
+  console.log('[CompanyList] checkPermissions - isLoggedIn:', userStore.isLoggedIn, 'companyTypeId:', userStore.companyTypeId)
+  
   if (!userStore.isLoggedIn) {
     ElMessage.error('请先登录')
     router.push('/login')
-    return
+    return false
   }
   if (userStore.companyTypeId !== 4) {
     ElMessage.warning('您没有权限访问此页面')
     router.push('/')
-    return
+    return false
   }
-})
+  return true
+}
 
 // 判断是否为系统管理员
 const canManageCompany = computed(() => {
-  return userStore.companyTypeId === 4
+  const val = userStore.companyTypeId === 4
+  console.log('[CompanyList] canManageCompany:', val, 'companyTypeId:', userStore.companyTypeId)
+  return val
 })
 
 const goBack = () => {
@@ -282,6 +376,7 @@ const showCreateDialog = () => {
 
 // 显示编辑对话框
 const showEditDialog = (row) => {
+  console.log('[CompanyList] showEditDialog called - row:', row, 'canManageCompany:', canManageCompany.value)
   dialogMode.value = 'edit'
   dialogVisible.value = true
   
@@ -395,6 +490,24 @@ const getTypeTag = (typeId) => {
 const dialogTitle = dialogMode.value === 'create' ? '创建公司' : '编辑公司'
 
 onMounted(() => {
+  // 权限检查
+  if (!checkPermissions()) {
+    return
+  }
+  
+  // 确保用户信息已加载
+  if (!userStore.userInfo || Object.keys(userStore.userInfo).length === 0) {
+    const savedUserInfo = localStorage.getItem('userInfo')
+    if (savedUserInfo) {
+      try {
+        userStore.userInfo = JSON.parse(savedUserInfo)
+      } catch (e) {
+        console.error('解析用户信息失败:', e)
+      }
+    }
+  }
+  
+  console.log('[CompanyList] onMounted - userInfo:', userStore.userInfo, 'companyTypeId:', userStore.companyTypeId, 'canManageCompany:', canManageCompany.value)
   getCompanyTypes()
   getCompanyList()
 })
@@ -439,6 +552,13 @@ onMounted(() => {
       display: flex;
       justify-content: space-between;
       align-items: center;
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+      }
     }
 
     .search-form {
