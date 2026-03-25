@@ -19,10 +19,24 @@ frontend/.vite/
 Thumbs.db
 
 # 环境变量（敏感信息）
+# 敏感配置文件（绝对不要提交）
 .env
 .env.local
 .env.*.local
 *.env
+*.env.backup
+/etc/camera-system/.env
+docs/.env.backup-*
+
+# 数据库备份
+*.sql
+docs/db-*.sql
+
+# 密钥文件
+*.key
+*.pem
+*.crt
+secrets/
 e2e/.env
 **/.env
 

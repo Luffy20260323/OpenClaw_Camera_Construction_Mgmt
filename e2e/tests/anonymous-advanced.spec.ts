@@ -8,7 +8,7 @@ import { test, expect } from '@playwright/test';
 test.describe('匿名注册配置与系统保护 - 补充测试', () => {
   // 配置 baseURL
   const baseURL = process.env.BASE_URL || 'http://localhost:8080';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const FRONTEND_URL = process.env.FRONTEND_URL || process.env.BASE_URL || 'http://localhost:8080';
   
   // TC-ANON-002: 修改公司配置后列表更新
   test('TC-ANON-002: 修改公司匿名注册配置后，登录页面公司列表立即更新', async ({ page, request }) => {

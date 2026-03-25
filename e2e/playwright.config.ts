@@ -3,6 +3,11 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright 测试配置
  * 摄像头生命周期管理系统 - 前端自动化测试
+ * 
+ * 环境变量说明：
+ * - BASE_URL: 前端基础 URL (默认：http://localhost:8080)
+ * - FRONTEND_URL: 前端 URL (与 BASE_URL 相同，用于测试脚本)
+ * - CI: 是否在 CI 环境中运行
  */
 export default defineConfig({
   // 测试目录
@@ -29,8 +34,9 @@ export default defineConfig({
   
   // 共享配置
   use: {
-    // 基础 URL - 优先使用环境变量，其次检测 CI 环境
-    baseURL: process.env.BASE_URL || 'http://localhost:8080',
+    // 基础 URL - 优先使用环境变量
+    // 优先级：BASE_URL > FRONTEND_URL > 默认值
+    baseURL: process.env.BASE_URL || process.env.FRONTEND_URL || 'http://localhost:8080',
     
     // API 请求基础 URL
     extraHTTPHeaders: {

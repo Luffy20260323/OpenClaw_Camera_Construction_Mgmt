@@ -11,12 +11,12 @@ export const useUserStore = defineStore('user', {
   
   getters: {
     isLoggedIn: (state) => !!state.token,
-    username: (state) => state.userInfo.username || '',
-    realName: (state) => state.userInfo.realName || '',
-    roles: (state) => state.userInfo.roles || [],
-    permissions: (state) => state.userInfo.permissions || [],
-    companyId: (state) => state.userInfo.companyId || null,
-    companyTypeId: (state) => state.userInfo.companyTypeId || null
+    username: (state) => state.userInfo?.username || '',
+    realName: (state) => state.userInfo?.realName || '',
+    roles: (state) => state.userInfo?.roles || [],
+    permissions: (state) => state.userInfo?.permissions || [],
+    companyId: (state) => state.userInfo?.companyId || null,
+    companyTypeId: (state) => state.userInfo?.companyTypeId || null
   },
   
   actions: {
@@ -26,14 +26,20 @@ export const useUserStore = defineStore('user', {
         const res = await login(loginForm)
         const { accessToken, refreshToken, userInfo } = res.data
         
+        // 先保存到 localStorage
+        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('refreshToken', refreshToken)
+        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        
+        // 再更新 state（确保顺序）
         this.token = accessToken
         this.refreshToken = refreshToken
         this.userInfo = userInfo
         
-        // 保存到 localStorage
-        localStorage.setItem('accessToken', accessToken)
-        localStorage.setItem('refreshToken', refreshToken)
-        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        // 强制触发响应式更新
+        this.$patch({
+          userInfo: { ...userInfo }
+        })
         
         ElMessage.success('登录成功')
         return Promise.resolve(res)

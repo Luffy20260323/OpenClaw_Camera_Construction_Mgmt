@@ -133,7 +133,7 @@ jobs:
         with:
           name: backend-jar
           path: backend/target/*.jar
-          retention-days: 30
+          retention-days: 1
 
   #-------------------------------------------------------------------------------
   # 任务 3：前端构建
@@ -181,7 +181,7 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist/
-          retention-days: 30
+          retention-days: 1
 
   #-------------------------------------------------------------------------------
   # 任务 4：Docker 构建

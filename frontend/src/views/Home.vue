@@ -116,13 +116,21 @@ const displayRoles = computed(() => {
 
 // 判断是否为系统管理员（优先使用 roles 判断）
 const isSystemAdmin = computed(() => {
-  const _trigger = userStore.userInfo
-  if (_trigger && _trigger.roles && _trigger.roles.length > 0) {
-    return _trigger.roles.includes('system_admin')
+  const userInfo = userStore.userInfo
+  if (!userInfo) return false
+  
+  // 检查角色列表中是否包含 system_admin 或 ROLE_SYSTEM_ADMIN
+  const roles = userInfo.roles || []
+  if (roles.length > 0) {
+    return roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
   }
-  if (_trigger && _trigger.companyTypeId) {
-    return _trigger.companyTypeId === 4
+  
+  // 备用方案：检查公司类型 ID
+  const companyTypeId = userInfo.companyTypeId
+  if (companyTypeId) {
+    return companyTypeId === 4
   }
+  
   return false
 })
 

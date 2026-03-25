@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 
 // 配置 baseURL
 const baseURL = process.env.BASE_URL || 'http://localhost:8080';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const FRONTEND_URL = process.env.FRONTEND_URL || process.env.BASE_URL || 'http://localhost:8080';
 import * as fs from 'fs';
 import * as path from 'path';
 

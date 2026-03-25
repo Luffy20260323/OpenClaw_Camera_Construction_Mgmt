@@ -599,17 +599,20 @@ const handleLogin = async () => {
           }
         })
         
-        // 保存 token
-        localStorage.setItem('accessToken', res.data.accessToken)
-        localStorage.setItem('refreshToken', res.data.refreshToken)
-        
-        // 保存用户信息
+        // 先更新 userStore（确保响应式）
         userStore.token = res.data.accessToken
         userStore.refreshToken = res.data.refreshToken
         userStore.userInfo = res.data.userInfo
-        localStorage.setItem("userInfo", JSON.stringify(res.data.userInfo))
+        
+        // 再保存到 localStorage
+        localStorage.setItem('accessToken', res.data.accessToken)
+        localStorage.setItem('refreshToken', res.data.refreshToken)
+        localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
         
         ElMessage.success('登录成功')
+        
+        // 等待响应式更新完成后再跳转
+        await new Promise(resolve => setTimeout(resolve, 100))
         
         // 跳转到首页
         router.push('/')

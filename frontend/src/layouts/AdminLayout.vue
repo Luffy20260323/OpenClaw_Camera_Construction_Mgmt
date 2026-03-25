@@ -13,7 +13,7 @@
         </el-button>
         
         <!-- 用户信息下拉菜单 -->
-        <el-dropdown @command="handleCommand" class="user-dropdown">
+        <el-dropdown @command="handleCommand" class="user-dropdown" :key="menuKey">
           <span class="user-info">
             <el-avatar :size="32" icon="User" />
             <span class="username">{{ userStore.realName || userStore.username }}</span>
@@ -23,11 +23,11 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item v-if="canManageUser" command="user" divided>用户管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="role">角色管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="workarea">作业区管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="company">公司管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="system" divided>系统管理</el-dropdown-item>
+              <el-dropdown-item v-show="canManageUser" command="user" divided>用户管理</el-dropdown-item>
+              <el-dropdown-item v-show="isSystemAdmin" command="role">角色管理</el-dropdown-item>
+              <el-dropdown-item v-show="isSystemAdmin" command="workarea">作业区管理</el-dropdown-item>
+              <el-dropdown-item v-show="isSystemAdmin" command="company">公司管理</el-dropdown-item>
+              <el-dropdown-item v-show="isSystemAdmin" command="system" divided>系统管理</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -49,7 +49,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { computed } from 'vue'
+import { computed, watch, ref, onMounted } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { VideoPlay, ArrowDown, HomeFilled } from '@element-plus/icons-vue'
@@ -64,24 +64,64 @@ const displayRoles = computed(() => {
   return `· ${roles[0]}`
 })
 
-// 判断是否为系统管理员（优先使用 roles 判断，因为 roles 在登录时就已设置）
+// 使用 ref 确保响应式更新
+const isAdmin = ref(false)
+
+// 判断是否为系统管理员
 const isSystemAdmin = computed(() => {
-  // 强制触发响应式更新
-  const _trigger = userStore.userInfo
+  const userInfo = userStore.userInfo
+  if (!userInfo) return false
   
-  // 方法 1：检查角色列表中是否包含 system_admin
-  if (_trigger && _trigger.roles && _trigger.roles.length > 0) {
-    return _trigger.roles.includes('system_admin')
+  // 方法 1：检查角色列表中是否包含 system_admin 或 ROLE_SYSTEM_ADMIN
+  const roles = userInfo.roles || []
+  if (roles.length > 0) {
+    const result = roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
+    console.log('[isSystemAdmin] roles:', roles, 'result:', result)
+    isAdmin.value = result
+    return result
   }
+  
   // 方法 2：检查公司类型 ID（备用方案）
-  if (_trigger && _trigger.companyTypeId) {
-    return _trigger.companyTypeId === 4
+  const companyTypeId = userInfo.companyTypeId
+  if (companyTypeId) {
+    const result = companyTypeId === 4
+    console.log('[isSystemAdmin] companyTypeId:', companyTypeId, 'result:', result)
+    isAdmin.value = result
+    return result
   }
+  
+  isAdmin.value = false
   return false
 })
 
-// 判断是否有用户管理权限
-const canManageUser = computed(() => userStore.isLoggedIn)
+// 监听 userInfo 变化，强制更新
+watch(() => userStore.userInfo, (newVal) => {
+  console.log('[watch] userInfo changed:', newVal)
+  console.log('[watch] roles:', newVal?.roles)
+  console.log('[watch] isSystemAdmin:', isSystemAdmin.value)
+  console.log('[watch] isAdmin ref:', isAdmin.value)
+  // 强制触发更新
+  isAdmin.value = isSystemAdmin.value
+}, { deep: true, immediate: true })
+
+// 组件挂载时检查
+onMounted(() => {
+  console.log('[onMounted] userInfo:', userStore.userInfo)
+  console.log('[onMounted] isSystemAdmin:', isSystemAdmin.value)
+  console.log('[onMounted] isAdmin ref:', isAdmin.value)
+  isAdmin.value = isSystemAdmin.value
+})
+
+// 判断是否有用户管理权限（系统管理员才有）
+const canManageUser = computed(() => isAdmin.value)
+
+// 菜单 key，用于强制重新渲染
+const menuKey = computed(() => {
+  const userInfo = userStore.userInfo
+  const roles = userInfo?.roles?.join(',') || 'none'
+  const companyTypeId = userInfo?.companyTypeId || 'none'
+  return `menu-${roles}-${companyTypeId}`
+})
 
 // 返回首页
 const goHome = () => {
