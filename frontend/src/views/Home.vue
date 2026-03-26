@@ -134,9 +134,10 @@ const isSystemAdmin = computed(() => {
 // 判断是否为公司管理员（甲方管理员、乙方管理员、监理方管理员）
 const isCompanyAdmin = computed(() => {
   const roles = userStore.roles || []
-  return roles.includes('jiafang_admin') || 
-         roles.includes('yifang_admin') || 
-         roles.includes('jianli_admin')
+  // 支持两种角色编码格式：ROLE_XXX_ADMIN 和 xxx_admin
+  return roles.some(r => r.includes('JIAFANG_ADMIN')) || 
+         roles.some(r => r.includes('YIFANG_ADMIN')) || 
+         roles.some(r => r.includes('JIANLIFANG_ADMIN'))
 })
 
 // 判断是否是管理员（系统管理员或公司管理员）
