@@ -70,6 +70,9 @@ public class CompanyService {
             wrapper.eq(Company::getAllowAnonymousRegister, true);
         }
         
+        // 排序：先按公司类型 ID，再按公司 ID
+        wrapper.orderByAsc(Company::getTypeId, Company::getId);
+        
         Page<Company> companyPage = companyMapper.selectPage(page, wrapper);
         
         // 转换为 DTO

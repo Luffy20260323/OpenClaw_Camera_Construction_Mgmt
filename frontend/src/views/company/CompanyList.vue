@@ -2,8 +2,8 @@
   <AdminLayout>
     <el-card class="box-card">
         <template #header>
-          <div class="card-header">
-            <span>公司管理</span>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: 600;">公司管理</span>
             <div style="display: flex; gap: 10px; align-items: center;">
               <el-tag v-if="!canManageCompany" type="info">👁️ 只读模式</el-tag>
               <el-button 
@@ -55,9 +55,15 @@
       </el-form>
 
       <!-- 公司列表 -->
-      <el-table :data="companyList" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="companyName" label="公司名称" min-width="200" />
+      <el-table :data="companyList" style="width: 100%" v-loading="loading" 
+        :header-cell-style="{background: '#f5f7fa', color: '#606266', fontWeight: 'bold', border: '1px solid #dcdfe6'}" 
+        :cell-style="{border: '1px solid #e4e7ed'}">
+        <el-table-column label="序号" width="56">
+          <template #default="scope">
+            {{ (pagination.pageNum - 1) * pagination.pageSize + scope.$index + 1 }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="companyName" label="公司名称" min-width="300" />
         <el-table-column prop="typeName" label="公司类型" width="150">
           <template #default="scope">
             <el-tag :type="getTypeTag(scope.row.typeId)">
@@ -441,9 +447,12 @@ const handleSubmit = async () => {
         }
         
         dialogVisible.value = false
-        getCompanyList()
+        // 重置到第一页并刷新列表
+        pagination.pageNum = 1
+        await getCompanyList()
       } catch (error) {
         console.error('提交失败:', error)
+        ElMessage.error(error.message || '提交失败')
       } finally {
         submitting.value = false
       }

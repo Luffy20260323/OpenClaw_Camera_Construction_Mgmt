@@ -1009,7 +1009,7 @@ public class UserService {
         // 获取审批人的角色
         List<Role> operatorRoles = roleMapper.selectByUserId(operatorId);
         boolean isSystemAdmin = operatorRoles.stream()
-            .anyMatch(role -> "system_admin".equals(role.getRoleCode()));
+            .anyMatch(role -> role.getRoleCode() != null && role.getRoleCode().contains("SYSTEM_ADMIN"));
 
         StringBuilder sql = new StringBuilder(
             "SELECT u.*, c.company_name, c.type_id, ct.type_name as company_type_name " +

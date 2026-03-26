@@ -13,7 +13,7 @@
                 <el-icon><Upload /></el-icon>
                 批量导入
               </el-button>
-              <el-button @click="loadPendingApprovals">
+              <el-button @click="handlePendingApprovalsClick">
                 <el-icon><Bell /></el-icon>
                 待审批 ({{ pendingCount }})
               </el-button>
@@ -439,19 +439,26 @@ const loadUsers = async () => {
   console.log('loadUsers 开始 - 用户信息:', userStore.userInfo)
   console.log('loadUsers - roles:', userStore.roles)
   console.log('loadUsers - companyId:', userStore.companyId)
+  console.log('loadUsers - queryForm:', queryForm)
   try {
     const params = {
       pageNum: pagination.pageNum,
-      pageSize: pagination.pageSize,
-      ...queryForm
+      pageSize: pagination.pageSize
     }
+    // 只在有值的情况下添加筛选条件
+    if (queryForm.keyword) params.keyword = queryForm.keyword
+    if (queryForm.companyTypeId) params.companyTypeId = queryForm.companyTypeId
+    if (queryForm.approvalStatus !== null && queryForm.approvalStatus !== undefined) params.approvalStatus = queryForm.approvalStatus
+    
     // 非系统管理员自动过滤公司类型
-    const isSystemAdmin = userStore.roles?.includes("system_admin") || false
-    console.log('loadUsers - isSystemAdmin:', isSystemAdmin)
+    // 注意：后端返回的角色编码格式是 ROLE_XXX，如 ROLE_SYSTEM_ADMIN
+    const isSystemAdmin = userStore.roles?.some(r => r.includes('SYSTEM_ADMIN')) || false
+    console.log('loadUsers - isSystemAdmin:', isSystemAdmin, 'roles:', userStore.roles)
     if (!isSystemAdmin && userStore.companyId) {
       params.companyId = userStore.companyId
       console.log('loadUsers - 添加 companyId 过滤:', userStore.companyId)
     }
+    console.log('loadUsers - 最终 params:', params)
     const res = await request({
       url: '/user/list',
       method: 'get',
@@ -520,11 +527,24 @@ const loadPendingApprovals = async () => {
     })
     const pendingUsers = res.data || []
     pendingCount.value = pendingUsers.length
-    if (pendingCount.value > 0) {
-      ElMessage.info(`有 ${pendingCount.value} 个待审批用户，请使用筛选功能查看`)
-    }
   } catch (error) {
     ElMessage.error('加载待审批列表失败：' + error.message)
+  }
+}
+
+// 点击待审批按钮
+const handlePendingApprovalsClick = async () => {
+  // 先刷新待审批数量
+  await loadPendingApprovals()
+  
+  if (pendingCount.value > 0) {
+    // 自动设置筛选条件为待审批
+    queryForm.approvalStatus = 0
+    // 触发查询
+    await loadUsers()
+    ElMessage.success(`已筛选出 ${pendingCount.value} 个待审批用户`)
+  } else {
+    ElMessage.info('当前没有待审批的用户')
   }
 }
 

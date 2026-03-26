@@ -52,6 +52,9 @@ public class RoleService {
             );
         }
         
+        // 排序：先按公司类型 ID，再按角色 ID
+        wrapper.orderByAsc(Role::getCompanyTypeId, Role::getId);
+        
         Page<Role> rolePage = roleMapper.selectPage(page, wrapper);
         
         // 转换为 DTO

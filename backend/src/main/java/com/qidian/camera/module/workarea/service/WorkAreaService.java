@@ -52,6 +52,9 @@ public class WorkAreaService {
             );
         }
         
+        // 排序：先按公司 ID，再按作业区 ID
+        wrapper.orderByAsc(WorkArea::getCompanyId, WorkArea::getId);
+        
         Page<WorkArea> workAreaPage = workAreaMapper.selectPage(page, wrapper);
         
         // 转换为 DTO

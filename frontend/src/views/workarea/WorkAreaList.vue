@@ -2,8 +2,8 @@
   <AdminLayout>
     <el-card class="box-card">
         <template #header>
-          <div class="card-header">
-            <span>作业区管理</span>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: 600;">作业区管理</span>
             <div style="display: flex; gap: 10px; align-items: center;">
               <el-tag v-if="!isSystemAdmin" type="info">👁️ 只读模式</el-tag>
               <el-button v-if="isSystemAdmin" type="primary" @click="showCreateDialog">
@@ -44,10 +44,16 @@
       </el-form>
 
       <!-- 作业区列表 -->
-      <el-table :data="workAreaList" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="workAreaName" label="作业区名称" min-width="180" />
-        <el-table-column prop="workAreaCode" label="作业区编码" width="120" />
+      <el-table :data="workAreaList" style="width: 100%" v-loading="loading"
+        :header-cell-style="{background: '#f5f7fa', color: '#606266', fontWeight: 'bold', border: '1px solid #dcdfe6'}" 
+        :cell-style="{border: '1px solid #e4e7ed'}">
+        <el-table-column label="序号" width="56">
+          <template #default="scope">
+            {{ (pagination.pageNum - 1) * pagination.pageSize + scope.$index + 1 }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="workAreaName" label="作业区名称" min-width="162" />
+        <el-table-column prop="workAreaCode" label="作业区编码" width="192" />
         <el-table-column prop="companyName" label="所属公司" min-width="180" />
         <el-table-column prop="leaderName" label="负责人" width="120" />
         <el-table-column prop="leaderPhone" label="联系电话" width="130" />
@@ -384,9 +390,12 @@ const handleSubmit = async () => {
         }
         
         dialogVisible.value = false
-        getWorkAreaList()
+        // 重置到第一页并刷新列表
+        pagination.pageNum = 1
+        await getWorkAreaList()
       } catch (error) {
         console.error('提交失败:', error)
+        ElMessage.error(error.message || '提交失败')
       } finally {
         submitting.value = false
       }

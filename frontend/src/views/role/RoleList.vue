@@ -2,8 +2,8 @@
   <AdminLayout>
     <el-card class="box-card">
         <template #header>
-          <div class="card-header">
-            <span>角色管理</span>
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 16px; font-weight: 600;">角色管理</span>
             <div style="display: flex; gap: 10px; align-items: center;">
               <el-tag v-if="!isSystemAdmin" type="info">👁️ 只读模式</el-tag>
               <el-button v-if="isSystemAdmin" type="primary" @click="showCreateDialog">
@@ -44,10 +44,16 @@
       </el-form>
 
       <!-- 角色列表 -->
-      <el-table :data="roleList" style="width: 100%" v-loading="loading">
-        <el-table-column prop="id" label="ID" width="80" />
-        <el-table-column prop="roleName" label="角色名称" min-width="150" />
-        <el-table-column prop="roleCode" label="角色编码" width="180" />
+      <el-table :data="roleList" style="width: 100%" v-loading="loading"
+        :header-cell-style="{background: '#f5f7fa', color: '#606266', fontWeight: 'bold', border: '1px solid #dcdfe6'}" 
+        :cell-style="{border: '1px solid #e4e7ed'}">
+        <el-table-column label="序号" width="56">
+          <template #default="scope">
+            {{ (pagination.pageNum - 1) * pagination.pageSize + scope.$index + 1 }}
+          </template>
+        </el-table-column>
+        <el-table-column prop="roleName" label="角色名称" min-width="135" />
+        <el-table-column prop="roleCode" label="角色编码" width="288" />
         <el-table-column prop="companyTypeName" label="公司类型" width="150">
           <template #default="scope">
             <el-tag :type="getCompanyTypeTag(scope.row.companyTypeId)">
@@ -268,7 +274,9 @@ const getRoleList = async () => {
       params: {
         pageNum: pagination.pageNum,
         pageSize: pagination.pageSize,
-        ...searchForm
+        ...searchForm,
+        sort: 'company_type_id,id',
+        order: 'asc,asc'
       }
     })
     roleList.value = res.data.records
@@ -361,9 +369,12 @@ const handleSubmit = async () => {
         }
         
         dialogVisible.value = false
-        getRoleList()
+        // 重置到第一页并刷新列表
+        pagination.pageNum = 1
+        await getRoleList()
       } catch (error) {
         console.error('提交失败:', error)
+        ElMessage.error(error.message || '提交失败')
       } finally {
         submitting.value = false
       }
