@@ -1,0 +1,22 @@
+{
+  "github": {
+    "accounts": {
+      "richard": {
+        "username": "RichardQidian",
+        "token_env": "GITHUB_TOKEN",
+        "default_repo": "OpenClaw_Camera_Construction_Mgmt",
+        "git_user_name": "OCT10-开发 1",
+        "git_user_email": "oct10-dev1@openclaw.local",
+        "notes": "主账号，日常使用"
+      },
+      "luffy": {
+        "username": "Luffy20260323",
+        "token_env": "GITHUB_TOKEN_LUFFY",
+        "notes": "备用账号，空间充足"
+      }
+    },
+    "default_account": "richard",
+    "last_updated": "2026-03-25",
+    "migrated_date": "2026-03-23"
+  }
+}
