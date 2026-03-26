@@ -4,11 +4,13 @@
         <template #header>
           <div class="card-header">
             <span>作业区管理</span>
-            <el-tag v-if="!isSystemAdmin" type="info" style="margin-left: 10px;">👁️ 只读模式</el-tag>
-            <el-button v-if="isSystemAdmin" type="primary" @click="showCreateDialog">
-              <el-icon><Plus /></el-icon>
-              新建作业区
-            </el-button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <el-tag v-if="!isSystemAdmin" type="info">👁️ 只读模式</el-tag>
+              <el-button v-if="isSystemAdmin" type="primary" @click="showCreateDialog">
+                <el-icon><Plus /></el-icon>
+                新建作业区
+              </el-button>
+            </div>
           </div>
         </template>
 
@@ -93,6 +95,66 @@
         @current-change="handlePageChange"
         style="margin-top: 20px; justify-content: flex-end"
       />
+
+      <!-- 创建/编辑对话框 -->
+      <el-dialog
+        v-model="dialogVisible"
+        :title="dialogTitle"
+        width="600px"
+        :close-on-click-modal="false"
+        @closed="resetForm"
+      >
+        <el-form
+          ref="workAreaFormRef"
+          :model="workAreaForm"
+          :rules="rules"
+          label-width="120px"
+        >
+          <el-form-item label="作业区名称" prop="workAreaName">
+            <el-input v-model="workAreaForm.workAreaName" placeholder="请输入作业区名称" />
+          </el-form-item>
+          
+          <el-form-item label="作业区编码">
+            <el-input v-model="workAreaForm.workAreaCode" placeholder="请输入作业区编码" />
+          </el-form-item>
+          
+          <el-form-item label="所属公司" prop="companyId">
+            <el-select v-model="workAreaForm.companyId" placeholder="请选择所属公司" style="width: 100%">
+              <el-option
+                v-for="company in companies"
+                :key="company.id"
+                :label="company.companyName"
+                :value="company.id"
+              />
+            </el-select>
+          </el-form-item>
+          
+          <el-form-item label="负责人">
+            <el-input v-model="workAreaForm.leaderName" placeholder="请输入负责人姓名" />
+          </el-form-item>
+          
+          <el-form-item label="联系电话">
+            <el-input v-model="workAreaForm.leaderPhone" placeholder="请输入联系电话" />
+          </el-form-item>
+          
+          <el-form-item label="地理范围">
+            <el-input v-model="workAreaForm.geographicRange" placeholder="请输入地理范围" type="textarea" :rows="2" />
+          </el-form-item>
+          
+          <el-form-item label="最大容量">
+            <el-input-number v-model="workAreaForm.maxCapacity" :min="1" :max="10000" style="width: 100%" />
+          </el-form-item>
+          
+          <el-form-item label="描述">
+            <el-input v-model="workAreaForm.description" placeholder="请输入描述" type="textarea" :rows="3" />
+          </el-form-item>
+        </el-form>
+        
+        <template #footer>
+          <el-button @click="dialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSubmit" :loading="submitting">确定</el-button>
+        </template>
+      </el-dialog>
     </el-card>
   </AdminLayout>
 </template>
@@ -109,18 +171,33 @@ const router = useRouter()
 const userStore = useUserStore()
 
 // 权限验证：只有系统管理员可以访问
-onMounted(() => {
+const checkPermissions = () => {
+  // 确保用户信息已从 localStorage 加载
+  if (!userStore.userInfo || Object.keys(userStore.userInfo).length === 0) {
+    const savedUserInfo = localStorage.getItem('userInfo')
+    if (savedUserInfo) {
+      try {
+        userStore.userInfo = JSON.parse(savedUserInfo)
+      } catch (e) {
+        console.error('解析用户信息失败:', e)
+      }
+    }
+  }
+  
+  console.log('[WorkAreaList] checkPermissions - isLoggedIn:', userStore.isLoggedIn, 'companyTypeId:', userStore.companyTypeId)
+  
   if (!userStore.isLoggedIn) {
     ElMessage.error('请先登录')
     router.push('/login')
-    return
+    return false
   }
   if (userStore.companyTypeId !== 4) {
     ElMessage.warning('您没有权限访问此页面')
     router.push('/')
-    return
+    return false
   }
-})
+  return true
+}
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -345,6 +422,24 @@ const handleDelete = (row) => {
 const dialogTitle = dialogMode.value === 'create' ? '创建作业区' : '编辑作业区'
 
 onMounted(() => {
+  // 权限检查
+  if (!checkPermissions()) {
+    return
+  }
+  
+  // 确保用户信息已加载
+  if (!userStore.userInfo || Object.keys(userStore.userInfo).length === 0) {
+    const savedUserInfo = localStorage.getItem('userInfo')
+    if (savedUserInfo) {
+      try {
+        userStore.userInfo = JSON.parse(savedUserInfo)
+      } catch (e) {
+        console.error('解析用户信息失败:', e)
+      }
+    }
+  }
+  
+  console.log('[WorkAreaList] onMounted - userInfo:', userStore.userInfo, 'companyTypeId:', userStore.companyTypeId)
   getCompanies()
   getWorkAreaList()
 })
@@ -389,6 +484,13 @@ onMounted(() => {
       display: flex;
       justify-content: space-between;
       align-items: center;
+
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-left: auto;
+      }
     }
 
     .search-form {
