@@ -116,17 +116,14 @@ const displayRoles = computed(() => {
 
 // 判断是否为系统管理员（优先使用 roles 判断）
 const isSystemAdmin = computed(() => {
-  const userInfo = userStore.userInfo
-  if (!userInfo) return false
-  
-  // 检查角色列表中是否包含 system_admin 或 ROLE_SYSTEM_ADMIN
-  const roles = userInfo.roles || []
+  // 直接使用 userStore.roles getter（响应式）
+  const roles = userStore.roles || []
   if (roles.length > 0) {
     return roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
   }
   
   // 备用方案：检查公司类型 ID
-  const companyTypeId = userInfo.companyTypeId
+  const companyTypeId = userStore.companyTypeId
   if (companyTypeId) {
     return companyTypeId === 4
   }

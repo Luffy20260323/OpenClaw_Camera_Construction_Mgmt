@@ -49,7 +49,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { computed, watch, ref, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { VideoPlay, ArrowDown, HomeFilled } from '@element-plus/icons-vue'
@@ -64,56 +64,30 @@ const displayRoles = computed(() => {
   return `· ${roles[0]}`
 })
 
-// 使用 ref 确保响应式更新
-const isAdmin = ref(false)
-
-// 判断是否为系统管理员
+// 判断是否为系统管理员（直接使用 userStore.roles getter）
 const isSystemAdmin = computed(() => {
-  const userInfo = userStore.userInfo
-  if (!userInfo) return false
-  
-  // 方法 1：检查角色列表中是否包含 system_admin 或 ROLE_SYSTEM_ADMIN
-  const roles = userInfo.roles || []
+  const roles = userStore.roles || []
   if (roles.length > 0) {
-    const result = roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
-    console.log('[isSystemAdmin] roles:', roles, 'result:', result)
-    isAdmin.value = result
-    return result
+    return roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
   }
   
-  // 方法 2：检查公司类型 ID（备用方案）
-  const companyTypeId = userInfo.companyTypeId
+  const companyTypeId = userStore.companyTypeId
   if (companyTypeId) {
-    const result = companyTypeId === 4
-    console.log('[isSystemAdmin] companyTypeId:', companyTypeId, 'result:', result)
-    isAdmin.value = result
-    return result
+    return companyTypeId === 4
   }
   
-  isAdmin.value = false
   return false
 })
 
-// 监听 userInfo 变化，强制更新
-watch(() => userStore.userInfo, (newVal) => {
-  console.log('[watch] userInfo changed:', newVal)
-  console.log('[watch] roles:', newVal?.roles)
-  console.log('[watch] isSystemAdmin:', isSystemAdmin.value)
-  console.log('[watch] isAdmin ref:', isAdmin.value)
-  // 强制触发更新
-  isAdmin.value = isSystemAdmin.value
-}, { deep: true, immediate: true })
-
-// 组件挂载时检查
-onMounted(() => {
-  console.log('[onMounted] userInfo:', userStore.userInfo)
-  console.log('[onMounted] isSystemAdmin:', isSystemAdmin.value)
-  console.log('[onMounted] isAdmin ref:', isAdmin.value)
-  isAdmin.value = isSystemAdmin.value
+// 判断是否有用户管理权限（系统管理员 + 公司管理员）
+const canManageUser = computed(() => {
+  const roles = userStore.roles || []
+  // 系统管理员
+  if (roles.some(r => r.includes('SYSTEM_ADMIN'))) return true
+  // 公司管理员（甲方、乙方、监理方管理员）
+  if (roles.some(r => r.includes('ADMIN'))) return true
+  return false
 })
-
-// 判断是否有用户管理权限（系统管理员才有）
-const canManageUser = computed(() => isAdmin.value)
 
 // 菜单 key，用于强制重新渲染
 const menuKey = computed(() => {
