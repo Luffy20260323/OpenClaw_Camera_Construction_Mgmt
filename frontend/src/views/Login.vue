@@ -599,20 +599,33 @@ const handleLogin = async () => {
           }
         })
         
+        const { accessToken, refreshToken, userInfo, menus } = res.data
+        
         // 先更新 userStore（确保响应式）
-        userStore.token = res.data.accessToken
-        userStore.refreshToken = res.data.refreshToken
-        userStore.userInfo = res.data.userInfo
+        userStore.token = accessToken
+        userStore.refreshToken = refreshToken
+        userStore.userInfo = userInfo
+        
+        // 保存菜单信息到 userInfo（兼容两种格式）
+        const userInfoWithMenus = {
+          ...userInfo,
+          menus: userInfo?.menus || (menus ? menus.map(m => m.menuCode) : [])
+        }
         
         // 再保存到 localStorage
-        localStorage.setItem('accessToken', res.data.accessToken)
-        localStorage.setItem('refreshToken', res.data.refreshToken)
-        localStorage.setItem('userInfo', JSON.stringify(res.data.userInfo))
+        localStorage.setItem('accessToken', accessToken)
+        localStorage.setItem('refreshToken', refreshToken)
+        localStorage.setItem('userInfo', JSON.stringify(userInfoWithMenus))
+        
+        // 更新 store
+        userStore.userInfo = userInfoWithMenus
         
         ElMessage.success('登录成功')
         
         // 等待响应式更新完成后再跳转
         await new Promise(resolve => setTimeout(resolve, 100))
+        
+        console.log('[Login] 登录成功，菜单权限:', userInfoWithMenus.menus)
         
         // 跳转到首页
         router.push('/')

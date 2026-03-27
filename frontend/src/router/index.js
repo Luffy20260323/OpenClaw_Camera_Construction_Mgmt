@@ -95,26 +95,40 @@ router.beforeEach((to, from, next) => {
   
   // 如果有 token 且需要权限验证
   if (to.meta.requiresAuth && token) {
-    // 获取用户菜单权限
-    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
-    const menus = userInfo.menus || []
-    const menuCode = to.meta.menuCode
-    
-    // 个人中心始终可访问
-    if (menuCode === 'profile') {
+    try {
+      // 获取用户菜单权限
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+      const menus = userInfo.menus || []
+      const menuCode = to.meta.menuCode
+      
+      // 个人中心始终可访问
+      if (menuCode === 'profile') {
+        next()
+        return
+      }
+      
+      // 首页始终可访问（作为无权限时的 fallback）
+      if (!menuCode || menuCode === 'home') {
+        next()
+        return
+      }
+      
+      // 检查是否有菜单权限
+      const hasPermission = menus.some(m => {
+        const code = typeof m === 'string' ? m : (m.menuCode || '')
+        return code === menuCode
+      })
+      
+      if (!hasPermission) {
+        // 无权限，重定向到首页
+        console.warn(`用户无权限访问 ${to.path}，重定向到首页`)
+        next({ name: 'Home' })
+        return
+      }
+    } catch (error) {
+      console.error('路由权限检查失败:', error)
+      // 出错时允许访问，避免死循环
       next()
-      return
-    }
-    
-    // 检查是否有菜单权限
-    const hasPermission = menus.some(m => {
-      const code = typeof m === 'string' ? m : m.menuCode
-      return code === menuCode
-    })
-    
-    if (!hasPermission) {
-      // 无权限，重定向到首页或 403 页面
-      next({ name: 'Home', query: { noauth: '1' } })
       return
     }
   }
