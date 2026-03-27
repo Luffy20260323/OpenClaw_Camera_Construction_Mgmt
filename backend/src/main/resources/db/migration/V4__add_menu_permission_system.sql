@@ -81,6 +81,56 @@ FROM menus m
 WHERE m.menu_code IN ('profile', 'user_management')
 ON CONFLICT (role_id, menu_id) DO NOTHING;
 
+-- 9. 为其他角色（普通用户）仅分配个人中心权限
+-- 甲方普通用户 (ROLE_JIAFANG_USER, role_id=4)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 4, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
+-- 乙方普通用户 (ROLE_YIFANG_USER, role_id=7)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 7, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
+-- 监理方普通用户 (ROLE_JIANLIFANG_USER, role_id=10)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 10, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
+-- 甲方项目经理 (ROLE_JIAFANG_PM, role_id=3)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 3, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
+-- 乙方项目经理 (ROLE_YIFANG_PM, role_id=6)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 6, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
+-- 监理工程师 (ROLE_JIANLIFANG_ENGINEER, role_id=9)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 9, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
+-- 乙方材料管理员 (ROLE_YIFANG_MATERIAL_ADMIN, role_id=18)
+INSERT INTO role_menu_permissions (role_id, menu_id, can_view, can_operate)
+SELECT 18, m.id, TRUE, FALSE
+FROM menus m
+WHERE m.menu_code = 'profile'
+ON CONFLICT (role_id, menu_id) DO NOTHING;
+
 -- 9. 创建索引
 CREATE INDEX IF NOT EXISTS idx_role_menu_role_id ON role_menu_permissions(role_id);
 CREATE INDEX IF NOT EXISTS idx_role_menu_menu_id ON role_menu_permissions(menu_id);

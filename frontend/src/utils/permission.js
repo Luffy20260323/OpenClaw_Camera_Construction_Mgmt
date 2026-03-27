@@ -1,50 +1,100 @@
 import { useUserStore } from '@/stores/user'
 
 /**
- * 判断是否为系统管理员
- * 系统管理员的公司类型 ID 为 4
+ * 检查用户是否有指定菜单的查看权限
+ * @param {string} menuCode - 菜单编码
+ * @returns {boolean} - 是否有权限
  */
-export function isSystemAdmin() {
+export function hasMenuPermission(menuCode) {
   const userStore = useUserStore()
-  // 检查用户信息中的公司类型
-  const companyTypeId = userStore.userInfo?.companyTypeId
-  return companyTypeId === 4
+  const menus = userStore.menus || []
+  return menus.some(m => {
+    const code = typeof m === 'string' ? m : m.menuCode
+    return code === menuCode
+  })
 }
 
 /**
- * 检查是否有公司管理权限
+ * 检查用户是否有指定菜单的操作权限
+ * @param {string} menuCode - 菜单编码
+ * @returns {boolean} - 是否有操作权限
  */
-export function canManageCompany() {
-  return isSystemAdmin()
-}
-
-/**
- * 检查是否有角色管理权限
- */
-export function canManageRole() {
-  return isSystemAdmin()
-}
-
-/**
- * 检查是否有作业区管理权限
- */
-export function canManageWorkArea() {
-  return isSystemAdmin()
-}
-
-/**
- * 检查是否有用户管理权限
- */
-export function canManageUser() {
-  // 所有管理员都可以管理用户（但只能管理本公司）
+export function hasMenuOperatePermission(menuCode) {
   const userStore = useUserStore()
-  return userStore.isLoggedIn
+  const menus = userStore.menus || []
+  const menu = menus.find(m => {
+    const code = typeof m === 'string' ? m : m.menuCode
+    return code === menuCode
+  })
+  
+  if (!menu || typeof menu === 'string') return false
+  return menu.userCanOperate !== false
 }
 
-export default {
-  isSystemAdmin,
-  canManageCompany,
-  canManageRole,
-  canManageWorkArea,
-  canManageUser
+/**
+ * 检查用户是否有指定权限点
+ * @param {string} permission - 权限点编码
+ * @returns {boolean} - 是否有权限
+ */
+export function hasPermission(permission) {
+  const userStore = useUserStore()
+  const permissions = userStore.permissions || []
+  return permissions.includes(permission)
+}
+
+/**
+ * 检查用户是否有任一权限点
+ * @param {string[]} permissions - 权限点列表
+ * @returns {boolean} - 是否有任一权限
+ */
+export function hasAnyPermission(permissions) {
+  return permissions.some(p => hasPermission(p))
+}
+
+/**
+ * 检查用户是否有所有权限点
+ * @param {string[]} permissions - 权限点列表
+ * @returns {boolean} - 是否有所有权限
+ */
+export function hasAllPermissions(permissions) {
+  return permissions.every(p => hasPermission(p))
+}
+
+/**
+ * Vue 指令：检查菜单权限
+ * 用法：v-menu-permission="'user_management'"
+ */
+export const menuPermissionDirective = {
+  mounted(el, binding) {
+    const { value } = binding
+    if (!hasMenuPermission(value)) {
+      el.parentNode && el.parentNode.removeChild(el)
+    }
+  }
+}
+
+/**
+ * Vue 指令：检查操作权限
+ * 用法：v-menu-operate="'user_management'"
+ */
+export const menuOperateDirective = {
+  mounted(el, binding) {
+    const { value } = binding
+    if (!hasMenuOperatePermission(value)) {
+      el.parentNode && el.parentNode.removeChild(el)
+    }
+  }
+}
+
+/**
+ * Vue 指令：检查权限点
+ * 用法：v-permission="'user:create'"
+ */
+export const permissionDirective = {
+  mounted(el, binding) {
+    const { value } = binding
+    if (value && !hasPermission(value)) {
+      el.parentNode && el.parentNode.removeChild(el)
+    }
+  }
 }

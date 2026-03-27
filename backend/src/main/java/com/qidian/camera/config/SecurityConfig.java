@@ -1,6 +1,7 @@
 package com.qidian.camera.config;
 
 import com.qidian.camera.module.auth.filter.JwtAuthenticationFilter;
+import com.qidian.camera.module.auth.filter.MenuPermissionFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -31,6 +32,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final MenuPermissionFilter menuPermissionFilter;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -56,6 +58,9 @@ public class SecurityConfig {
             
             // 添加 JWT 过滤器（必须在 authorizeHttpRequests 之前）
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            
+            // 添加菜单权限过滤器（在 JWT 过滤器之后）
+            .addFilterAfter(menuPermissionFilter, JwtAuthenticationFilter.class)
             
             // 配置授权规则（注意：路径相对于上下文路径 /api）
             .authorizeHttpRequests(auth -> auth

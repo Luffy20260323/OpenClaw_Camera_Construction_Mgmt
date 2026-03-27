@@ -1,5 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+// 菜单编码与路由的映射关系
+const MENU_CODE_MAP = {
+  '/': 'home',
+  '/home': 'home',
+  '/system/config': 'system_config',
+  '/system/user-permission': 'user_permission',
+  '/user/profile': 'profile',
+  '/user/management': 'user_management',
+  '/company': 'company_management',
+  '/workarea': 'workarea_management',
+  '/role': 'role_management'
+}
+
 const routes = [
   {
     path: '/login',
@@ -11,49 +24,49 @@ const routes = [
     path: '/',
     name: 'Home',
     component: () => import('@/views/Home.vue'),
-    meta: { title: '首页', requiresAuth: true }
+    meta: { title: '首页', requiresAuth: true, menuCode: 'home' }
   },
   {
     path: '/system/config',
     name: 'SystemConfig',
     component: () => import('@/views/system/Config.vue'),
-    meta: { title: '系统配置', requiresAuth: true }
+    meta: { title: '系统配置', requiresAuth: true, menuCode: 'system_config' }
   },
   {
     path: '/system/user-permission',
     name: 'UserPermission',
     component: () => import('@/views/system/UserPermission.vue'),
-    meta: { title: '用户权限配置', requiresAuth: true }
+    meta: { title: '用户权限配置', requiresAuth: true, menuCode: 'user_permission' }
   },
   {
     path: '/user/profile',
     name: 'UserProfile',
     component: () => import('@/views/user/Profile.vue'),
-    meta: { title: '个人中心', requiresAuth: true }
+    meta: { title: '个人中心', requiresAuth: true, menuCode: 'profile' }
   },
   {
     path: '/user/management',
     name: 'UserManagement',
     component: () => import('@/views/user/Management.vue'),
-    meta: { title: '用户管理', requiresAuth: true }
+    meta: { title: '用户管理', requiresAuth: true, menuCode: 'user_management' }
   },
   {
     path: '/company',
     name: 'CompanyList',
     component: () => import('@/views/company/CompanyList.vue'),
-    meta: { title: '公司管理', requiresAuth: true }
+    meta: { title: '公司管理', requiresAuth: true, menuCode: 'company_management' }
   },
   {
     path: '/workarea',
     name: 'WorkAreaList',
     component: () => import('@/views/workarea/WorkAreaList.vue'),
-    meta: { title: '作业区管理', requiresAuth: true }
+    meta: { title: '作业区管理', requiresAuth: true, menuCode: 'workarea_management' }
   },
   {
     path: '/role',
     name: 'RoleList',
     component: () => import('@/views/role/RoleList.vue'),
-    meta: { title: '角色管理', requiresAuth: true }
+    meta: { title: '角色管理', requiresAuth: true, menuCode: 'role_management' }
   },
   {
     path: '/:pathMatch(.*)*',
@@ -68,7 +81,7 @@ const router = createRouter({
   routes
 })
 
-// 路由守卫
+// 路由守卫 - 增强权限验证
 router.beforeEach((to, from, next) => {
   // 设置页面标题
   document.title = to.meta.title ? `${to.meta.title} - 视频监控点位施工项目管理系统` : '视频监控点位施工项目管理系统'
@@ -77,9 +90,36 @@ router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('accessToken')
   if (to.meta.requiresAuth && !token) {
     next('/login')
-  } else {
-    next()
+    return
   }
+  
+  // 如果有 token 且需要权限验证
+  if (to.meta.requiresAuth && token) {
+    // 获取用户菜单权限
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    const menus = userInfo.menus || []
+    const menuCode = to.meta.menuCode
+    
+    // 个人中心始终可访问
+    if (menuCode === 'profile') {
+      next()
+      return
+    }
+    
+    // 检查是否有菜单权限
+    const hasPermission = menus.some(m => {
+      const code = typeof m === 'string' ? m : m.menuCode
+      return code === menuCode
+    })
+    
+    if (!hasPermission) {
+      // 无权限，重定向到首页或 403 页面
+      next({ name: 'Home', query: { noauth: '1' } })
+      return
+    }
+  }
+  
+  next()
 })
 
 export default router
