@@ -256,7 +256,8 @@ const pendingCount = ref(0)
 
 // 判断是否为系统管理员
 const isSystemAdmin = computed(() => {
-  return userStore.userInfo?.roles?.includes('system_admin') || false
+  const roles = userStore.roles || []
+  return roles.some(r => r.includes('SYSTEM_ADMIN')) || false
 })
 
 const queryForm = reactive({
