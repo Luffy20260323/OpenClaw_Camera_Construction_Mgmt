@@ -601,16 +601,25 @@ const handleLogin = async () => {
         
         const { accessToken, refreshToken, userInfo, menus } = res.data
         
+        console.log('[Login] 登录响应数据:', {
+          userInfo_menus: userInfo?.menus,
+          top_menus: menus,
+          userInfo_roles: userInfo?.roles
+        })
+        
         // 先更新 userStore（确保响应式）
         userStore.token = accessToken
         userStore.refreshToken = refreshToken
         userStore.userInfo = userInfo
         
         // 保存菜单信息到 userInfo（兼容两种格式）
+        const menuCodes = userInfo?.menus || (menus ? menus.map(m => m.menuCode) : [])
         const userInfoWithMenus = {
           ...userInfo,
-          menus: userInfo?.menus || (menus ? menus.map(m => m.menuCode) : [])
+          menus: menuCodes
         }
+        
+        console.log('[Login] 处理后的菜单数据:', menuCodes)
         
         // 再保存到 localStorage
         localStorage.setItem('accessToken', accessToken)
@@ -622,10 +631,14 @@ const handleLogin = async () => {
         
         ElMessage.success('登录成功')
         
+        // 验证 localStorage 中的数据
+        const savedUserInfo = JSON.parse(localStorage.getItem('userInfo'))
+        console.log('[Login] localStorage 中的菜单数据:', savedUserInfo?.menus)
+        
         // 等待响应式更新完成后再跳转
         await new Promise(resolve => setTimeout(resolve, 100))
         
-        console.log('[Login] 登录成功，菜单权限:', userInfoWithMenus.menus)
+        console.log('[Login] userStore.menus:', userStore.menus)
         
         // 跳转到首页
         router.push('/')
