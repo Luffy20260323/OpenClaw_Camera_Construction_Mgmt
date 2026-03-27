@@ -84,8 +84,10 @@ const canManageUser = computed(() => {
   const roles = userStore.roles || []
   // 系统管理员
   if (roles.some(r => r.includes('SYSTEM_ADMIN'))) return true
-  // 公司管理员（甲方、乙方、监理方管理员）
-  if (roles.some(r => r.includes('ADMIN'))) return true
+  // 公司管理员（甲方、乙方、监理方管理员）- 精确匹配，排除材料管理员等
+  if (roles.some(r => r === 'ROLE_JIAFANG_ADMIN' || r === 'ROLE_YIFANG_ADMIN' || r === 'ROLE_JIANLIFANG_ADMIN')) return true
+  // 兼容格式：XXX_ADMIN（但不包括 XXX_XXX_ADMIN）
+  if (roles.some(r => r.match(/^ROLE_(JIAFANG|YIFANG|JIANLIFANG)_ADMIN$/))) return true
   return false
 })
 
