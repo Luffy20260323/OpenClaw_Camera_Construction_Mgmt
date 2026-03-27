@@ -883,8 +883,16 @@ public class UserService {
      * @return 用户分页列表
      */
     @Transactional(readOnly = true)
-    public Page<UserDTO> queryUsers(UserQueryRequest query) {
+    public Page<UserDTO> queryUsers(UserQueryRequest query, Long operatorId) {
         Page<User> page = new Page<>(query.getPageNum(), query.getPageSize());
+        
+        // 获取操作员的权限信息
+        User operator = userMapper.selectById(operatorId);
+        List<Role> operatorRoles = roleMapper.selectByUserId(operatorId);
+        boolean isSystemAdmin = operatorRoles.stream()
+            .anyMatch(role -> role.getRoleCode() != null && role.getRoleCode().contains("SYSTEM_ADMIN"));
+        boolean isCompanyAdmin = !isSystemAdmin && operatorRoles.stream()
+            .anyMatch(role -> role.getRoleCode() != null && role.getRoleCode().contains("ADMIN"));
         
         // 构建查询条件（关联作业区表以便关键字搜索）
         StringBuilder sql = new StringBuilder(
@@ -899,6 +907,12 @@ public class UserService {
         );
         
         List<Object> params = new ArrayList<>();
+        
+        // 非系统管理员且为公司管理员时，只能看到本公司的用户
+        if (!isSystemAdmin && isCompanyAdmin && operator.getCompanyId() != null) {
+            sql.append(" AND u.company_id = ?");
+            params.add(operator.getCompanyId());
+        }
         
         if (StringUtils.hasText(query.getUsername())) {
             sql.append(" AND u.username LIKE ?");

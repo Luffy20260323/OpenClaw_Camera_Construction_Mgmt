@@ -124,8 +124,9 @@ public class UserController {
     @Operation(summary = "分页查询用户列表", description = "支持多条件筛选")
     @GetMapping("/list")
     public Result<Page<UserDTO>> queryUsers(
-            @ModelAttribute UserQueryRequest query) {
-        Page<UserDTO> page = userService.queryUsers(query);
+            @ModelAttribute UserQueryRequest query,
+            @RequestAttribute("userId") Long operatorId) {
+        Page<UserDTO> page = userService.queryUsers(query, operatorId);
         return Result.success(page);
     }
 

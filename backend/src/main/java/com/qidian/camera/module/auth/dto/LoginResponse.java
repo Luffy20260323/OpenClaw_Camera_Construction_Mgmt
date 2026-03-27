@@ -31,6 +31,9 @@ public class LoginResponse {
     @Schema(description = "用户信息")
     private UserInfo userInfo;
 
+    @Schema(description = "用户菜单列表")
+    private java.util.List<com.qidian.camera.module.menu.dto.MenuDTO> menus;
+
     /**
      * 用户信息
      */
@@ -69,5 +72,8 @@ public class LoginResponse {
 
         @Schema(description = "权限列表")
         private java.util.List<String> permissions;
+
+        @Schema(description = "菜单编码列表")
+        private java.util.List<String> menus;
     }
 }

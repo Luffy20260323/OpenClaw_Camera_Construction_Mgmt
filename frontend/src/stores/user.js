@@ -16,7 +16,8 @@ export const useUserStore = defineStore('user', {
     roles: (state) => state.userInfo?.roles || [],
     permissions: (state) => state.userInfo?.permissions || [],
     companyId: (state) => state.userInfo?.companyId || null,
-    companyTypeId: (state) => state.userInfo?.companyTypeId || null
+    companyTypeId: (state) => state.userInfo?.companyTypeId || null,
+    menus: (state) => state.userInfo?.menus || []
   },
   
   actions: {

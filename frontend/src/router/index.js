@@ -20,6 +20,12 @@ const routes = [
     meta: { title: '系统配置', requiresAuth: true }
   },
   {
+    path: '/system/user-permission',
+    name: 'UserPermission',
+    component: () => import('@/views/system/UserPermission.vue'),
+    meta: { title: '用户权限配置', requiresAuth: true }
+  },
+  {
     path: '/user/profile',
     name: 'UserProfile',
     component: () => import('@/views/user/Profile.vue'),

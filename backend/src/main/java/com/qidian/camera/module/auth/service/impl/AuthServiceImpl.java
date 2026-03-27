@@ -7,6 +7,8 @@ import com.qidian.camera.module.auth.dto.LoginResponse;
 import com.qidian.camera.module.auth.service.AuthService;
 import com.qidian.camera.module.auth.service.CaptchaService;
 import com.qidian.camera.module.auth.service.JwtTokenProvider;
+import com.qidian.camera.module.menu.dto.MenuDTO;
+import com.qidian.camera.module.menu.service.MenuService;
 import com.qidian.camera.module.user.entity.User;
 import com.qidian.camera.module.role.entity.Role;
 import com.qidian.camera.module.user.mapper.UserMapper;
@@ -39,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final RedisTemplate<String, String> redisTemplate;
     private final CaptchaService captchaService;
     private final JdbcTemplate jdbcTemplate;
+    private final MenuService menuService;
 
     private static final String TOKEN_BLACKLIST_PREFIX = "auth:token:blacklist:";
 
@@ -135,7 +138,13 @@ public class AuthServiceImpl implements AuthService {
                 user.getUsername()
         );
 
-        // 7. 构建用户信息
+        // 7. 获取用户菜单权限
+        List<MenuDTO> menus = menuService.getUserMenus(user.getId());
+        List<String> menuCodes = menus.stream()
+                .map(MenuDTO::getMenuCode)
+                .toList();
+
+        // 8. 构建用户信息
         LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
                 .userId(user.getId())
                 .username(user.getUsername())
@@ -147,17 +156,19 @@ public class AuthServiceImpl implements AuthService {
                 .companyName(companyName)
                 .roles(roleCodes)
                 .permissions(permissions)
+                .menus(menuCodes)
                 .build();
 
-        log.info("用户登录成功：{}", username);
+        log.info("用户登录成功：{}, 菜单权限：{}", username, menuCodes);
 
-        // 8. 返回响应
+        // 9. 返回响应（包含菜单列表）
         return LoginResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
                 .expiresIn(86400L)
                 .userInfo(userInfo)
+                .menus(menus)
                 .build();
     }
 

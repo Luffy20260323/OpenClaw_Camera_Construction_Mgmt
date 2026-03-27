@@ -23,11 +23,12 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item v-show="canManageUser" command="user" divided>用户管理</el-dropdown-item>
-              <el-dropdown-item v-show="isSystemAdmin" command="role">角色管理</el-dropdown-item>
-              <el-dropdown-item v-show="isSystemAdmin" command="workarea">作业区管理</el-dropdown-item>
-              <el-dropdown-item v-show="isSystemAdmin" command="company">公司管理</el-dropdown-item>
-              <el-dropdown-item v-show="isSystemAdmin" command="system" divided>系统管理</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('user_management')" command="user" divided>用户管理</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('role_management')" command="role">角色管理</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('workarea_management')" command="workarea">作业区管理</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('company_management')" command="company">公司管理</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('system_config')" command="system" divided>系统配置</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('user_permission')" command="userPermission" divided>用户权限配置</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -79,17 +80,20 @@ const isSystemAdmin = computed(() => {
   return false
 })
 
-// 判断是否有用户管理权限（系统管理员 + 公司管理员）
+// 判断是否有用户管理权限（系统管理员 + 公司管理员）- 保留用于兼容
 const canManageUser = computed(() => {
   const roles = userStore.roles || []
-  // 系统管理员
   if (roles.some(r => r.includes('SYSTEM_ADMIN'))) return true
-  // 公司管理员（甲方、乙方、监理方管理员）- 精确匹配，排除材料管理员等
   if (roles.some(r => r === 'ROLE_JIAFANG_ADMIN' || r === 'ROLE_YIFANG_ADMIN' || r === 'ROLE_JIANLIFANG_ADMIN')) return true
-  // 兼容格式：XXX_ADMIN（但不包括 XXX_XXX_ADMIN）
   if (roles.some(r => r.match(/^ROLE_(JIAFANG|YIFANG|JIANLIFANG)_ADMIN$/))) return true
   return false
 })
+
+// 检查是否有菜单权限（使用后端返回的菜单列表）
+const hasMenuPermission = (menuCode) => {
+  const menus = userStore.menus || []
+  return menus.some(m => m.menuCode === menuCode || m === menuCode)
+}
 
 // 菜单 key，用于强制重新渲染
 const menuKey = computed(() => {
@@ -133,6 +137,8 @@ const handleCommand = async (command) => {
     router.push('/company')
   } else if (command === 'system') {
     router.push('/system/config')
+  } else if (command === 'userPermission') {
+    router.push('/system/user-permission')
   }
 }
 </script>
