@@ -52,7 +52,8 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
         PATH_TO_MENU_MAP.put("/api/user", "user_management");
         PATH_TO_MENU_MAP.put("/api/role", "role_management");
         PATH_TO_MENU_MAP.put("/api/workarea", "workarea_management");
-        PATH_TO_MENU_MAP.put("/api/company", "company_management");
+        // /api/company 已在 PUBLIC_PATHS 中定义为公开路径（注册和公司列表查询用）
+        // 不需要权限检查
         PATH_TO_MENU_MAP.put("/api/system/config", "system_config");
         PATH_TO_MENU_MAP.put("/api/menu", "system_config");
     }
