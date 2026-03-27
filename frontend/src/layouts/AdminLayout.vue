@@ -92,7 +92,15 @@ const canManageUser = computed(() => {
 // 检查是否有菜单权限（使用后端返回的菜单列表）
 const hasMenuPermission = (menuCode) => {
   const menus = userStore.menus || []
-  return menus.some(m => m.menuCode === menuCode || m === menuCode)
+  const hasPermission = menus.some(m => {
+    const code = typeof m === 'string' ? m : (m?.menuCode || '')
+    return code === menuCode
+  })
+  // 调试日志
+  if (menuCode !== 'profile') {
+    console.log(`[Permission] ${menuCode}: menus=${JSON.stringify(menus)}, hasPermission=${hasPermission}`)
+  }
+  return hasPermission
 }
 
 // 菜单 key，用于强制重新渲染

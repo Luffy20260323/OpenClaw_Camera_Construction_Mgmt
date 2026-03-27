@@ -23,11 +23,11 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item v-if="isAdmin" command="user" divided>用户管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="role">角色管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="workarea">作业区管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="company">公司管理</el-dropdown-item>
-              <el-dropdown-item v-if="isSystemAdmin" command="system" divided>系统管理</el-dropdown-item>
+              <el-dropdown-item v-if="hasMenuPermission('user_management')" command="user" divided>用户管理</el-dropdown-item>
+              <el-dropdown-item v-if="hasMenuPermission('role_management')" command="role">角色管理</el-dropdown-item>
+              <el-dropdown-item v-if="hasMenuPermission('workarea_management')" command="workarea">作业区管理</el-dropdown-item>
+              <el-dropdown-item v-if="hasMenuPermission('company_management')" command="company">公司管理</el-dropdown-item>
+              <el-dropdown-item v-if="hasMenuPermission('system_config')" command="system" divided>系统配置</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -114,34 +114,27 @@ const displayRoles = computed(() => {
   return `· ${roles[0]}`
 })
 
-// 判断是否为系统管理员（优先使用 roles 判断）
+// 检查是否有菜单权限（使用后端返回的菜单列表）
+const hasMenuPermission = (menuCode) => {
+  const menus = userStore.menus || []
+  return menus.some(m => {
+    const code = typeof m === 'string' ? m : (m?.menuCode || '')
+    return code === menuCode
+  })
+}
+
+// 判断是否为系统管理员（保留用于页面内容权限控制）
 const isSystemAdmin = computed(() => {
-  // 直接使用 userStore.roles getter（响应式）
   const roles = userStore.roles || []
   if (roles.length > 0) {
     return roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
   }
-  
-  // 备用方案：检查公司类型 ID
   const companyTypeId = userStore.companyTypeId
   if (companyTypeId) {
     return companyTypeId === 4
   }
-  
   return false
 })
-
-// 判断是否为公司管理员（甲方管理员、乙方管理员、监理方管理员）
-const isCompanyAdmin = computed(() => {
-  const roles = userStore.roles || []
-  // 支持两种角色编码格式：ROLE_XXX_ADMIN 和 xxx_admin
-  return roles.some(r => r.includes('JIAFANG_ADMIN')) || 
-         roles.some(r => r.includes('YIFANG_ADMIN')) || 
-         roles.some(r => r.includes('JIANLIFANG_ADMIN'))
-})
-
-// 判断是否是管理员（系统管理员或公司管理员）
-const isAdmin = computed(() => isSystemAdmin.value || isCompanyAdmin.value)
 
 // 返回首页
 const goHome = () => {
@@ -166,31 +159,31 @@ const handleCommand = async (command) => {
   } else if (command === 'profile') {
     router.push('/user/profile')
   } else if (command === 'user') {
-    if (!isAdmin.value) {
+    if (!hasMenuPermission('user_management')) {
       ElMessage.warning('您没有权限访问用户管理')
       return
     }
     router.push('/user/management')
   } else if (command === 'role') {
-    if (!isSystemAdmin.value) {
+    if (!hasMenuPermission('role_management')) {
       ElMessage.warning('您没有权限访问此功能')
       return
     }
     router.push('/role')
   } else if (command === 'workarea') {
-    if (!isSystemAdmin.value) {
+    if (!hasMenuPermission('workarea_management')) {
       ElMessage.warning('您没有权限访问此功能')
       return
     }
     router.push('/workarea')
   } else if (command === 'company') {
-    if (!isSystemAdmin.value) {
+    if (!hasMenuPermission('company_management')) {
       ElMessage.warning('您没有权限访问此功能')
       return
     }
     router.push('/company')
   } else if (command === 'system') {
-    if (!isSystemAdmin.value) {
+    if (!hasMenuPermission('system_config')) {
       ElMessage.warning('您没有权限访问此功能')
       return
     }
