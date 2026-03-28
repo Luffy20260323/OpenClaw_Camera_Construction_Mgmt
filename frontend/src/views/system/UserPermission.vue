@@ -2,13 +2,13 @@
   <AdminLayout>
     <div class="user-permission-page">
       <el-card class="header-card">
-        <div class="page-header">
-          <h2>用户权限配置</h2>
-          <p class="description">系统管理员可在此页面为指定用户定制菜单权限，自定义权限优先级高于角色默认权限</p>
-        </div>
-      </el-card>
+      <div class="page-header">
+        <h2>用户权限配置</h2>
+        <p class="description">系统管理员可在此页面为指定用户定制菜单权限，自定义权限优先级高于角色默认权限</p>
+      </div>
+    </el-card>
 
-      <el-card class="content-card">
+    <el-card class="content-card">
         <!-- 用户选择 -->
         <el-form :inline="true" class="user-select-form">
           <el-form-item label="选择用户">
@@ -50,12 +50,12 @@
             <el-descriptions-item label="用户名">{{ selectedUser.username }}</el-descriptions-item>
             <el-descriptions-item label="姓名">{{ selectedUser.realName }}</el-descriptions-item>
             <el-descriptions-item label="角色">
-              <el-tag v-for="role in selectedUser.roles" :key="role" size="small" style="margin-right: 4px;">
+              <el-tag v-for="role in selectedUser.roleNames" :key="role" size="small" style="margin-right: 4px;">
                 {{ role }}
               </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="公司">{{ selectedUser.companyName }}</el-descriptions-item>
-            <el-descriptions-item label="公司类型">{{ selectedUser.companyType }}</el-descriptions-item>
+            <el-descriptions-item label="公司类型">{{ selectedUser.companyTypeName }}</el-descriptions-item>
           </el-descriptions>
         </div>
 
@@ -136,8 +136,8 @@
             <li><strong>系统保护菜单：</strong>个人中心等基础菜单权限不可修改</li>
           </ul>
         </el-alert>
-      </el-card>
-    </div>
+    </el-card>
+  </div>
   </AdminLayout>
 </template>
 
