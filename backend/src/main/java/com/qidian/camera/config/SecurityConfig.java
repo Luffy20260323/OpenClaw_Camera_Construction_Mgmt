@@ -77,6 +77,8 @@ public class SecurityConfig {
                 .requestMatchers("/workarea/**").permitAll()
                 .requestMatchers("/user/**").authenticated()
                 .requestMatchers("/system/**").authenticated()
+                // 权限管理接口（需要认证）
+                .requestMatchers("/permission/**").authenticated()
                 // Swagger/API 文档
                 .requestMatchers("/doc.html").permitAll()
                 .requestMatchers("/doc/**").permitAll()
