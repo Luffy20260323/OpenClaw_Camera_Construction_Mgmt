@@ -56,6 +56,9 @@ public class SecurityConfig {
             // 禁用 Session（JWT 无状态）
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
+            // 禁用匿名认证（避免 AnonymousAuthenticationFilter 覆盖 JWT 认证）
+            .anonymous(anonymous -> anonymous.disable())
+            
             // 添加 JWT 过滤器（必须在 authorizeHttpRequests 之前）
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             
@@ -75,10 +78,11 @@ public class SecurityConfig {
                 .requestMatchers("/company/**").permitAll()
                 .requestMatchers("/role/**").permitAll()
                 .requestMatchers("/workarea/**").permitAll()
+                // 权限管理接口（依赖菜单权限过滤器控制，此处只需认证）
+                .requestMatchers("/permission/**").authenticated()
                 .requestMatchers("/user/**").authenticated()
                 .requestMatchers("/system/**").authenticated()
-                // 权限管理接口（需要认证）
-                .requestMatchers("/permission/**").authenticated()
+                .requestMatchers("/menu/**").authenticated()
                 // Swagger/API 文档
                 .requestMatchers("/doc.html").permitAll()
                 .requestMatchers("/doc/**").permitAll()

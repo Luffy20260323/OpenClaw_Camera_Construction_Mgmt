@@ -56,6 +56,8 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
         // 不需要权限检查
         PATH_TO_MENU_MAP.put("/api/system/config", "system_config");
         PATH_TO_MENU_MAP.put("/api/menu", "system_config");
+        // 权限管理菜单（用户权限配置、角色权限配置属于系统管理功能）
+        PATH_TO_MENU_MAP.put("/api/permission", "system_config");
     }
     
     @Override
