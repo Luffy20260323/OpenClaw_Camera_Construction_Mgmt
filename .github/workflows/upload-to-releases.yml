@@ -1,0 +1,179 @@
+#===============================================================================
+# 自动上传编译产物到 GitHub Releases
+# 触发条件：
+# - push: 所有分支
+# - 手动触发
+#
+# 功能：
+# 1. 编译后端和前端
+# 2. 将编译产物上传到 GitHub Releases
+# 3. 保留最近 3 天的 Release
+#===============================================================================
+
+name: Upload Build Artifacts to Releases
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+# 取消正在运行的重复工作流
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '17'
+  NODE_VERSION: '20'
+
+jobs:
+  build-and-upload:
+    name: 📦 构建并上传到 Releases
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: ⬇️ 检出代码
+        uses: actions/checkout@v4
+
+      - name: 🔧 设置 Java 环境
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🔧 设置 Node.js 环境
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: 📦 安装前端依赖
+        run: |
+          cd frontend
+          npm ci
+
+      - name: 🏗️ 编译后端
+        run: |
+          cd backend
+          mvn -B clean package -DskipTests
+
+      - name: 🎨 构建前端
+        run: |
+          cd frontend
+          npm run build
+
+      - name: 🔍 检查构建产物大小
+        run: |
+          echo "检查后端构建产物..."
+          find backend/target -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          ls -lh backend/target/*.jar 2>/dev/null || true
+          
+          echo ""
+          echo "检查前端构建产物..."
+          find frontend/dist -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          du -sh frontend/dist/ 2>/dev/null || true
+
+      - name: 📦 准备 Release 文件
+        run: |
+          mkdir -p release
+          
+          # 复制后端 jar
+          if [ -f backend/target/*.jar ]; then
+            cp backend/target/*.jar release/
+            echo "后端 jar 已复制到 release/"
+          fi
+          
+          # 压缩前端 dist
+          if [ -d frontend/dist ]; then
+            cd frontend
+            tar -czf ../release/frontend-dist.tar.gz dist/
+            echo "前端 dist 已压缩到 release/"
+          fi
+
+      - name: 📝 生成 Release 说明
+        run: |
+          cat > release/README.md << EOF
+          # 构建产物
+
+          **分支**: ${{ github.ref_name }}
+          **提交**: ${{ github.sha }}
+          **触发者**: ${{ github.actor }}
+          **构建时间**: $(date '+%Y-%m-%d %H:%M:%S')
+
+          ## 文件说明
+
+          - \`*.jar\` - 后端可执行 jar 包
+          - \`frontend-dist.tar.gz\` - 前端构建产物（压缩）
+
+          ## 使用方法
+
+          ### 后端
+          \`\`\`bash
+          java -jar *.jar
+          \`\`\`
+
+          ### 前端
+          \`\`\`bash
+          tar -xzf frontend-dist.tar.gz
+          # 使用静态文件服务器托管 dist/ 目录
+          \`\`\`
+
+          ## 注意事项
+
+          - 此构建产物仅保留 3 天
+          - 大文件（>5MB）已在构建时标记
+          EOF
+
+      - name: ⬆️ 上传到 GitHub Releases
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: build-${{ github.sha }}
+          name: "Build ${{ github.ref_name }} - $(date '+%Y-%m-%d %H:%M')"
+          body_path: release/README.md
+          files: |
+            release/*.jar
+            release/*.tar.gz
+            release/README.md
+          draft: false
+          prerelease: true
+          retain_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 输出构建信息
+        run: |
+          echo "=========================================="
+          echo "  构建产物上传完成"
+          echo "=========================================="
+          echo ""
+          echo "分支：${{ github.ref_name }}"
+          echo "提交：${{ github.sha }}"
+          echo "触发者：${{ github.actor }}"
+          echo ""
+          echo "Release 文件:"
+          ls -lh release/ 2>/dev/null || true
+          echo ""
+          echo "注意：Release 将在 3 天后自动清理"
+
+  cleanup-old-releases:
+    name: 🧹 清理旧的 Releases
+    runs-on: ubuntu-latest
+    needs: build-and-upload
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    
+    steps:
+      - name: 🗑️ 删除 3 天前的 Release
+        uses: dev-drprasad/delete-older-releases@v0.2.1
+        with:
+          keep_latest: 0
+          delete_tags: true
+          delete_tag_pattern: build-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

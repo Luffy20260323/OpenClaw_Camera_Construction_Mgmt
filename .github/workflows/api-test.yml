@@ -137,13 +137,20 @@ jobs:
       run: npm run test:api -- --reporter=jest-junit --testPathPattern="tests/api/regression"
       continue-on-error: false
     
+    - name: Check test results size
+      if: always()
+      run: |
+        echo "检查测试结果文件大小..."
+        find backend/tests/reports -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+        du -sh backend/tests/reports/ 2>/dev/null || true
+
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: test-results
         path: backend/tests/reports/
-        retention-days: 1
+        retention-days: 3
     
     - name: Publish test report
       if: always()

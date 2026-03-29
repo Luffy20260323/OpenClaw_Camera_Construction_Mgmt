@@ -130,12 +130,18 @@ jobs:
           cd backend
           mvn -B package -DskipTests
 
+      - name: 🔍 检查构建产物大小
+        run: |
+          echo "检查大于 5MB 的构建产物..."
+          find backend/target -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          ls -lh backend/target/*.jar 2>/dev/null || true
+
       - name: ⬆️ 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
           path: backend/target/*.jar
-          retention-days: 1  # 仅保留 1 天，节省空间
+          retention-days: 3
 
   #-------------------------------------------------------------------------------
   # 任务 3：前端构建
@@ -178,12 +184,18 @@ jobs:
           cd frontend
           npm run build
 
+      - name: 🔍 检查构建产物大小
+        run: |
+          echo "检查大于 5MB 的构建产物..."
+          find frontend/dist -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          du -sh frontend/dist/ 2>/dev/null || true
+
       - name: ⬆️ 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: frontend/dist/
-          retention-days: 1  # 仅保留 1 天，节省空间
+          retention-days: 3
 
   #-------------------------------------------------------------------------------
   # 任务 4：API 自动化测试 (38 条) - 可选测试
@@ -291,13 +303,20 @@ jobs:
           echo "API 测试完成"
           echo "=========================================="
 
+      - name: 🔍 检查测试结果大小
+        if: always() && github.event_name == 'workflow_dispatch'
+        run: |
+          echo "检查测试结果文件大小..."
+          find /tmp/api-test-results -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          du -sh /tmp/api-test-results/ 2>/dev/null || true
+
       - name: ⬆️ 上传 API 测试结果
         if: always() && github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: api-test-results
           path: /tmp/api-test-results/
-          retention-days: 1
+          retention-days: 3
 
       - name: 📄 上传后端日志
         if: failure() && github.event_name == 'workflow_dispatch'  # 仅失败时上传日志
@@ -476,13 +495,20 @@ jobs:
           echo "E2E 测试完成"
           echo "=========================================="
 
+      - name: 🔍 检查测试结果大小
+        if: always()
+        run: |
+          echo "检查测试结果文件大小..."
+          find e2e/results -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          du -sh e2e/results/ 2>/dev/null || true
+
       - name: ⬆️ 上传 Playwright 报告
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: e2e/results/html/
-          retention-days: 1
+          retention-days: 3
 
       - name: ⬆️ 上传 JUnit 结果
         if: always()
@@ -490,7 +516,14 @@ jobs:
         with:
           name: playwright-junit
           path: e2e/results/results.xml
-          retention-days: 1
+          retention-days: 3
+
+      - name: 🔍 检查日志文件大小
+        if: always()
+        run: |
+          echo "检查日志文件大小..."
+          ls -lh /tmp/backend-e2e.log 2>/dev/null || true
+          du -sh /tmp/backend-e2e.log 2>/dev/null || true
 
       - name: 📄 上传后端日志
         if: always()
@@ -498,7 +531,7 @@ jobs:
         with:
           name: backend-e2e-log
           path: /tmp/backend-e2e.log
-          retention-days: 7
+          retention-days: 3
 
   #-------------------------------------------------------------------------------
   # 任务 6：Docker 构建验证

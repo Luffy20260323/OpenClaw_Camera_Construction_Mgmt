@@ -128,12 +128,18 @@ jobs:
           cd backend
           mvn -B package -DskipTests
 
+      - name: 🔍 检查构建产物大小
+        run: |
+          echo "检查大于 5MB 的构建产物..."
+          find backend/target -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          ls -lh backend/target/*.jar 2>/dev/null || true
+
       - name: ⬆️ 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: backend-jar
           path: backend/target/*.jar
-          retention-days: 1
+          retention-days: 3
 
   #-------------------------------------------------------------------------------
   # 任务 3：前端构建
@@ -176,12 +182,18 @@ jobs:
           cd frontend
           npm run build
 
+      - name: 🔍 检查构建产物大小
+        run: |
+          echo "检查大于 5MB 的构建产物..."
+          find frontend/dist -type f -size +5M -exec echo "⚠️ 大文件：{} ($(du -h {} | cut -f1))" \; || true
+          du -sh frontend/dist/ 2>/dev/null || true
+
       - name: ⬆️ 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: frontend-dist
           path: frontend/dist/
-          retention-days: 1
+          retention-days: 3
 
   #-------------------------------------------------------------------------------
   # 任务 4：Docker 构建
