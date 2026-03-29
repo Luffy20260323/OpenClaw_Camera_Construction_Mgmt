@@ -1,6 +1,6 @@
 # MEMORY.md - 长期记忆
 
-_最后更新：2026-03-20_
+_最后更新：2026-03-29_
 
 ---
 
@@ -28,27 +28,30 @@ _最后更新：2026-03-20_
 
 ## 🐙 GitHub 配置
 
+### ⚠️ 账号使用规则（重要）
+
+| 账号 | 用户名 | 角色 | 使用场景 |
+|------|--------|------|----------|
+| **主账号** | **RichardQidian** | 主用 | **默认使用，如非特别说明一律使用此账号** |
+| 备用账号 | Luffy20260323 | 备用 | 仅在主账号不可用时使用 |
+
 ### 账号迁移记录
 
 | 项目 | 旧账号 | 新账号 | 迁移日期 | 原因 |
 |------|--------|--------|----------|------|
 | OpenClaw_Camera_Construction_Mgmt | RichardQidian | Luffy20260323 | 2026-03-23 | 原账号免费空间用完 |
 
-### 可用账号
+### 可用账号详情
 
-| 账号 | 用户名 | Token 环境变量 | 状态 | 备注 |
-|------|--------|---------------|------|------|
-| 主账号 | RichardQidian | GITHUB_TOKEN | 正常 | 日常使用，默认仓库 OpenClaw_Camera_Construction_Mgmt |
-| 备用账号 | Luffy20260323 | GITHUB_TOKEN_LUFFY | 正常 | 备用，空间充足 |
-
-### 默认使用
-- **主账号**: RichardQidian
-- **默认仓库**: OpenClaw_Camera_Construction_Mgmt
+| 账号 | 用户名 | Token 环境变量 | 状态 |
+|------|--------|---------------|------|
+| 主账号 | RichardQidian | GITHUB_TOKEN | ✅ 正常 |
+| 备用账号 | Luffy20260323 | GITHUB_TOKEN_LUFFY | ✅ 正常 |
 
 ### 配置位置
 - 环境变量：`~/.openclaw/.env`（两个账号的 Token 都在这里）
 - 共享配置：`~/.openclaw/workspace/.shared-configs/github.json`
-- gh CLI 配置：`~/.config/gh/hosts.yml`（仅配置了 Luffy20260323）
+- gh CLI 配置：`~/.config/gh/hosts.yml`
 
 ---
 
