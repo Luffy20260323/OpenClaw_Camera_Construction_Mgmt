@@ -185,12 +185,14 @@ public class PermissionController {
             @RequestParam(required = false) Long targetId,
             @RequestParam(required = false) String targetType,
             @RequestParam(required = false) Long operatorId,
+            @RequestParam(required = false) String operationType,
+            @RequestParam(required = false) String operatorName,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         
         Pageable pageable = PageRequest.of(page - 1, size);
         Page<PermissionAuditLog> auditPage = auditLogService.getAuditLogs(
-            targetId, targetType, operatorId, pageable);
+            targetId, targetType, operatorId, operationType, operatorName, pageable);
         
         Map<String, Object> result = new HashMap<>();
         result.put("content", auditPage.getContent());
@@ -214,5 +216,34 @@ public class PermissionController {
             ip = request.getRemoteAddr();
         }
         return ip;
+    }
+    
+    @Operation(summary = "更新权限描述", description = "更新指定权限的描述信息（需要 permission:edit 权限）")
+    @PutMapping("/{id}")
+    public Result<Void> updatePermissionDescription(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        
+        String description = request.get("description");
+        
+        // 检查用户是否有编辑权限的权限
+        UserContext currentUser = permissionServiceImpl.getCurrentUser();
+        boolean hasEditPermission = permissionServiceImpl.hasPermission("permission:edit");
+        
+        if (!hasEditPermission) {
+            return Result.error(403, "您没有编辑权限描述的权限");
+        }
+        
+        // 更新权限描述
+        int updated = jdbcTemplate.update(
+            "UPDATE permissions SET description = ? WHERE id = ?",
+            description, id);
+        
+        if (updated == 0) {
+            return Result.error(404, "权限不存在");
+        }
+        
+        log.info("权限 {} 描述已更新，操作人：{}", id, currentUser.getUsername());
+        return Result.success();
     }
 }

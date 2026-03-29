@@ -1,9 +1,8 @@
 <template>
-  <div class="admin-layout">
+  <el-container class="admin-layout">
     <!-- 顶部导航栏 -->
     <el-header class="header">
       <div class="header-left">
-        <el-icon :size="24"><VideoPlay /></el-icon>
         <span class="app-title">视频监控点位施工项目管理系统</span>
       </div>
       <div class="header-right">
@@ -28,7 +27,9 @@
               <el-dropdown-item v-show="hasMenuPermission('workarea_management')" command="workarea">作业区管理</el-dropdown-item>
               <el-dropdown-item v-show="hasMenuPermission('company_management')" command="company">公司管理</el-dropdown-item>
               <el-dropdown-item v-show="hasMenuPermission('system_config')" command="system" divided>系统配置</el-dropdown-item>
-              <el-dropdown-item v-show="hasMenuPermission('user_permission')" command="userPermission" divided>用户权限配置</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('user_permission')" command="userPermission">用户权限配置</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('role_permission')" command="rolePermission">角色权限配置</el-dropdown-item>
+              <el-dropdown-item v-show="hasMenuPermission('audit_log')" command="auditLog">审计日志</el-dropdown-item>
               <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -45,7 +46,7 @@
     <el-footer class="footer">
       <p>© 2026 北京其点技术服务有限公司 版权所有</p>
     </el-footer>
-  </div>
+  </el-container>
 </template>
 
 <script setup>
@@ -53,7 +54,7 @@ import { useRouter } from 'vue-router'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
-import { VideoPlay, ArrowDown, HomeFilled } from '@element-plus/icons-vue'
+import { ArrowDown, HomeFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -65,42 +66,26 @@ const displayRoles = computed(() => {
   return `· ${roles[0]}`
 })
 
-// 判断是否为系统管理员（直接使用 userStore.roles getter）
+// 判断是否为系统管理员
 const isSystemAdmin = computed(() => {
   const roles = userStore.roles || []
   if (roles.length > 0) {
-    return roles.includes('system_admin') || roles.includes('ROLE_SYSTEM_ADMIN')
+    return roles.includes('SYSTEM_ADMIN') || roles.includes('ROLE_SYSTEM_ADMIN')
   }
-  
   const companyTypeId = userStore.companyTypeId
   if (companyTypeId) {
     return companyTypeId === 4
   }
-  
   return false
 })
 
-// 判断是否有用户管理权限（系统管理员 + 公司管理员）- 保留用于兼容
-const canManageUser = computed(() => {
-  const roles = userStore.roles || []
-  if (roles.some(r => r.includes('SYSTEM_ADMIN'))) return true
-  if (roles.some(r => r === 'ROLE_JIAFANG_ADMIN' || r === 'ROLE_YIFANG_ADMIN' || r === 'ROLE_JIANLIFANG_ADMIN')) return true
-  if (roles.some(r => r.match(/^ROLE_(JIAFANG|YIFANG|JIANLIFANG)_ADMIN$/))) return true
-  return false
-})
-
-// 检查是否有菜单权限（使用后端返回的菜单列表）
+// 检查是否有菜单权限
 const hasMenuPermission = (menuCode) => {
   const menus = userStore.menus || []
-  const hasPermission = menus.some(m => {
+  return menus.some(m => {
     const code = typeof m === 'string' ? m : (m?.menuCode || '')
     return code === menuCode
   })
-  // 调试日志
-  if (menuCode !== 'profile') {
-    console.log(`[Permission] ${menuCode}: menus=${JSON.stringify(menus)}, hasPermission=${hasPermission}`)
-  }
-  return hasPermission
 }
 
 // 菜单 key，用于强制重新渲染
@@ -147,91 +132,107 @@ const handleCommand = async (command) => {
     router.push('/system/config')
   } else if (command === 'userPermission') {
     router.push('/system/user-permission')
+  } else if (command === 'rolePermission') {
+    router.push('/system/role-permission')
+  } else if (command === 'auditLog') {
+    router.push('/system/audit-log')
   }
 }
 </script>
 
 <style scoped lang="scss">
 .admin-layout {
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 0 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
   
-  .header-left {
+  .header {
+    flex-shrink: 0;
+    height: 60px;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 12px;
-    color: #fff;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 0 24px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
     
-    .app-title {
-      font-size: 18px;
-      font-weight: 600;
-    }
-  }
-  
-  .header-right {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    
-    .el-button {
-      color: #fff;
-      border-color: transparent;
-      background: rgba(255, 255, 255, 0.2);
-      
-      &:hover {
-        background: rgba(255, 255, 255, 0.3);
-      }
-    }
-    
-    .user-dropdown {
-      margin-left: 8px;
-    }
-    
-    .user-info {
+    .header-left {
       display: flex;
       align-items: center;
-      gap: 8px;
-      cursor: pointer;
+      gap: 12px;
       color: #fff;
       
-      .username {
-        font-size: 14px;
+      .app-title {
+        font-size: 18px;
+        font-weight: 600;
+      }
+    }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      
+      .el-button {
+        color: #fff;
+        border-color: transparent;
+        background: rgba(255, 255, 255, 0.2);
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.3);
+        }
       }
       
-      .user-roles {
-        font-size: 12px;
-        opacity: 0.8;
+      .user-dropdown {
+        margin-left: 8px;
+      }
+      
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        color: #fff;
+        
+        .username {
+          font-size: 14px;
+        }
+        
+        .user-roles {
+          font-size: 12px;
+          opacity: 0.8;
+        }
       }
     }
   }
-}
-
-.main-content {
-  flex: 1;
-  background: #f5f7fa;
-  padding: 24px;
-}
-
-.footer {
-  background: #fff;
-  border-top: 1px solid #e4e7ed;
-  padding: 12px 24px;
-  text-align: center;
-  color: #909399;
-  font-size: 13px;
   
-  p {
-    margin: 0;
+  .main-content {
+    flex: 1;
+    min-height: 0;
+    background: #f5f7fa;
+    padding: 24px;
+    overflow-y: auto;
+  }
+  
+  .footer {
+    flex-shrink: 0;
+    height: 48px;
+    background: #fff;
+    border-top: 1px solid #e4e7ed;
+    padding: 12px 24px;
+    text-align: center;
+    color: #909399;
+    font-size: 13px;
+    position: sticky;
+    bottom: 0;
+    
+    p {
+      margin: 0;
+    }
   }
 }
 </style>

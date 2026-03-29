@@ -7,6 +7,7 @@ import com.qidian.camera.module.company.dto.CreateCompanyRequest;
 import com.qidian.camera.module.company.dto.UpdateCompanyRequest;
 import com.qidian.camera.module.company.entity.CompanyType;
 import com.qidian.camera.module.company.service.CompanyService;
+import com.qidian.camera.module.auth.annotation.ApiPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -28,6 +29,7 @@ public class CompanyController {
     private final com.qidian.camera.module.user.service.UserService userService;
 
     @Operation(summary = "分页查询公司列表", description = "支持按类型、关键词、状态、是否允许匿名注册筛选")
+    @ApiPermission("company:list")
     @GetMapping
     public Result<Page<CompanyDTO>> getCompanies(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -41,6 +43,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "获取公司详情", description = "根据 ID 获取公司详细信息")
+    @ApiPermission("company:view")
     @GetMapping("/{id}")
     public Result<CompanyDTO> getCompany(@PathVariable Long id) {
         CompanyDTO company = companyService.getCompanyById(id);
@@ -48,6 +51,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "创建公司", description = "创建新公司（仅系统管理员）")
+    @ApiPermission("company:create")
     @PostMapping
     public Result<CompanyDTO> createCompany(
             @RequestAttribute("userId") Long operatorId,
@@ -58,6 +62,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "更新公司", description = "更新公司信息（仅系统管理员，系统保护的公司不可修改）")
+    @ApiPermission("company:edit")
     @PutMapping("/{id}")
     public Result<CompanyDTO> updateCompany(
             @PathVariable Long id,
@@ -69,6 +74,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "删除公司", description = "删除公司（仅系统管理员，系统保护的公司不可删除）")
+    @ApiPermission("company:delete")
     @DeleteMapping("/{id}")
     public Result<Void> deleteCompany(
             @PathVariable Long id,
@@ -79,6 +85,7 @@ public class CompanyController {
     }
 
     @Operation(summary = "获取所有公司类型", description = "获取公司类型列表（甲方/乙方/监理/软件所有者）")
+    @ApiPermission("company:type:list")
     @GetMapping(value = "/types", produces = "application/json")
     @ResponseBody
     public Result<List<CompanyType>> getCompanyTypes() {

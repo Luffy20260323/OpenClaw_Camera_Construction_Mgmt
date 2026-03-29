@@ -612,14 +612,15 @@ const handleLogin = async () => {
         userStore.refreshToken = refreshToken
         userStore.userInfo = userInfo
         
-        // 保存菜单信息到 userInfo（兼容两种格式）
-        const menuCodes = userInfo?.menus || (menus ? menus.map(m => m.menuCode) : [])
+        // 保存完整的菜单对象数组到 userInfo（用于构建树形结构）
+        // 优先使用后端返回的 menus（MenuDTO 数组），其次使用 userInfo.menus（字符串数组）
+        const menuData = menus || userInfo?.menus || []
         const userInfoWithMenus = {
           ...userInfo,
-          menus: menuCodes
+          menus: menuData
         }
         
-        console.log('[Login] 处理后的菜单数据:', menuCodes)
+        console.log('[Login] 处理后的菜单数据:', menuData)
         
         // 再保存到 localStorage
         localStorage.setItem('accessToken', accessToken)

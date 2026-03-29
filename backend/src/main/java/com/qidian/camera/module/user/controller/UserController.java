@@ -5,6 +5,7 @@ import com.qidian.camera.common.response.Result;
 import com.qidian.camera.module.user.dto.*;
 import com.qidian.camera.module.user.service.UserService;
 import com.qidian.camera.module.auth.filter.JwtAuthenticationFilter;
+import com.qidian.camera.module.auth.annotation.ApiPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -30,6 +31,7 @@ public class UserController {
     private final UserService userService;
 
     @Operation(summary = "获取当前用户信息", description = "获取当前登录用户的个人信息")
+    @ApiPermission("user:profile:view")
     @GetMapping("/profile")
     public Result<UserProfileDTO> getProfile(
             @RequestAttribute("userId") Long userId) {
@@ -38,6 +40,7 @@ public class UserController {
     }
 
     @Operation(summary = "更新用户信息", description = "更新当前登录用户的个人信息")
+    @ApiPermission("user:profile:edit")
     @PutMapping("/profile")
     public Result<UserProfileDTO> updateProfile(
             @RequestAttribute("userId") Long userId,
@@ -47,6 +50,7 @@ public class UserController {
     }
 
     @Operation(summary = "修改密码", description = "修改当前登录用户的密码")
+    @ApiPermission("user:password:change")
     @PutMapping("/password")
     public Result<Void> changePassword(
             @RequestAttribute("userId") Long userId,
@@ -56,6 +60,7 @@ public class UserController {
     }
 
     @Operation(summary = "重置用户密码", description = "管理员重置指定用户的密码")
+    @ApiPermission("user:password:reset")
     @PutMapping("/reset-password/{id}")
     public Result<Void> resetPassword(
             @PathVariable Long id,
@@ -66,6 +71,7 @@ public class UserController {
     }
 
     @Operation(summary = "用户注册", description = "用户自主注册（需要审批）")
+    @ApiPermission("user:register")
     @PostMapping("/register")
     public Result<Long> register(@Valid @RequestBody RegisterRequest request) {
         Long userId = userService.register(request);
@@ -73,6 +79,7 @@ public class UserController {
     }
 
     @Operation(summary = "创建用户", description = "管理员创建用户")
+    @ApiPermission("user:create")
     @PostMapping
     public Result<UserDTO> createUser(
             @RequestAttribute("userId") Long operatorId,
@@ -82,6 +89,7 @@ public class UserController {
     }
 
     @Operation(summary = "批量导入用户", description = "管理员批量导入用户（JSON 格式）")
+    @ApiPermission("user:import:json")
     @PostMapping("/batch-import")
     public Result<UserService.BatchImportResult> batchImport(
             @RequestAttribute("userId") Long operatorId,
@@ -91,6 +99,7 @@ public class UserController {
     }
 
     @Operation(summary = "下载导入模板", description = "下载 Excel 导入模板")
+    @ApiPermission("user:import:template")
     @GetMapping("/import-template")
     public ResponseEntity<ByteArrayResource> downloadTemplate() {
         byte[] template = userService.generateImportTemplate();
@@ -103,6 +112,7 @@ public class UserController {
     }
 
     @Operation(summary = "批量导入用户（Excel 文件）", description = "上传 Excel 文件批量导入用户")
+    @ApiPermission("user:import:excel")
     @PostMapping("/batch-import-file")
     public Result<UserService.BatchImportResult> batchImportFile(
             @RequestAttribute("userId") Long operatorId,
@@ -113,6 +123,7 @@ public class UserController {
     }
 
     @Operation(summary = "审批用户", description = "管理员审批用户注册申请")
+    @ApiPermission("user:approve")
     @PostMapping("/approve")
     public Result<UserDTO> approveUser(
             @RequestAttribute("userId") Long operatorId,
@@ -122,6 +133,7 @@ public class UserController {
     }
 
     @Operation(summary = "分页查询用户列表", description = "支持多条件筛选")
+    @ApiPermission("user:list")
     @GetMapping("/list")
     public Result<Page<UserDTO>> queryUsers(
             @ModelAttribute UserQueryRequest query,
@@ -131,6 +143,7 @@ public class UserController {
     }
 
     @Operation(summary = "获取待审批用户列表", description = "获取当前管理员有权限审批的待审批用户")
+    @ApiPermission("user:pending:view")
     @GetMapping("/pending-approvals")
     public Result<List<UserDTO>> getPendingApprovals(
             @RequestAttribute("userId") Long operatorId) {
@@ -139,6 +152,7 @@ public class UserController {
     }
 
     @Operation(summary = "获取用户详情", description = "根据 ID 获取用户详细信息")
+    @ApiPermission("user:view")
     @GetMapping("/{id}")
     public Result<UserDTO> getUser(@PathVariable Long id) {
         UserDTO user = userService.getUserById(id);
@@ -146,6 +160,7 @@ public class UserController {
     }
 
     @Operation(summary = "更新用户信息", description = "管理员更新用户信息")
+    @ApiPermission("user:edit")
     @PutMapping("/{id}")
     public Result<UserDTO> updateUser(
             @PathVariable Long id,
@@ -156,6 +171,7 @@ public class UserController {
     }
 
     @Operation(summary = "删除用户", description = "删除指定用户（系统保护用户不可删除）")
+    @ApiPermission("user:delete")
     @DeleteMapping("/{id}")
     public Result<Void> deleteUser(
             @PathVariable Long id,

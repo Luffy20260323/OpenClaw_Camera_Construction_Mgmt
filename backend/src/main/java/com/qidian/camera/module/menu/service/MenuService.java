@@ -66,45 +66,31 @@ public class MenuService {
         
         String sql = """
             SELECT 
-                ump.id as ump_id,
-                ump.user_id,
-                ump.menu_id,
-                ump.can_view as ump_can_view,
-                ump.can_operate as ump_can_operate,
-                ump.granted_by,
-                ump.granted_at,
-                u.username,
-                u.real_name,
+                m.id as menu_id,
                 m.menu_code,
                 m.menu_name,
-                rmp.can_view as rmp_can_view,
-                rmp.can_operate as rmp_can_operate,
-                CASE 
-                    WHEN ump.id IS NOT NULL THEN 'CUSTOM'
-                    ELSE 'ROLE'
-                END as permission_source
+                COALESCE(ump.can_view, rmp.can_view, false) as can_view,
+                COALESCE(ump.can_operate, rmp.can_operate, false) as can_operate,
+                CASE WHEN ump.id IS NOT NULL THEN 'CUSTOM' ELSE 'ROLE' END as permission_source,
+                ump.id as ump_id,
+                ump.granted_by,
+                ump.granted_at,
+                ? as user_id,
+                (SELECT username FROM users WHERE id = ?) as username,
+                (SELECT real_name FROM users WHERE id = ?) as real_name
             FROM menus m
             LEFT JOIN user_menu_permissions ump ON m.id = ump.menu_id AND ump.user_id = ?
             LEFT JOIN role_menu_permissions rmp ON m.id = rmp.menu_id 
-            LEFT JOIN user_roles ur ON ur.user_id = ? AND ur.role_id = rmp.role_id
-            LEFT JOIN users u ON u.id = ?
+                AND rmp.role_id IN (SELECT role_id FROM user_roles WHERE user_id = ?)
             WHERE m.is_visible = TRUE
-            ORDER BY m.sort_order
+            ORDER BY m.sort_order, m.id
         """;
         
-        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, targetUserId, targetUserId, targetUserId);
+        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, targetUserId, targetUserId, targetUserId, targetUserId, targetUserId);
         
         return results.stream().map(row -> {
-            Boolean canView = (Boolean) row.get("ump_can_view");
-            Boolean canOperate = (Boolean) row.get("ump_can_operate");
-            
-            // 如果自定义权限存在，使用自定义权限；否则使用角色默认权限
-            if (canView == null) {
-                canView = (Boolean) row.get("rmp_can_view");
-            }
-            if (canOperate == null) {
-                canOperate = (Boolean) row.get("rmp_can_operate");
-            }
+            Boolean canView = (Boolean) row.get("can_view");
+            Boolean canOperate = (Boolean) row.get("can_operate");
             
             return UserMenuPermissionDTO.builder()
                     .id(row.get("ump_id") != null ? ((Number) row.get("ump_id")).longValue() : null)

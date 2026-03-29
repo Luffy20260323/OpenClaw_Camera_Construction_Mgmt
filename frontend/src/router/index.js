@@ -6,6 +6,8 @@ const MENU_CODE_MAP = {
   '/home': 'home',
   '/system/config': 'system_config',
   '/system/user-permission': 'user_permission',
+  '/system/role-permission': 'role_permission',
+  '/system/audit-log': 'audit_log',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
   '/company': 'company_management',
@@ -37,6 +39,18 @@ const routes = [
     name: 'UserPermission',
     component: () => import('@/views/system/UserPermission.vue'),
     meta: { title: '用户权限配置', requiresAuth: true, menuCode: 'user_permission' }
+  },
+  {
+    path: '/system/role-permission',
+    name: 'RolePermission',
+    component: () => import('@/views/system/RolePermission.vue'),
+    meta: { title: '角色权限配置', requiresAuth: true, menuCode: 'role_permission' }
+  },
+  {
+    path: '/system/audit-log',
+    name: 'AuditLog',
+    component: () => import('@/views/system/AuditLog.vue'),
+    meta: { title: '审计日志', requiresAuth: true, menuCode: 'audit_log' }
   },
   {
     path: '/user/profile',

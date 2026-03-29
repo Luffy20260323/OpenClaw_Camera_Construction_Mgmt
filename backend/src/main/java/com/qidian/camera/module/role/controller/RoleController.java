@@ -6,6 +6,7 @@ import com.qidian.camera.module.role.dto.RoleDTO;
 import com.qidian.camera.module.role.dto.CreateRoleRequest;
 import com.qidian.camera.module.role.dto.UpdateRoleRequest;
 import com.qidian.camera.module.role.service.RoleService;
+import com.qidian.camera.module.auth.annotation.ApiPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ public class RoleController {
     private final com.qidian.camera.module.user.service.UserService userService;
 
     @Operation(summary = "分页查询角色列表", description = "支持按公司类型、关键词筛选")
+    @ApiPermission("role:list")
     @GetMapping
     public Result<Page<RoleDTO>> getRoles(
             @RequestParam(defaultValue = "1") Integer pageNum,
@@ -36,6 +38,7 @@ public class RoleController {
     }
 
     @Operation(summary = "获取角色详情", description = "根据 ID 获取角色详细信息")
+    @ApiPermission("role:view")
     @GetMapping("/{id}")
     public Result<RoleDTO> getRole(@PathVariable Long id) {
         RoleDTO role = roleService.getRoleById(id);
@@ -43,6 +46,7 @@ public class RoleController {
     }
 
     @Operation(summary = "创建角色", description = "创建新角色（仅系统管理员）")
+    @ApiPermission("role:create")
     @PostMapping
     public Result<RoleDTO> createRole(
             @RequestAttribute("userId") Long operatorId,
@@ -53,6 +57,7 @@ public class RoleController {
     }
 
     @Operation(summary = "更新角色", description = "更新角色信息（仅系统管理员，系统保护的角色不可修改）")
+    @ApiPermission("role:edit")
     @PutMapping("/{id}")
     public Result<RoleDTO> updateRole(
             @PathVariable Long id,
@@ -64,6 +69,7 @@ public class RoleController {
     }
 
     @Operation(summary = "删除角色", description = "删除角色（仅系统管理员，系统保护的角色不可删除）")
+    @ApiPermission("role:delete")
     @DeleteMapping("/{id}")
     public Result<Void> deleteRole(
             @PathVariable Long id,

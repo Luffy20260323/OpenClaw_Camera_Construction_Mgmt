@@ -38,10 +38,11 @@ public class JwtTokenProvider {
     /**
      * 生成访问令牌
      */
-    public String generateAccessToken(Long userId, String username, List<String> roles, List<String> permissions) {
+    public String generateAccessToken(Long userId, String username, String realName, List<String> roles, List<String> permissions) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
+        claims.put("realName", realName);
         claims.put("roles", roles);
         claims.put("permissions", permissions);
 

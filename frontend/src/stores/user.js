@@ -25,21 +25,31 @@ export const useUserStore = defineStore('user', {
     async login(loginForm) {
       try {
         const res = await login(loginForm)
-        const { accessToken, refreshToken, userInfo } = res.data
+        const { accessToken, refreshToken, userInfo, menus } = res.data
+        
+        console.log('[Login] 登录响应数据:', { userInfo, menus })
+        
+        // 将完整菜单数据添加到 userInfo 中（优先使用 menus，如果没有则用 userInfo.menus）
+        const userInfoWithMenus = {
+          ...userInfo,
+          menus: menus || userInfo.menus || []
+        }
+        
+        console.log('[Login] 保存的菜单数据:', userInfoWithMenus.menus)
         
         // 先保存到 localStorage
         localStorage.setItem('accessToken', accessToken)
         localStorage.setItem('refreshToken', refreshToken)
-        localStorage.setItem('userInfo', JSON.stringify(userInfo))
+        localStorage.setItem('userInfo', JSON.stringify(userInfoWithMenus))
         
         // 再更新 state（确保顺序）
         this.token = accessToken
         this.refreshToken = refreshToken
-        this.userInfo = userInfo
+        this.userInfo = userInfoWithMenus
         
         // 强制触发响应式更新
         this.$patch({
-          userInfo: { ...userInfo }
+          userInfo: { ...userInfoWithMenus }
         })
         
         ElMessage.success('登录成功')

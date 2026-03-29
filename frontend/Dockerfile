@@ -37,8 +37,24 @@ RUN npm run build
 #-------------------------------------------------------------------------------
 FROM nginx:alpine
 
-# 复制自定义 Nginx 配置
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# 直接写入正确的 Nginx 配置（避免缓存问题）
+RUN echo 'server { \
+    listen 80; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    access_log /var/log/nginx/access.log; \
+    error_log /var/log/nginx/error.log; \
+    location / { try_files $uri $uri/ /index.html; } \
+    location /api/ { \
+        proxy_pass http://camera-backend:8080/api/; \
+        proxy_http_version 1.1; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+    } \
+    location /health { return 200 "healthy\n"; } \
+}' > /etc/nginx/conf.d/default.conf
 
 # 从构建阶段复制构建产物
 COPY --from=builder /build/dist /usr/share/nginx/html
