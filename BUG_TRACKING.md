@@ -271,7 +271,243 @@ echo "✅ 部署完成"
 
 ---
 
-## Bug #002: (预留)
+## Bug #002: 用户权限配置/角色权限配置页面报错"请求失败"
+
+**创建日期**: 2026-03-29  
+**状态**: ✅ 已解决  
+**优先级**: 高  
+**影响范围**: 用户权限配置、角色权限配置页面  
+
+---
+
+### 📋 问题描述
+
+用户报告在"用户权限配置"页面点击后显示"加载菜单列表失败：请求失败"，"角色权限配置"页面显示"服务器错误"。
+
+**受影响页面**:
+- 用户权限配置 (`/system/user-permission`) - 加载菜单列表失败
+- 角色权限配置 (`/system/role-permission`) - 服务器错误
+
+**现象**:
+- 页面加载时 `loadAllMenus()` 调用 `/menu/all` API
+- HTTP 返回 200，但前端报错"请求失败"
+- 控制台显示 `user-permission:1:1` 错误
+
+---
+
+### 🔍 根本原因
+
+**代码层面**:
+- `MenuController.java` 的方法直接返回 `List<T>` 数组，未使用 `Result<T>` 包装
+- 前端 `request.js` 响应拦截器检查 `res.code !== 200`
+- 数组没有 `code` 属性 → `undefined !== 200` → 触发错误
+
+**对比其他 Controller**:
+- `UserController.java` 正确使用 `Result.success(data)` 包装返回值
+- `MenuController.java` 直接返回 `return menuService.getAllMenus()` (数组)
+
+**错误代码**:
+```java
+@GetMapping("/all")
+public List<MenuDTO> getAllMenus(...) {
+    return menuService.getAllMenus();  // 直接返回数组
+}
+```
+
+**正确代码**:
+```java
+@GetMapping("/all")
+public Result<List<MenuDTO>> getAllMenus(...) {
+    List<MenuDTO> menus = menuService.getAllMenus();
+    return Result.success(menus);  // 包装成 { code: 200, data: [...] }
+}
+```
+
+---
+
+### 📝 排查过程
+
+#### ❌ 第一次分析（错误方向）
+
+1. **假设**: 权限问题（403 Forbidden）
+2. **行动**: 检查权限表、角色权限配置
+3. **发现**: 系统管理员有 `menu:all:view` 权限
+4. **结果**: ❌ 用户确认 HTTP 返回 200，不是 403
+
+**耗时**: 20 分钟
+
+---
+
+#### ✅ 第二次分析（正确定位）
+
+1. **用户提供**: 网络面板截图，显示 `/menu/all` 请求返回 200
+2. **关键线索**: 用户说"截图中的返回码是200，我没有看到403"
+3. **重新检查**: 响应拦截器逻辑
+4. **发现**: `res.code !== 200` → 数组没有 code 属性 → 报错
+5. **对比代码**: `UserController` 用 `Result<T>`，`MenuController` 直接返回数组
+6. **定位**: 响应格式不一致问题
+
+**耗时**: 10 分钟
+
+---
+
+### 🛠️ 解决方案
+
+#### 代码修复
+
+**文件**: `backend/src/main/java/com/qidian/camera/module/menu/controller/MenuController.java`
+
+修改所有方法，使用 `Result<T>` 包装返回值：
+
+```java
+// 添加导入
+import com.qidian.camera.common.response.Result;
+
+// 修改所有方法
+@GetMapping("/my-menus")
+public Result<List<MenuDTO>> getMyMenus(...) {
+    return Result.success(menuService.getUserMenus(userId));
+}
+
+@GetMapping("/all")
+public Result<List<MenuDTO>> getAllMenus(...) {
+    return Result.success(menuService.getAllMenus());
+}
+
+@GetMapping("/user-permissions/{userId}")
+public Result<List<UserMenuPermissionDTO>> getUserPermissions(...) {
+    return Result.success(menuService.getUserMenuPermissions(userId));
+}
+
+@PutMapping("/user-permission")
+public Result<Void> updateUserPermission(...) {
+    menuService.updateUserMenuPermission(request, operatorId);
+    return Result.success();
+}
+
+@DeleteMapping("/user-permission")
+public Result<Void> deleteUserPermission(...) {
+    menuService.deleteUserMenuPermission(userId, menuId, operatorId);
+    return Result.success();
+}
+
+@PutMapping("/user-permissions/batch")
+public Result<Void> batchUpdateUserPermissions(...) {
+    menuService.batchUpdateUserMenuPermissions(userId, requests, operatorId);
+    return Result.success();
+}
+```
+
+#### 部署流程
+
+```bash
+# 1. 编译后端
+cd backend
+mvn clean package -DskipTests
+
+# 2. 重新构建 Docker 镜像
+docker compose build backend
+
+# 3. 重启容器
+docker compose up -d backend
+```
+
+---
+
+### 📊 时间线
+
+| 时间 | 事件 | 状态 |
+|------|------|------|
+| 2026-03-29 07:34 | 用户报告问题 | 开始 |
+| 2026-03-29 07:40 | 第一次分析（权限方向） | ❌ 错误方向 |
+| 2026-03-29 08:43 | 用户提供关键截图 | 🔍 转折点 |
+| 2026-03-29 08:50 | 定位响应格式问题 | ✅ 正确定位 |
+| 2026-03-29 08:56 | 重新构建并部署 | ✅ 解决 |
+
+**总耗时**: ~1.5 小时  
+**实际修复时间**: ~10 分钟（定位后）
+
+---
+
+### 🎯 关键教训
+
+#### 1. 不要被表面现象误导
+
+**错误**: 看到"请求失败"联想到权限问题（403）  
+**正确**: 用户明确说 HTTP 200，应该检查响应数据结构
+
+---
+
+#### 2. 统一响应格式是基础规范
+
+**问题**: 同一项目内 Controller 返回格式不一致  
+**预防**: 所有 Controller 应遵循统一规范
+
+**规范要求**:
+- 所有 API 返回 `Result<T>` 格式
+- 前端统一处理 `res.code` 检查
+- 新增 Controller 前检查现有规范
+
+---
+
+#### 3. 用户提供的细节很重要
+
+**关键线索**: "截图中的返回码是200，我没有看到403"
+- 这句话直接推翻了权限问题的假设
+- 应该更早询问用户响应状态码
+
+---
+
+### ✅ 验证步骤
+
+1. **用户权限配置**:
+   - 访问 `/system/user-permission`
+   - 页面加载 → ✅ 不再报错
+   - 用户下拉框有数据
+   - 菜单表格正常显示
+
+2. **角色权限配置**:
+   - 访问 `/system/role-permission`
+   - 页面加载 → ✅ 不再报错
+
+---
+
+### 📎 相关文件
+
+- `backend/src/main/java/com/qidian/camera/module/menu/controller/MenuController.java` (已修复)
+- `backend/src/main/java/com/qidian/camera/common/response/Result.java` (响应包装类)
+- `frontend/src/utils/request.js` (响应拦截器)
+
+---
+
+### 🔄 预防措施
+
+#### 1. Controller 返回格式规范
+
+所有 Controller 必须使用 `Result<T>` 包装返回值：
+
+```java
+// ✅ 正确
+public Result<List<XDTO>> list() {
+    return Result.success(service.list());
+}
+
+// ❌ 错误
+public List<XDTO> list() {
+    return service.list();  // 直接返回数组
+}
+```
+
+#### 2. 新增 Controller 检查清单
+
+创建新 Controller 时：
+1. 检查 `Result.java` 是否存在
+2. 所有方法返回 `Result<T>`
+3. 参考 `UserController.java` 示例
+
+---
+
+## Bug #003: (预留)
 
 ---
 
@@ -295,5 +531,5 @@ echo "✅ 部署完成"
 
 ---
 
-*最后更新: 2026-03-26*  
+*最后更新: 2026-03-29*  
 *维护者: OpenClaw 团队*
