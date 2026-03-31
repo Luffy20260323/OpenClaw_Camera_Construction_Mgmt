@@ -36,3 +36,13 @@ logging:
     com.qidian.camera: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
+
+# 权限缓存配置
+permission:
+  cache:
+    # 是否启用权限缓存（默认：true）
+    enabled: true
+    # 用户权限缓存 TTL（分钟，默认：30）
+    user-ttl-minutes: 30
+    # 角色权限缓存 TTL（分钟，默认：60）
+    role-ttl-minutes: 60

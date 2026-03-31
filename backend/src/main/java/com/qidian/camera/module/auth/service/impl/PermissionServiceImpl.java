@@ -2,7 +2,7 @@ package com.qidian.camera.module.auth.service.impl;
 
 import com.qidian.camera.module.auth.entity.UserContext;
 import com.qidian.camera.module.auth.entity.PermissionInfo;
-import com.qidian.camera.module.auth.service.PermissionService;
+import com.qidian.camera.module.auth.service.DataPermissionService;
 import com.qidian.camera.module.auth.service.PermissionCacheService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,15 +15,18 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * 权限服务实现
+ * 权限服务实现（基于 JdbcTemplate）
+ * 提供权限查询、验证和缓存功能
+ * 注意：这是基于 permissions 表的旧实现，与 PermissionService（基于 resource 表）是独立的服务
  */
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class PermissionServiceImpl implements PermissionService {
+public class PermissionServiceImpl {
     
     private final JdbcTemplate jdbcTemplate;
     private final PermissionCacheService permissionCacheService;
+    private final DataPermissionService dataPermissionService;
     
     private static final ThreadLocal<UserContext> USER_CONTEXT_THREAD_LOCAL = new ThreadLocal<>();
     
@@ -41,7 +44,9 @@ public class PermissionServiceImpl implements PermissionService {
         USER_CONTEXT_THREAD_LOCAL.remove();
     }
     
-    @Override
+    /**
+     * 获取当前用户上下文
+     */
     public UserContext getCurrentUser() {
         UserContext userContext = USER_CONTEXT_THREAD_LOCAL.get();
         if (userContext == null) {
@@ -50,7 +55,9 @@ public class PermissionServiceImpl implements PermissionService {
         return userContext;
     }
     
-    @Override
+    /**
+     * 检查当前用户是否有指定权限
+     */
     public boolean hasPermission(String permissionCode) {
         try {
             UserContext userContext = getCurrentUser();
@@ -61,7 +68,9 @@ public class PermissionServiceImpl implements PermissionService {
         }
     }
     
-    @Override
+    /**
+     * 检查指定用户是否有指定权限
+     */
     public boolean hasPermission(Long userId, String permissionCode) {
         // 系统管理员拥有所有权限
         if (isSystemAdmin(userId)) {
@@ -72,7 +81,9 @@ public class PermissionServiceImpl implements PermissionService {
         return permissions.contains(permissionCode);
     }
     
-    @Override
+    /**
+     * 获取用户权限列表（带缓存）
+     */
     public List<String> getUserPermissions(Long userId) {
         // 1. 先从缓存读取
         java.util.Set<String> cached = permissionCacheService.getUserPermissionsFromCache(userId);
@@ -97,7 +108,9 @@ public class PermissionServiceImpl implements PermissionService {
         return permissions;
     }
     
-    @Override
+    /**
+     * 获取用户角色列表（带缓存）
+     */
     public List<String> getUserRoles(Long userId) {
         // 1. 先从缓存读取
         java.util.Set<String> cached = permissionCacheService.getUserRolesFromCache(userId);
@@ -119,7 +132,9 @@ public class PermissionServiceImpl implements PermissionService {
         return roles;
     }
     
-    @Override
+    /**
+     * 获取所有权限列表
+     */
     public List<PermissionInfo> getAllPermissions() {
         String sql = "SELECT id, permission_code, permission_name FROM permissions ORDER BY id";
         
@@ -136,14 +151,28 @@ public class PermissionServiceImpl implements PermissionService {
     }
     
     /**
-     * 判断用户是否是系统管理员
+     * 检查用户是否是系统管理员
      */
-    private boolean isSystemAdmin(Long userId) {
+    public boolean isSystemAdmin(Long userId) {
         String sql = "SELECT COUNT(1) FROM user_roles ur " +
                      "JOIN roles r ON ur.role_id = r.id " +
                      "WHERE ur.user_id = ? AND r.role_code = 'ROLE_SYSTEM_ADMIN'";
         
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId);
         return count != null && count > 0;
+    }
+    
+    /**
+     * 获取用户数据范围类型
+     */
+    public String getUserDataScopeType(Long userId) {
+        return dataPermissionService.getUserDataScopeType(userId);
+    }
+    
+    /**
+     * 获取用户数据权限 SQL
+     */
+    public String getUserDataPermissionSql(Long userId, String entityType) {
+        return dataPermissionService.getUserDataPermissionSql(userId, entityType);
     }
 }

@@ -12,6 +12,7 @@ import com.qidian.camera.module.company.entity.Company;
 import com.qidian.camera.module.company.mapper.CompanyMapper;
 import com.qidian.camera.module.company.entity.CompanyType;
 import com.qidian.camera.module.company.mapper.CompanyTypeMapper;
+import com.qidian.camera.module.auth.service.PermissionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -43,6 +44,7 @@ public class UserService {
     private final CompanyTypeMapper companyTypeMapper;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final PermissionService permissionService;
 
     // 公司类型常量
     private static final Integer COMPANY_TYPE_JIAFANG = 1;    // 甲方
@@ -104,6 +106,8 @@ public class UserService {
                     roleId
                 );
             }
+            // 清除用户权限缓存
+            permissionService.evictUserPermissionCache(user.getId());
         }
 
         // 8. 分配作业区
@@ -202,6 +206,8 @@ public class UserService {
                     role.getId()
                 );
             }
+            // 清除用户权限缓存
+            permissionService.evictUserPermissionCache(user.getId());
         }
 
         // 9. 分配作业区
@@ -821,6 +827,9 @@ public class UserService {
 
         // 4. 删除用户
         userMapper.deleteById(userId);
+        
+        // 5. 清除用户权限缓存
+        permissionService.evictUserPermissionCache(userId);
 
         log.info("删除用户：userId={}, username={}, operatorId={}", userId, user.getUsername(), operatorId);
     }
@@ -1147,6 +1156,8 @@ public class UserService {
                     );
                 }
             }
+            // 清除用户权限缓存（用户角色变更）
+            permissionService.evictUserPermissionCache(userId);
         }
 
         // 更新用户作业区
