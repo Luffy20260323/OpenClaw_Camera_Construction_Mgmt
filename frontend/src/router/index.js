@@ -5,9 +5,14 @@ const MENU_CODE_MAP = {
   '/': 'home',
   '/home': 'home',
   '/system/config': 'system_config',
+  '/system/menu': 'menu_management',
+  '/system/base-permission': 'base_permission',
   '/system/user-permission': 'user_permission',
+  '/system/user-permission-detail': 'user_permission_detail',
   '/system/role-permission': 'role_permission',
+  '/system/role-default': 'role_default_permission',
   '/system/audit-log': 'audit_log',
+  '/system/docs': 'system_docs',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
   '/company': 'company_management',
@@ -35,10 +40,28 @@ const routes = [
     meta: { title: '系统配置', requiresAuth: true, menuCode: 'system_config' }
   },
   {
+    path: '/system/menu',
+    name: 'MenuManagement',
+    component: () => import('@/views/system/MenuManagement.vue'),
+    meta: { title: '菜单管理', requiresAuth: true, menuCode: 'menu_management' }
+  },
+  {
+    path: '/system/base-permission',
+    name: 'BasePermission',
+    component: () => import('@/views/system/BasePermission.vue'),
+    meta: { title: '基本权限配置', requiresAuth: true, menuCode: 'base_permission' }
+  },
+  {
     path: '/system/user-permission',
     name: 'UserPermission',
     component: () => import('@/views/system/UserPermission.vue'),
     meta: { title: '用户权限配置', requiresAuth: true, menuCode: 'user_permission' }
+  },
+  {
+    path: '/system/user-permission-detail',
+    name: 'UserPermissionDetail',
+    component: () => import('@/views/system/UserPermissionDetail.vue'),
+    meta: { title: '用户权限查看', requiresAuth: true, menuCode: 'user_permission_detail' }
   },
   {
     path: '/system/role-permission',
@@ -47,10 +70,28 @@ const routes = [
     meta: { title: '角色权限配置', requiresAuth: true, menuCode: 'role_permission' }
   },
   {
+    path: '/system/role-default',
+    name: 'RoleDefaultPermission',
+    component: () => import('@/views/system/RoleDefaultPermission.vue'),
+    meta: { title: '角色缺省权限', requiresAuth: true, menuCode: 'role_default_permission' }
+  },
+  {
     path: '/system/audit-log',
     name: 'AuditLog',
     component: () => import('@/views/system/AuditLog.vue'),
     meta: { title: '审计日志', requiresAuth: true, menuCode: 'audit_log' }
+  },
+  {
+    path: '/system/docs',
+    name: 'SystemDocs',
+    component: () => import('@/views/system/Documents.vue'),
+    meta: { title: '文档中心', requiresAuth: true, menuCode: 'system_docs' }
+  },
+  {
+    path: '/system/resources',
+    name: 'ResourceManagement',
+    component: () => import('@/views/system/ResourceManagement.vue'),
+    meta: { title: '资源管理', requiresAuth: true, menuCode: 'resource_management' }
   },
   {
     path: '/user/profile',
