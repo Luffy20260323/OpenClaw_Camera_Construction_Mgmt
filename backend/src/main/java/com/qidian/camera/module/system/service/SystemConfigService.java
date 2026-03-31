@@ -170,4 +170,52 @@ public class SystemConfigService {
             return 60;
         }
     }
+
+    /**
+     * 获取侧边栏位置配置
+     * @return "LEFT" 或 "RIGHT"
+     */
+    public String getSidebarPosition() {
+        return getConfigValue("sidebar-position", "LEFT");
+    }
+
+    /**
+     * 获取侧边栏显示模式配置
+     * @return "FIXED" 或 "COLLAPSIBLE"
+     */
+    public String getSidebarMode() {
+        return getConfigValue("sidebar-mode", "FIXED");
+    }
+
+    /**
+     * 获取侧边栏配置
+     */
+    public Map<String, String> getSidebarConfig() {
+        Map<String, String> config = new HashMap<>();
+        config.put("sidebarPosition", getSidebarPosition());
+        config.put("sidebarMode", getSidebarMode());
+        return config;
+    }
+
+    /**
+     * 更新侧边栏位置配置
+     */
+    @Transactional
+    public void updateSidebarPosition(String position) {
+        if (!"LEFT".equals(position) && !"RIGHT".equals(position)) {
+            throw new IllegalArgumentException("侧边栏位置必须是 LEFT 或 RIGHT");
+        }
+        updateConfig("sidebar-position", position, "侧边栏位置：LEFT-左边，RIGHT-右边");
+    }
+
+    /**
+     * 更新侧边栏显示模式配置
+     */
+    @Transactional
+    public void updateSidebarMode(String mode) {
+        if (!"FIXED".equals(mode) && !"COLLAPSIBLE".equals(mode)) {
+            throw new IllegalArgumentException("侧边栏模式必须是 FIXED 或 COLLAPSIBLE");
+        }
+        updateConfig("sidebar-mode", mode, "侧边栏显示模式：FIXED-一直显示，COLLAPSIBLE-可隐藏");
+    }
 }

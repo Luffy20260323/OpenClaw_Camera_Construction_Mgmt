@@ -1,16 +1,26 @@
 <template>
-  <el-container class="admin-layout">
-    <!-- 左侧导航菜单 -->
-    <el-aside :width="isCollapse ? '64px' : '240px'" class="sidebar">
+  <el-container class="admin-layout" :class="{ 'sidebar-right': sidebarConfig.position === 'RIGHT' }">
+    <!-- 侧边栏（支持左右位置） -->
+    <el-aside 
+      v-show="isSidebarVisible"
+      :style="sidebarStyle"
+      class="sidebar"
+    >
       <SidebarMenu :is-collapse="isCollapse" @menu-select="handleMenuSelect" />
     </el-aside>
 
-    <el-container>
+    <el-container class="main-wrapper">
       <!-- 顶部导航栏 -->
       <el-header class="header">
         <div class="header-left">
-          <!-- 折叠/展开按钮 -->
-          <el-button text @click="toggleCollapse" class="collapse-btn">
+          <!-- 折叠/展开按钮（仅在可折叠模式下显示） -->
+          <el-button 
+            v-if="isCollapsible"
+            text 
+            @click="toggleCollapse" 
+            class="collapse-btn"
+            :title="isCollapse ? '展开侧边栏' : '折叠侧边栏'"
+          >
             <el-icon>
               <component :is="isCollapse ? 'Expand' : 'Fold'" />
             </el-icon>
@@ -59,7 +69,7 @@
 
 <script setup>
 import { useRouter } from 'vue-router'
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { ArrowDown, HomeFilled, Expand, Fold } from '@element-plus/icons-vue'
@@ -68,13 +78,126 @@ import SidebarMenu from '@/components/SidebarMenu.vue'
 const router = useRouter()
 const userStore = useUserStore()
 
+// 侧边栏配置
+const sidebarConfig = ref({
+  position: 'LEFT', // LEFT 或 RIGHT
+  mode: 'FIXED' // FIXED 或 COLLAPSIBLE
+})
+
 // 侧边栏折叠状态
 const isCollapse = ref(false)
 
+// 计算侧边栏是否可折叠
+const isCollapsible = computed(() => {
+  return sidebarConfig.value.mode === 'COLLAPSIBLE'
+})
+
+// 计算侧边栏实际显示状态
+const isSidebarVisible = computed(() => {
+  if (sidebarConfig.value.mode === 'FIXED') {
+    return true
+  }
+  return !isCollapse.value
+})
+
+// 计算侧边栏样式
+const sidebarStyle = computed(() => {
+  const baseStyle = {
+    order: sidebarConfig.value.position === 'RIGHT' ? 1 : 0,
+    transition: 'width 0.3s, opacity 0.3s'
+  }
+  if (!isSidebarVisible.value) {
+    baseStyle.width = '0px'
+    baseStyle.opacity = '0'
+    baseStyle.overflow = 'hidden'
+  } else {
+    baseStyle.width = isCollapse.value ? '64px' : '240px'
+    baseStyle.opacity = '1'
+  }
+  return baseStyle
+})
+
+// 加载侧边栏配置（优先从 localStorage 读取）
+const loadSidebarConfig = () => {
+  const savedConfig = localStorage.getItem('sidebarConfig')
+  if (savedConfig) {
+    try {
+      sidebarConfig.value = JSON.parse(savedConfig)
+    } catch (e) {
+      console.error('解析侧边栏配置失败:', e)
+      sidebarConfig.value = { position: 'LEFT', mode: 'FIXED' }
+    }
+  }
+  
+  // 根据配置初始化折叠状态
+  if (sidebarConfig.value.mode === 'COLLAPSIBLE') {
+    // 可折叠模式下，从 localStorage 读取折叠状态
+    const savedCollapse = localStorage.getItem('sidebarCollapsed')
+    if (savedCollapse !== null) {
+      isCollapse.value = savedCollapse === 'true'
+    }
+  } else {
+    // 固定模式下，不折叠
+    isCollapse.value = false
+  }
+}
+
+// 保存侧边栏配置到 localStorage
+const saveSidebarConfig = () => {
+  localStorage.setItem('sidebarConfig', JSON.stringify(sidebarConfig.value))
+}
+
+// 监听配置变化，保存到 localStorage
+watch(sidebarConfig, () => {
+  saveSidebarConfig()
+}, { deep: true })
+
 // 切换折叠状态
 const toggleCollapse = () => {
+  if (sidebarConfig.value.mode === 'FIXED') {
+    ElMessage.warning('固定模式下不可折叠侧边栏')
+    return
+  }
   isCollapse.value = !isCollapse.value
+  localStorage.setItem('sidebarCollapsed', String(isCollapse.value))
 }
+
+// 更新侧边栏位置
+const updateSidebarPosition = (position) => {
+  sidebarConfig.value.position = position
+  ElMessage.success(`侧边栏已切换到${position === 'LEFT' ? '左侧' : '右侧'}`)
+}
+
+// 更新侧边栏模式
+const updateSidebarMode = (mode) => {
+  sidebarConfig.value.mode = mode
+  if (mode === 'FIXED') {
+    isCollapse.value = false
+    localStorage.removeItem('sidebarCollapsed')
+  }
+  ElMessage.success(`侧边栏模式已切换为${mode === 'FIXED' ? '固定显示' : '可折叠'}`)
+}
+
+// 暴露方法供外部调用（用于系统设置页面）
+const setSidebarConfig = (config) => {
+  if (config.position) {
+    updateSidebarPosition(config.position)
+  }
+  if (config.mode) {
+    updateSidebarMode(config.mode)
+  }
+}
+
+// 定义暴露的事件
+const emit = defineEmits(['config-change'])
+
+// 暴露方法给父组件
+defineExpose({
+  setSidebarConfig,
+  updateSidebarPosition,
+  updateSidebarMode,
+  getSidebarConfig: () => sidebarConfig.value
+})
 
 // 处理菜单选择
 const handleMenuSelect = (menuPath) => {
@@ -260,9 +383,10 @@ const handleCommand = async (command) => {
   }
 }
 
-// 组件挂载时加载菜单详情
+// 组件挂载时加载菜单详情和侧边栏配置
 onMounted(() => {
   loadMenuDetails()
+  loadSidebarConfig()
 })
 </script>
 
@@ -273,10 +397,25 @@ onMounted(() => {
   flex-direction: row;
   overflow: hidden;
   
+  // 侧边栏在右侧时的布局
+  &.sidebar-right {
+    flex-direction: row-reverse;
+    
+    .main-wrapper {
+      flex-direction: row-reverse;
+    }
+  }
+  
+  .main-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
+  
   .sidebar {
     flex-shrink: 0;
     background-color: #304156;
-    transition: width 0.3s;
     overflow: hidden;
   }
   

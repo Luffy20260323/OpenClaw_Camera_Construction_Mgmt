@@ -70,4 +70,36 @@ public class SystemConfigController {
         configs.put("smsIntervalSeconds", systemConfigService.getSmsIntervalSeconds());
         return Result.success(configs);
     }
+
+    @Operation(summary = "获取侧边栏配置", description = "获取侧边栏位置和显示模式配置")
+    @ApiPermission("system:config:view")
+    @GetMapping("/sidebar")
+    public Result<Map<String, String>> getSidebarConfig() {
+        Map<String, String> config = systemConfigService.getSidebarConfig();
+        return Result.success(config);
+    }
+
+    @Operation(summary = "更新侧边栏位置", description = "更新侧边栏位置配置（LEFT 或 RIGHT）")
+    @ApiPermission("system:config:edit")
+    @PutMapping("/sidebar/position")
+    public Result<Void> updateSidebarPosition(@RequestBody Map<String, String> updateData) {
+        String position = updateData.get("position");
+        if (position == null) {
+            return Result.error(400, "位置参数不能为空");
+        }
+        systemConfigService.updateSidebarPosition(position);
+        return Result.success(null);
+    }
+
+    @Operation(summary = "更新侧边栏显示模式", description = "更新侧边栏显示模式配置（FIXED 或 COLLAPSIBLE）")
+    @ApiPermission("system:config:edit")
+    @PutMapping("/sidebar/mode")
+    public Result<Void> updateSidebarMode(@RequestBody Map<String, String> updateData) {
+        String mode = updateData.get("mode");
+        if (mode == null) {
+            return Result.error(400, "模式参数不能为空");
+        }
+        systemConfigService.updateSidebarMode(mode);
+        return Result.success(null);
+    }
 }
