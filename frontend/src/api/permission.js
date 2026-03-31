@@ -83,6 +83,40 @@ export function getAuditLogs(params) {
 }
 
 /**
+ * 获取权限审计日志列表
+ * @param {object} params - 查询参数
+ * @param {number} params.page - 页码
+ * @param {number} params.size - 每页数量
+ * @param {string} params.targetType - 目标类型 (ROLE/USER)
+ * @param {string} params.targetName - 目标名称
+ * @param {string} params.operationType - 操作类型 (GRANT/REVOKE)
+ * @param {string} params.operatorName - 操作人
+ * @param {string} params.startTime - 开始时间
+ * @param {string} params.endTime - 结束时间
+ */
+export function getPermissionAuditLogs(params) {
+  return request({
+    url: '/permission/audit-logs',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 导出权限审计日志 Excel
+ * @param {object} params - 查询参数（同 getPermissionAuditLogs）
+ * @returns {Promise<Blob>} Excel 文件 Blob
+ */
+export function exportPermissionAuditLogs(params) {
+  return request({
+    url: '/permission/audit-logs/export',
+    method: 'get',
+    params,
+    responseType: 'blob'
+  })
+}
+
+/**
  * 更新权限描述
  */
 export function updatePermissionDescription(id, description) {

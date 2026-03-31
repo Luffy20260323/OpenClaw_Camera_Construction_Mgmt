@@ -92,7 +92,7 @@ const menuGroupConfig = [
   {
     key: 'system',
     divided: true,
-    codes: ['system_config', 'menu_management', 'base_permission', 'user_permission', 'user_permission_detail', 'role_permission', 'role_default_permission', 'audit_log', 'system_docs']
+    codes: ['system_config', 'menu_management', 'base_permission', 'user_permission', 'user_permission_detail', 'role_permission', 'role_default_permission', 'audit_log', 'permission_audit_log', 'system_docs']
   }
 ]
 
@@ -162,6 +162,7 @@ const getMenuPath = (menuCode) => {
     'role_permission': '/system/role-permission',
     'role_default_permission': '/system/role-default',
     'audit_log': '/system/audit-log',
+    'permission_audit_log': '/system/permission-audit-log',
     'system_docs': '/system/docs'
   }
   
@@ -206,6 +207,7 @@ const getDefaultMenuName = (menuCode) => {
     'role_permission': '角色权限配置',
     'role_default_permission': '角色缺省权限',
     'audit_log': '审计日志',
+    'permission_audit_log': '权限审计日志',
     'system_docs': '文档中心'
   }
   return defaultNames[menuCode] || menuCode
