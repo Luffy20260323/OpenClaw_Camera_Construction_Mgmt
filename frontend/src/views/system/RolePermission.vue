@@ -1,6 +1,6 @@
 <template>
   <AdminLayout>
-    <div class="permission-management">
+    <div class="role-permission">
       <el-card class="header-card">
         <div class="page-header">
           <h2>角色权限配置</h2>
@@ -17,7 +17,7 @@
               placeholder="请选择角色"
               filterable
               style="width: 300px"
-              @change="loadRolePermissions"
+              @change="loadRolePermissionTree"
             >
               <el-option
                 v-for="role in roleList"
@@ -28,13 +28,8 @@
             </el-select>
           </el-form-item>
           <el-form-item>
-            <el-button type="primary" @click="loadRolePermissions" :disabled="!selectedRoleId">
-              加载权限
-            </el-button>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="success" @click="savePermissions" :disabled="!selectedRoleId || !hasChanges || isProtectedRole">
-              保存修改
+            <el-button type="primary" @click="loadRolePermissionTree" :disabled="!selectedRoleId">
+              加载权限树
             </el-button>
           </el-form-item>
         </el-form>
@@ -60,141 +55,179 @@
           系统管理员角色默认拥有所有权限，不允许编辑。
         </el-alert>
 
-        <!-- 权限列表表格 -->
-        <el-table 
-          :data="permissionList" 
-          border 
-          style="width: 100%; margin-top: 20px"
-          v-loading="loading"
-          row-key="id"
-          :tree-props="{children: 'children'}"
-        >
-          <el-table-column label="分配状态" width="120" align="center">
-            <template #default="{ row }">
-              <!-- 模块级别（有子节点） -->
-              <div v-if="row.children && row.children.length > 0" class="module-checkbox-wrapper">
-                <el-checkbox
-                  v-model="row.selected"
-                  :indeterminate="getModuleIndeterminate(row)"
-                  :disabled="isProtectedRole"
-                  @change="handleModuleChange(row, $event)"
-                  :class="{
-                    'checkbox-all': isModuleAllSelected(row),
-                    'checkbox-partial': getModuleIndeterminate(row)
-                  }"
-                />
-              </div>
-              <!-- 具体权限（叶子节点） -->
-              <div v-else class="permission-checkbox-wrapper">
-                <el-checkbox
-                  v-model="row.selected"
-                  :disabled="isProtectedRole"
-                  @change="handlePermissionChange(row)"
-                />
-              </div>
-            </template>
-          </el-table-column>
-          <el-table-column prop="permissionCode" label="权限代码" width="200" />
-          <el-table-column prop="permissionName" label="权限名称" width="200" />
-          <el-table-column prop="description" label="描述">
-            <template #default="{ row }">
-              <span v-if="!row.children">{{ row.description || '-' }}</span>
-              <span v-else>-</span>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <!-- 权限说明 -->
+        <!-- 权限状态图例 -->
         <el-alert
-          title="权限说明"
+          title="权限状态说明"
           type="info"
           :closable="false"
           style="margin-top: 20px"
         >
-          <ul>
-            <li><strong>模块复选框</strong>：
-              <span class="legend-item"><span class="legend-box legend-green"></span> 绿色背景 = 全部授权</span>
-              <span class="legend-item"><span class="legend-box legend-yellow"></span> 黄色背景 = 部分授权</span>
-              <span class="legend-item">空白 = 全部未授权</span>
-            </li>
-            <li><strong>操作方式</strong>：点击模块复选框可批量授权/取消授权，点击具体权限复选框可单独授权/取消</li>
-            <li><strong>系统管理员角色</strong>：默认拥有所有权限，不允许修改</li>
-            <li><strong>权限控制</strong>：角色权限管理和用户权限管理本身需要相应权限才能操作</li>
-          </ul>
+          <div class="legend-container">
+            <span class="legend-item">
+              <el-tag type="danger" size="small">basic</el-tag> 基本权限（不可调整）
+            </span>
+            <span class="legend-item">
+              <el-tag type="warning" size="small">default</el-tag> 缺省权限
+            </span>
+            <span class="legend-item">
+              <el-tag type="success" size="small">added</el-tag> 已增加
+            </span>
+            <span class="legend-item">
+              <el-tag type="info" size="small">removed</el-tag> 已移除
+            </span>
+            <span class="legend-item">
+              <el-tag size="small">none</el-tag> 无权限
+            </span>
+          </div>
         </el-alert>
+
+        <!-- 权限树 -->
+        <div class="permission-tree-container" v-loading="loading">
+          <el-tree
+            ref="permissionTreeRef"
+            :data="permissionTree"
+            :props="treeProps"
+            node-key="resourceId"
+            default-expand-all
+            :expand-on-click-node="false"
+            :class="{ 'tree-disabled': isProtectedRole }"
+          >
+            <template #default="{ node, data }">
+              <div class="tree-node" :class="getNodeClass(data.status)">
+                <div class="node-content">
+                  <!-- 节点图标 -->
+                  <el-icon v-if="data.type" class="node-icon">
+                    <component :is="getTypeIcon(data.type)" />
+                  </el-icon>
+                  
+                  <!-- 节点信息 -->
+                  <div class="node-info">
+                    <span class="node-name">{{ data.name }}</span>
+                    <span class="node-code" v-if="data.code">{{ data.code }}</span>
+                    
+                    <!-- 状态标签 -->
+                    <el-tag 
+                      :type="getStatusTagType(data.status)" 
+                      size="small"
+                      class="status-tag"
+                    >
+                      {{ data.status }}
+                    </el-tag>
+                    
+                    <!-- 基本权限标记 -->
+                    <el-tag 
+                      v-if="data.status === 'basic'" 
+                      type="danger" 
+                      size="small"
+                      class="basic-tag"
+                    >
+                      基本
+                    </el-tag>
+                  </div>
+                </div>
+                
+                <!-- 操作按钮 -->
+                <div class="node-actions" v-if="!isProtectedRole && data.status !== 'basic'">
+                  <el-button
+                    v-if="data.status === 'none' || data.status === 'removed'"
+                    type="success"
+                    size="small"
+                    @click.stop="handleAdjustPermission(data, 'ADD')"
+                    :loading="adjustingIds.includes(data.resourceId)"
+                  >
+                    <el-icon><Plus /></el-icon>
+                    添加
+                  </el-button>
+                  
+                  <el-button
+                    v-if="data.status === 'default' || data.status === 'added'"
+                    type="danger"
+                    size="small"
+                    @click.stop="handleAdjustPermission(data, 'REMOVE')"
+                    :loading="adjustingIds.includes(data.resourceId)"
+                  >
+                    <el-icon><Minus /></el-icon>
+                    移除
+                  </el-button>
+                </div>
+                
+                <!-- 基本权限锁定提示 -->
+                <div class="node-locked" v-if="data.status === 'basic'">
+                  <el-icon><Lock /></el-icon>
+                  <span>基本权限</span>
+                </div>
+              </div>
+            </template>
+          </el-tree>
+        </div>
       </el-card>
     </div>
   </AdminLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { 
+  Plus, Minus, Lock, Folder, Menu, Document, Setting, 
+  Connection, User, Check, Close 
+} from '@element-plus/icons-vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
+import { getAllRoles, getRolePermissionTree, adjustRolePermission } from '@/api/permission'
 
-import { getAllPermissions, getAllRoles, getRolePermissions, updateRolePermissions } from '@/api/permission'
+// 树组件引用
+const permissionTreeRef = ref(null)
 
+// 状态
 const loading = ref(false)
+const adjustingIds = ref([])
 const roleList = ref([])
 const selectedRoleId = ref(null)
 const selectedRole = ref(null)
-const permissionList = ref([])
-const originalPermissionIds = ref([])
+const permissionTree = ref([])
+
+// 树配置
+const treeProps = {
+  children: 'children',
+  label: 'name'
+}
 
 // 受保护的角色列表（不允许编辑权限）
 const PROTECTED_ROLES = ['ROLE_SYSTEM_ADMIN']
 
-// 是否为受保护角色（系统管理员等）
+// 是否为受保护角色
 const isProtectedRole = computed(() => {
   return selectedRole.value && PROTECTED_ROLES.includes(selectedRole.value.role_code)
 })
 
-// 检查是否有未保存的修改
-const hasChanges = computed(() => {
-  const currentIds = getAllSelectedIds()
-  if (currentIds.length !== originalPermissionIds.value.length) return true
-  const currentSet = new Set(currentIds)
-  const originalSet = new Set(originalPermissionIds.value)
-  return ![...currentSet].every(id => originalSet.has(id))
-})
-
-// 获取所有选中的权限ID
-const getAllSelectedIds = () => {
-  const ids = []
-  permissionList.value.forEach(module => {
-    if (module.children) {
-      module.children.forEach(perm => {
-        if (perm.selected) ids.push(perm.id)
-      })
-    }
-  })
-  return ids
+// 获取类型图标
+const getTypeIcon = (type) => {
+  const iconMap = {
+    'MODULE': Folder,
+    'MENU': Menu,
+    'PAGE': Document,
+    'ELEMENT': Setting,
+    'API': Connection,
+    'PERMISSION': Check
+  }
+  return iconMap[type] || Document
 }
 
-// 判断模块是否全选
-const isModuleAllSelected = (module) => {
-  if (!module.children || module.children.length === 0) return false
-  return module.children.every(perm => perm.selected)
+// 获取状态标签类型
+const getStatusTagType = (status) => {
+  const typeMap = {
+    'basic': 'danger',
+    'default': 'warning',
+    'added': 'success',
+    'removed': 'info',
+    'none': ''
+  }
+  return typeMap[status] || ''
 }
 
-// 判断模块是否部分选中
-const getModuleIndeterminate = (module) => {
-  if (!module.children || module.children.length === 0) return false
-  const selectedCount = module.children.filter(perm => perm.selected).length
-  return selectedCount > 0 && selectedCount < module.children.length
-}
-
-// 处理模块复选框变化
-const handleModuleChange = (module, checked) => {
-  if (!module.children) return
-  module.children.forEach(perm => {
-    perm.selected = checked
-  })
-}
-
-// 处理具体权限复选框变化
-const handlePermissionChange = () => {
-  // 权限变化会自动更新
+// 获取节点 CSS 类
+const getNodeClass = (status) => {
+  return `node-status-${status}`
 }
 
 // 加载角色列表
@@ -204,49 +237,12 @@ const loadRoles = async () => {
     roleList.value = res.data || []
   } catch (error) {
     console.error('加载角色列表失败:', error)
+    ElMessage.error('加载角色列表失败')
   }
 }
 
-// 加载所有权限
-const loadAllPermissions = async () => {
-  try {
-    const res = await getAllPermissions()
-    const grouped = groupPermissionsByModule(res.data || [])
-    permissionList.value = grouped
-  } catch (error) {
-    console.error('加载权限列表失败:', error)
-  }
-}
-
-// 按模块分组权限
-const groupPermissionsByModule = (permissions) => {
-  const modules = {
-    'auth': { id: 'auth', permissionCode: '认证模块', permissionName: '认证模块', children: [], selected: false },
-    'user': { id: 'user', permissionCode: '用户模块', permissionName: '用户模块', children: [], selected: false },
-    'role': { id: 'role', permissionCode: '角色模块', permissionName: '角色模块', children: [], selected: false },
-    'workarea': { id: 'workarea', permissionCode: '作业区模块', permissionName: '作业区模块', children: [], selected: false },
-    'company': { id: 'company', permissionCode: '公司模块', permissionName: '公司模块', children: [], selected: false },
-    'menu': { id: 'menu', permissionCode: '菜单模块', permissionName: '菜单模块', children: [], selected: false },
-    'system': { id: 'system', permissionCode: '系统配置', permissionName: '系统配置', children: [], selected: false },
-    'permission': { id: 'permission', permissionCode: '权限管理', permissionName: '权限管理', children: [], selected: false },
-    'audit_log': { id: 'audit_log', permissionCode: '审计日志', permissionName: '审计日志', children: [], selected: false }
-  }
-  
-  permissions.forEach(perm => {
-    const moduleKey = perm.permissionCode.split(':')[0]
-    if (modules[moduleKey]) {
-      modules[moduleKey].children.push({
-        ...perm,
-        selected: false
-      })
-    }
-  })
-  
-  return Object.values(modules).filter(m => m.children.length > 0)
-}
-
-// 加载角色权限
-const loadRolePermissions = async () => {
+// 加载角色权限树
+const loadRolePermissionTree = async () => {
   if (!selectedRoleId.value) return
   
   loading.value = true
@@ -254,86 +250,64 @@ const loadRolePermissions = async () => {
     const role = roleList.value.find(r => r.id === selectedRoleId.value)
     selectedRole.value = role
     
-    // 如果是受保护角色，自动全选所有权限
-    if (PROTECTED_ROLES.includes(role.role_code)) {
-      permissionList.value.forEach(module => {
-        if (module.children) {
-          module.children.forEach(perm => {
-            perm.selected = true
-          })
-          module.selected = true
-        }
-      })
-      originalPermissionIds.value = getAllSelectedIds()
-      ElMessage.success('系统管理员角色拥有所有权限')
-    } else {
-      const res = await getRolePermissions(selectedRoleId.value)
-      const permissionIds = res.data?.permissionIds || []
-      originalPermissionIds.value = [...permissionIds]
-      
-      // 更新权限列表选中状态
-      permissionList.value.forEach(module => {
-        if (module.children) {
-          module.children.forEach(perm => {
-            perm.selected = permissionIds.includes(perm.id)
-          })
-          // 更新模块选中状态
-          module.selected = module.children.every(perm => perm.selected)
-        }
-      })
-      
-      ElMessage.success('权限加载成功')
-    }
+    const res = await getRolePermissionTree(selectedRoleId.value)
+    permissionTree.value = res.data || []
+    
+    ElMessage.success('权限树加载成功')
   } catch (error) {
-    console.error('加载权限失败:', error)
-    ElMessage.error('加载权限失败：' + error.message)
+    console.error('加载权限树失败:', error)
+    ElMessage.error('加载权限树失败：' + (error.message || '未知错误'))
   } finally {
     loading.value = false
   }
 }
 
-// 保存权限修改
-const savePermissions = async () => {
+// 处理权限调整
+const handleAdjustPermission = async (data, action) => {
   if (!selectedRoleId.value) return
   
-  // 再次检查是否为受保护角色
-  if (isProtectedRole.value) {
-    ElMessage.warning('系统管理员角色权限不允许修改')
-    return
-  }
+  const actionText = action === 'ADD' ? '添加' : '移除'
   
   try {
-    await ElMessageBox.confirm('确定要保存权限修改吗？', '提示', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
+    await ElMessageBox.confirm(
+      `确定要${actionText}权限"${data.name}"吗？`,
+      '确认操作',
+      {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }
+    )
+    
+    adjustingIds.value.push(data.resourceId)
+    
+    await adjustRolePermission(selectedRoleId.value, {
+      resourceId: data.resourceId,
+      action: action
     })
     
-    const selectedIds = getAllSelectedIds()
+    ElMessage.success(`${actionText}权限成功`)
     
-    await updateRolePermissions(selectedRoleId.value, {
-      permissionIds: selectedIds,
-      comment: '通过角色权限配置页面修改'
-    })
-    
-    ElMessage.success('权限保存成功')
-    await loadRolePermissions()
+    // 重新加载权限树
+    await loadRolePermissionTree()
   } catch (error) {
     if (error !== 'cancel') {
-      console.error('保存权限失败:', error)
-      ElMessage.error('保存权限失败：' + error.message)
+      console.error('调整权限失败:', error)
+      ElMessage.error('调整权限失败：' + (error.message || '未知错误'))
     }
+  } finally {
+    adjustingIds.value = adjustingIds.value.filter(id => id !== data.resourceId)
   }
 }
 
+// 初始化
 onMounted(() => {
   loadRoles()
-  loadAllPermissions()
 })
 </script>
 
 <style scoped lang="scss">
-.permission-management {
+.role-permission {
   .header-card {
     margin-bottom: 20px;
     
@@ -360,81 +334,135 @@ onMounted(() => {
     .role-info {
       margin-bottom: 20px;
     }
+    
+    .legend-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
+    
+    .permission-tree-container {
+      margin-top: 20px;
+      
+      &.tree-disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+    }
+  }
+}
+
+// 树节点样式
+.tree-node {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 4px;
+  margin: 2px 0;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #f5f7fa;
   }
   
-  // 模块复选框样式
-  .module-checkbox-wrapper {
+  // 状态样式
+  &.node-status-basic {
+    background-color: #fef0f0;
+    border-left: 3px solid #f56c6c;
+  }
+  
+  &.node-status-default {
+    background-color: #fdf6ec;
+    border-left: 3px solid #e6a23c;
+  }
+  
+  &.node-status-added {
+    background-color: #f0f9eb;
+    border-left: 3px solid #67c23a;
+  }
+  
+  &.node-status-removed {
+    background-color: #f4f4f5;
+    border-left: 3px solid #909399;
+  }
+  
+  &.node-status-none {
+    background-color: #fff;
+    border-left: 3px solid #dcdfe6;
+  }
+  
+  .node-content {
     display: flex;
-    justify-content: center;
     align-items: center;
+    flex: 1;
     
-    :deep(.el-checkbox) {
-      padding: 8px 12px;
-      border-radius: 4px;
-      margin: 0;
+    .node-icon {
+      margin-right: 8px;
+      font-size: 16px;
+      color: #606266;
+    }
+    
+    .node-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
       
-      &.checkbox-all {
-        background-color: #f0f9eb;
-        
-        .el-checkbox__inner {
-          background-color: #67c23a;
-          border-color: #67c23a;
-        }
+      .node-name {
+        font-weight: 500;
+        color: #303133;
       }
       
-      &.checkbox-partial {
-        background-color: #fdf6ec;
-        
-        .el-checkbox__inner {
-          background-color: #e6a23c;
-          border-color: #e6a23c;
-        }
-        
-        .el-checkbox__inner::after {
-          content: '';
-          position: absolute;
-          display: block;
-          left: 4px;
-          top: 7px;
-          width: 6px;
-          height: 2px;
-          background-color: #fff;
-          transform: none;
-        }
+      .node-code {
+        color: #909399;
+        font-size: 12px;
+        font-family: monospace;
+      }
+      
+      .status-tag {
+        margin-left: 8px;
+      }
+      
+      .basic-tag {
+        margin-left: 4px;
       }
     }
   }
   
-  .permission-checkbox-wrapper {
+  .node-actions {
     display: flex;
-    justify-content: center;
-    align-items: center;
+    gap: 8px;
+    
+    .el-button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
   }
   
-  // 图例样式
-  .legend-item {
-    margin-right: 16px;
-    display: inline-flex;
+  .node-locked {
+    display: flex;
     align-items: center;
     gap: 4px;
+    color: #f56c6c;
+    font-size: 12px;
+    
+    .el-icon {
+      font-size: 14px;
+    }
   }
-  
-  .legend-box {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    border: 1px solid #dcdfe6;
-    
-    &.legend-green {
-      background-color: #f0f9eb;
-      border-color: #67c23a;
-    }
-    
-    &.legend-yellow {
-      background-color: #fdf6ec;
-      border-color: #e6a23c;
-    }
+}
+
+// 树禁用状态
+.tree-disabled {
+  .tree-node {
+    pointer-events: none;
+    opacity: 0.5;
   }
 }
 </style>

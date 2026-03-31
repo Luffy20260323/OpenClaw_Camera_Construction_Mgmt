@@ -42,6 +42,16 @@ export function updateRolePermissions(roleId, data) {
 }
 
 /**
+ * 获取角色的缺省权限
+ */
+export function getRoleDefaultPermissions(roleId) {
+  return request({
+    url: `/permission/role/${roleId}/default`,
+    method: 'get'
+  })
+}
+
+/**
  * 获取用户的权限列表
  */
 export function getUserPermissions(userId) {
@@ -80,5 +90,31 @@ export function updatePermissionDescription(id, description) {
     url: `/permission/${id}`,
     method: 'put',
     data: { description }
+  })
+}
+
+/**
+ * 获取角色权限树（带状态标记）
+ * @param {number} roleId - 角色 ID
+ * @returns {Promise} 权限树数据
+ */
+export function getRolePermissionTree(roleId) {
+  return request({
+    url: `/api/roles/${roleId}/permissions/tree`,
+    method: 'get'
+  })
+}
+
+/**
+ * 调整角色权限
+ * @param {number} roleId - 角色 ID
+ * @param {object} data - 调整数据 { resourceId: Long, action: "ADD" | "REMOVE" }
+ * @returns {Promise}
+ */
+export function adjustRolePermission(roleId, data) {
+  return request({
+    url: `/api/roles/${roleId}/permissions/adjust`,
+    method: 'post',
+    data: data
   })
 }
