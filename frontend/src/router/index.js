@@ -20,6 +20,7 @@ const MENU_CODE_MAP = {
   '/system/component-instances': 'component_instances',
   '/system/point-device-models': 'point_device_models',
   '/system/point-device-model-instances': 'point_device_model_instances',
+  '/system/point-batch-assignment': 'point_batch_assignment',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
   '/company': 'company_management',
@@ -135,6 +136,12 @@ const routes = [
     name: 'PointDeviceModelInstanceList',
     component: () => import('@/views/system/PointDeviceModelInstanceList.vue'),
     meta: { title: '点位设备模型实例管理', requiresAuth: true, menuCode: 'point_device_model_instances' }
+  },
+  {
+    path: '/system/point-batch-assignment',
+    name: 'PointBatchAssignment',
+    component: () => import('@/views/system/PointBatchAssignment.vue'),
+    meta: { title: '点位批量分配', requiresAuth: true, menuCode: 'point_batch_assignment' }
   },
   {
     path: '/system/resources',
