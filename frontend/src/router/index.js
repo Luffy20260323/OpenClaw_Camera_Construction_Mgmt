@@ -104,10 +104,28 @@ const routes = [
     meta: { title: '文档中心', requiresAuth: true, menuCode: 'system_docs' }
   },
   {
+    path: '/system/component-types',
+    name: 'ComponentTypes',
+    component: () => import('@/views/system/ComponentTypeList.vue'),
+    meta: { title: '零部件种类管理', requiresAuth: true, menuCode: 'component_types' }
+  },
+  {
+    path: '/system/component-attr-sets',
+    name: 'ComponentAttrSets',
+    component: () => import('@/views/system/ComponentAttrSetList.vue'),
+    meta: { title: '零部件属性集管理', requiresAuth: true, menuCode: 'component_attr_sets' }
+  },
+  {
     path: '/system/resources',
     name: 'ResourceManagement',
     component: () => import('@/views/system/ResourceManagement.vue'),
     meta: { title: '资源管理', requiresAuth: true, menuCode: 'resource_management' }
+  },
+  {
+    path: '/system/component-attr-set-instances',
+    name: 'ComponentAttrSetInstanceList',
+    component: () => import('@/views/system/ComponentAttrSetInstanceList.vue'),
+    meta: { title: '属性集实例管理', requiresAuth: true, menuCode: 'component_attr_set_instances' }
   },
   {
     path: '/system/component-types',
