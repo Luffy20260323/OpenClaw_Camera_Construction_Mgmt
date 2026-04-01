@@ -132,7 +132,7 @@
             <el-statistic title="总权限数" :value="permissionStats.total" />
           </el-col>
           <el-col :span="6">
-            <el-statistic title="角色继承" :value="permissionStats.fromRole" />
+            <el-statistic title="角色权限" :value="permissionStats.fromRole" />
           </el-col>
           <el-col :span="6">
             <el-statistic title="个人新增" :value="permissionStats.added" />
@@ -141,6 +141,21 @@
             <el-statistic title="个人移除" :value="permissionStats.removed" />
           </el-col>
         </el-row>
+        
+        <!-- 权限来源说明 -->
+        <el-alert
+          title="权限来源说明"
+          type="info"
+          :closable="false"
+          style="margin-bottom: 20px"
+        >
+          <ul style="margin: 8px 0 0 20px; padding: 0;">
+            <li><strong>基本权限：</strong>角色配置的基础权限，来自 role_permissions 表</li>
+            <li><strong>缺省权限：</strong>角色创建时的默认权限，来自 role_default_permissions 表</li>
+            <li><strong>调整权限：</strong>用户个人权限调整，来自 user_permission_adjustments 表</li>
+            <li><strong>优先级：</strong>调整权限 > 基本权限 > 缺省权限</li>
+          </ul>
+        </el-alert>
 
         <!-- 权限树 -->
         <div class="permission-tree-container" v-loading="permissionLoading">
@@ -194,30 +209,34 @@
           v-loading="permissionLoading"
           :header-cell-style="{ background: '#f5f7fa', color: '#606266', fontWeight: 'bold' }"
         >
-          <el-table-column prop="permissionName" label="权限名称" width="200" />
+          <el-table-column prop="resourceName" label="权限名称" width="200" />
+          <el-table-column prop="resourceCode" label="权限编码" width="150" />
           <el-table-column prop="permissionKey" label="权限标识" width="250" />
-          <el-table-column label="权限类型" width="100">
+          <el-table-column label="资源类型" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.permissionType === 'MENU' ? 'primary' : 'success'" size="small">
-                {{ row.permissionType === 'MENU' ? '菜单' : '功能' }}
+              <el-tag :type="getResourceTypeTag(row.resourceType)" size="small">
+                {{ getResourceTypeText(row.resourceType) }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="来源类型" width="120">
+          <el-table-column label="权限来源" width="120">
             <template #default="{ row }">
-              <el-tag :type="getSourceType(row.source)" size="small">
-                {{ getSourceText(row.source) }}
+              <el-tag :type="getSourceType(row.permissionSource)" size="small">
+                {{ getSourceText(row.permissionSource) }}
               </el-tag>
             </template>
           </el-table-column>
           <el-table-column label="来源详情" width="180">
             <template #default="{ row }">
-              <span v-if="row.source === 'ROLE'">
+              <span v-if="row.permissionSource === 'BASIC'">
                 <el-tag size="small" effect="plain">{{ row.roleName || '-' }}</el-tag>
               </span>
-              <span v-else-if="row.source === 'CUSTOM'">
-                <el-tag size="small" type="warning" effect="plain">
-                  {{ row.adjustment === 'ADD' ? '个人新增' : '个人移除' }}
+              <span v-else-if="row.permissionSource === 'DEFAULT'">
+                <el-tag size="small" effect="plain">{{ row.roleName || '-' }} (缺省)</el-tag>
+              </span>
+              <span v-else-if="row.permissionSource === 'ADJUSTMENT'">
+                <el-tag size="small" :type="row.adjustmentType === 'ADD' ? 'success' : 'danger'" effect="plain">
+                  {{ row.adjustmentType === 'ADD' ? '个人新增' : '个人移除' }}
                 </el-tag>
               </span>
               <span v-else>-</span>
@@ -345,9 +364,9 @@ const loadUserPermissions = async () => {
 
   permissionLoading.value = true
   try {
-    // 获取用户权限列表
+    // 获取用户权限详情（包含来源追溯）
     const permRes = await request({
-      url: `/api/users/${selectedUser.value.id}/permissions`,
+      url: `/api/users/${selectedUser.value.id}/permissions/detail`,
       method: 'get'
     })
 
@@ -355,9 +374,15 @@ const loadUserPermissions = async () => {
 
     // 统计权限来源
     permissionStats.total = permissionList.value.length
-    permissionStats.fromRole = permissionList.value.filter(p => p.source === 'ROLE').length
-    permissionStats.added = permissionList.value.filter(p => p.adjustment === 'ADD').length
-    permissionStats.removed = permissionList.value.filter(p => p.adjustment === 'REMOVE').length
+    permissionStats.fromRole = permissionList.value.filter(p => 
+      p.permissionSource === 'BASIC' || p.permissionSource === 'DEFAULT'
+    ).length
+    permissionStats.added = permissionList.value.filter(p => 
+      p.permissionSource === 'ADJUSTMENT' && p.adjustmentType === 'ADD'
+    ).length
+    permissionStats.removed = permissionList.value.filter(p => 
+      p.permissionSource === 'ADJUSTMENT' && p.adjustmentType === 'REMOVE'
+    ).length
 
     // 构建权限树
     buildPermissionTree()
@@ -374,12 +399,14 @@ const loadUserPermissions = async () => {
 // 构建权限树
 const buildPermissionTree = () => {
   // 按权限类型和来源分组
-  const menuPermissions = permissionList.value.filter(p => p.permissionType === 'MENU')
-  const functionPermissions = permissionList.value.filter(p => p.permissionType === 'FUNCTION')
+  const menuPermissions = permissionList.value.filter(p => p.resourceType === 'MENU')
+  const apiPermissions = permissionList.value.filter(p => p.resourceType === 'API')
+  const buttonPermissions = permissionList.value.filter(p => p.resourceType === 'BUTTON')
 
   // 按来源分组
-  const rolePermissions = permissionList.value.filter(p => p.source === 'ROLE')
-  const customPermissions = permissionList.value.filter(p => p.source === 'CUSTOM')
+  const basicPermissions = permissionList.value.filter(p => p.permissionSource === 'BASIC')
+  const defaultPermissions = permissionList.value.filter(p => p.permissionSource === 'DEFAULT')
+  const adjustmentPermissions = permissionList.value.filter(p => p.permissionSource === 'ADJUSTMENT')
 
   // 构建树结构
   permissionTreeData.value = [
@@ -390,10 +417,16 @@ const buildPermissionTree = () => {
       children: buildTreeByCategory(menuPermissions, '菜单')
     },
     {
-      label: '功能权限',
+      label: 'API 权限',
       type: 'category',
-      id: 'function-category',
-      children: buildTreeByCategory(functionPermissions, '功能')
+      id: 'api-category',
+      children: buildTreeByCategory(apiPermissions, 'API')
+    },
+    {
+      label: '按钮权限',
+      type: 'category',
+      id: 'button-category',
+      children: buildTreeByCategory(buttonPermissions, '按钮')
     },
     {
       label: '按来源分类',
@@ -401,30 +434,44 @@ const buildPermissionTree = () => {
       id: 'source-category',
       children: [
         {
-          label: `角色继承 (${rolePermissions.length})`,
+          label: `基本权限 (${basicPermissions.length})`,
           type: 'source',
-          id: 'role-source',
-          children: rolePermissions.map(p => ({
-            label: p.permissionName,
+          id: 'basic-source',
+          children: basicPermissions.map(p => ({
+            label: p.resourceName,
             type: 'permission',
-            id: p.id,
-            source: p.source,
+            id: p.resourceId,
+            source: p.permissionSource,
             sourceDetail: p.roleName,
             adjustment: null,
             enabled: p.enabled
           }))
         },
         {
-          label: `个人调整 (${customPermissions.length})`,
+          label: `缺省权限 (${defaultPermissions.length})`,
           type: 'source',
-          id: 'custom-source',
-          children: customPermissions.map(p => ({
-            label: p.permissionName,
+          id: 'default-source',
+          children: defaultPermissions.map(p => ({
+            label: p.resourceName,
             type: 'permission',
-            id: p.id,
-            source: p.source,
-            sourceDetail: null,
-            adjustment: p.adjustment,
+            id: p.resourceId,
+            source: p.permissionSource,
+            sourceDetail: p.roleName + ' (缺省)',
+            adjustment: null,
+            enabled: p.enabled
+          }))
+        },
+        {
+          label: `调整权限 (${adjustmentPermissions.length})`,
+          type: 'source',
+          id: 'adjustment-source',
+          children: adjustmentPermissions.map(p => ({
+            label: p.resourceName,
+            type: 'permission',
+            id: p.resourceId,
+            source: p.permissionSource,
+            sourceDetail: p.adjustmentType === 'ADD' ? '个人新增' : '个人移除',
+            adjustment: p.adjustmentType,
             enabled: p.enabled
           }))
         }
@@ -470,9 +517,9 @@ const buildTreeByCategory = (permissions, categoryPrefix) => {
 // 获取来源类型样式
 const getSourceType = (source) => {
   const types = {
-    'ROLE': 'info',
-    'CUSTOM': 'warning',
-    'SYSTEM': 'success'
+    'BASIC': 'primary',      // 基本权限 - 蓝色
+    'DEFAULT': 'info',       // 缺省权限 - 灰色
+    'ADJUSTMENT': 'warning'  // 调整权限 - 橙色
   }
   return types[source] || 'info'
 }
@@ -480,9 +527,9 @@ const getSourceType = (source) => {
 // 获取来源文本
 const getSourceText = (source) => {
   const texts = {
-    'ROLE': '角色继承',
-    'CUSTOM': '个人调整',
-    'SYSTEM': '系统默认'
+    'BASIC': '基本权限',
+    'DEFAULT': '缺省权限',
+    'ADJUSTMENT': '调整权限'
   }
   return texts[source] || source
 }
@@ -490,11 +537,31 @@ const getSourceText = (source) => {
 // 获取来源样式类
 const getSourceClass = (source) => {
   const classes = {
-    'ROLE': 'source-role',
-    'CUSTOM': 'source-custom',
-    'SYSTEM': 'source-system'
+    'BASIC': 'source-basic',
+    'DEFAULT': 'source-default',
+    'ADJUSTMENT': 'source-adjustment'
   }
   return classes[source] || ''
+}
+
+// 获取资源类型标签样式
+const getResourceTypeTag = (type) => {
+  const types = {
+    'MENU': 'primary',
+    'API': 'success',
+    'BUTTON': 'warning'
+  }
+  return types[type] || 'info'
+}
+
+// 获取资源类型文本
+const getResourceTypeText = (type) => {
+  const texts = {
+    'MENU': '菜单',
+    'API': 'API',
+    'BUTTON': '按钮'
+  }
+  return texts[type] || type
 }
 
 onMounted(() => {
@@ -561,17 +628,18 @@ onMounted(() => {
       .node-label {
         font-size: 14px;
 
-        &.source-role {
-          color: #909399;
-        }
-
-        &.source-custom {
-          color: #e6a23c;
+        &.source-basic {
+          color: #409eff;
           font-weight: 500;
         }
 
-        &.source-system {
-          color: #67c23a;
+        &.source-default {
+          color: #909399;
+        }
+
+        &.source-adjustment {
+          color: #e6a23c;
+          font-weight: 500;
         }
       }
 
