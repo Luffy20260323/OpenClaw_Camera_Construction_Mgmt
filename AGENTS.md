@@ -12,10 +12,33 @@ Before doing anything else:
 
 1. Read `SOUL.md` — this is who you are
 2. Read `USER.md` — this is who you're helping
-3. Read `memory/YYYY-MM-DD.md` (today + yesterday) for recent context
+3. Read `memory/YYYY-MM-DD.md` (**last 7 days**) for recent context
 4. **If in MAIN SESSION** (direct chat with your human): Also read `MEMORY.md`
 
 Don't ask permission. Just do it.
+
+### 📅 Memory File Reading Strategy
+
+**Default behavior:** Read last 7 days of memory files for context continuity.
+
+**Example (if today is 2026-03-31):**
+- `memory/2026-03-31.md` (today)
+- `memory/2026-03-30.md` (yesterday)
+- `memory/2026-03-29.md` (2 days ago)
+- `memory/2026-03-28.md` (3 days ago)
+- `memory/2026-03-27.md` (4 days ago)
+- `memory/2026-03-26.md` (5 days ago)
+- `memory/2026-03-25.md` (6 days ago)
+
+**Why 7 days?**
+- Provides enough context for ongoing projects
+- Balances token usage with memory continuity
+- Covers typical work week cycles
+
+**Adjust if needed:**
+- Short projects: 3 days
+- Complex projects: 14 days
+- Long-term context: rely on `MEMORY.md`
 
 ## Memory
 
@@ -44,6 +67,48 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill
 - When you make a mistake → document it so future-you doesn't repeat it
 - **Text > Brain** 📝
+
+## 📋 多机器人协作规范
+
+### 任务板自动更新
+
+**每次接到任务时**：
+1. 立即更新 `/root/.openclaw/workspace/TASK_BOARD.md`
+2. 在"进行中"区域添加任务记录
+3. 状态标记为 "🔄 进行中"
+4. 填写当前时间和机器人名称
+
+**每次完成任务时**：
+1. 立即更新 `TASK_BOARD.md`
+2. 将任务移动到"已完成"区域
+3. 状态标记为 "✅ 完成"
+4. 填写完成时间
+5. 简要说明完成内容
+
+**示例更新**：
+```markdown
+## 📋 进行中
+| 任务 | 负责人 | 机器人 | 状态 | 更新时间 |
+|------|--------|--------|------|----------|
+| 文档中心 API | 柳生 | dev-1 | 🔄 进行中 | 2026-03-30 09:30 |
+
+## ✅ 已完成
+| 任务 | 完成时间 | 负责人 | 机器人 |
+|------|----------|--------|--------|
+| 文档中心 API | 2026-03-30 09:35 | 柳生 | dev-1 |
+```
+
+### 工作日志记录
+
+每天在 `memory/YYYY-MM-DD.md` 记录工作内容：
+
+```markdown
+## dev-1 工作记录
+- 09:30 开始文档中心 API 开发
+- 09:35 完成部署
+```
+
+---
 
 ## Red Lines
 

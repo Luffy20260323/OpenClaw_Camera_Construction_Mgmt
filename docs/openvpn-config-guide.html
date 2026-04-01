@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenVPN 客户端配置指南</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #16a34a;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --bg-color: #f8fafc;
+            --code-bg: #1e293b;
+            --text-color: #1e293b;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--bg-color);
+            padding: 2rem;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        h2 {
+            color: var(--primary-color);
+            margin: 2rem 0 1rem;
+            padding-left: 1rem;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        h3 {
+            color: #475569;
+            margin: 1.5rem 0 0.75rem;
+        }
+        
+        .step {
+            background: #f1f5f9;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .step-number {
+            display: inline-block;
+            background: var(--primary-color);
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 32px;
+            margin-right: 0.5rem;
+            font-weight: bold;
+        }
+        
+        pre {
+            background: var(--code-bg);
+            color: #e2e8f0;
+            padding: 1.5rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: "Fira Code", "Consolas", monospace;
+            font-size: 0.9rem;
+        }
+        
+        code {
+            font-family: "Fira Code", "Consolas", monospace;
+            background: #e2e8f0;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        pre code {
+            background: transparent;
+            padding: 0;
+        }
+        
+        .note {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning-color);
+            padding: 1rem 1.5rem;
+            margin: 1rem 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .success {
+            background: #dcfce7;
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .warning {
+            background: #fef3c7;
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .danger {
+            background: #fee2e2;
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1.5rem 0;
+        }
+        
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border: 1px solid #e2e8f0;
+        }
+        
+        th {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        tr:nth-child(even) {
+            background: #f8fafc;
+        }
+        
+        .status-ok {
+            color: var(--success-color);
+            font-weight: bold;
+        }
+        
+        .status-error {
+            color: var(--danger-color);
+            font-weight: bold;
+        }
+        
+        .file-tree {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 1rem 0;
+        }
+        
+        .file-tree ul {
+            list-style: none;
+            padding-left: 1.5rem;
+        }
+        
+        .file-tree li {
+            margin: 0.25rem 0;
+        }
+        
+        .toc {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 1rem;
+        }
+        
+        .toc li {
+            margin: 0.5rem 0;
+        }
+        
+        .toc a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        
+        .command {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .command::before {
+            content: "$";
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            color: #64748b;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 OpenVPN 客户端配置指南</h1>
+        <p><strong>适用系统：</strong> Ubuntu 24.04 LTS | <strong>OpenVPN 版本：</strong> 2.6.19</p>
+        
+        <div class="toc">
+            <h3>📑 目录</h3>
+            <ul>
+                <li><a href="#step1">1. 安装 OpenVPN</a></li>
+                <li><a href="#step2">2. 准备配置文件</a></li>
+                <li><a href="#step3">3. 配置客户端 1</a></li>
+                <li><a href="#step4">4. 配置客户端 2</a></li>
+                <li><a href="#step5">5. 启动服务</a></li>
+                <li><a href="#structure">6. 文件结构</a></li>
+                <li><a href="#troubleshoot">7. 故障排查</a></li>
+                <li><a href="#commands">8. 常用命令</a></li>
+            </ul>
+        </div>
+
+        <h2 id="step1">1. 安装 OpenVPN</h2>
+        <div class="step">
+            <p><span class="step-number">1</span>更新软件包列表并安装 OpenVPN</p>
+            <pre><code>sudo apt update && sudo apt install -y openvpn</code></pre>
+            <div class="note success">
+                ✅ 安装完成后，OpenVPN 服务会自动注册到 systemd
+            </div>
+        </div>
+
+        <h2 id="step2">2. 准备配置文件</h2>
+        <div class="step">
+            <p><span class="step-number">2</span>创建 PKI 目录存放证书文件</p>
+            <pre><code>mkdir -p /etc/openvpn/pki</code></pre>
+            
+            <p><span class="step-number">3</span>从服务器配置目录复制证书文件</p>
+            <pre><code># 服务器 1 证书
+cp /root/openvpn_conf/ov_srv1/ca.crt /etc/openvpn/pki/ov1_ca.crt
+cp /root/openvpn_conf/ov_srv1/cloudsrv_00002.crt /etc/openvpn/pki/ov1_client.crt
+cp /root/openvpn_conf/ov_srv1/cloudsrv_00002.key /etc/openvpn/pki/ov1_client.key
+cp /root/openvpn_conf/ov_srv1/ta.key /etc/openvpn/pki/ov1_ta.key
+
+# 服务器 2 证书
+cp /root/openvpn_conf/ov_srv2/ca.crt /etc/openvpn/pki/ov2_ca.crt
+cp /root/openvpn_conf/ov_srv2/cloudsrv_00002.crt /etc/openvpn/pki/ov2_client.crt
+cp /root/openvpn_conf/ov_srv2/cloudsrv_00002.key /etc/openvpn/pki/ov2_client.key
+cp /root/openvpn_conf/ov_srv2/ta.key /etc/openvpn/pki/ov2_ta.key</code></pre>
+        </div>
+
+        <h2 id="step3">3. 配置客户端 1</h2>
+        <div class="step">
+            <p><span class="step-number">4</span>创建客户端 1 配置文件</p>
+            <pre><code>cat > /etc/openvpn/client/client_ov1.conf << 'EOF'
+# OpenVPN Client 1 - Server ov.bjqd.net.cn
+client
+dev tun
+proto udp
+remote ov.bjqd.net.cn 1194
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+
+# SSL/TLS certificates (relative paths)
+ca ../pki/ov1_ca.crt
+cert ../pki/ov1_client.crt
+key ../pki/ov1_client.key
+tls-auth ../pki/ov1_ta.key 1
+
+# Security
+remote-cert-tls server
+
+# Logging
+verb 3
+EOF</code></pre>
+            
+            <h3>关键参数说明</h3>
+            <table>
+                <tr>
+                    <th>参数</th>
+                    <th>说明</th>
+                </tr>
+                <tr>
+                    <td><code>client</code></td>
+                    <td>指定为客户端模式</td>
+                </tr>
+                <tr>
+                    <td><code>dev tun</code></td>
+                    <td>使用 TUN 设备（三层路由）</td>
+                </tr>
+                <tr>
+                    <td><code>proto udp</code></td>
+                    <td>使用 UDP 协议（也可用 tcp）</td>
+                </tr>
+                <tr>
+                    <td><code>remote</code></td>
+                    <td>服务器地址和端口</td>
+                </tr>
+                <tr>
+                    <td><code>tls-auth</code></td>
+                    <td>TLS 认证密钥，<code>1</code> 表示客户端方向</td>
+                </tr>
+            </table>
+        </div>
+
+        <h2 id="step4">4. 配置客户端 2</h2>
+        <div class="step">
+            <p><span class="step-number">5</span>创建客户端 2 配置文件（与客户端 1 类似，修改服务器地址和证书）</p>
+            <pre><code>cat > /etc/openvpn/client/client_ov2.conf << 'EOF'
+# OpenVPN Client 2 - Server ov2.bjqd.net.cn
+client
+dev tun
+proto udp
+remote ov2.bjqd.net.cn 1194
+resolv-retry infinite
+nobind
+persist-key
+persist-tun
+
+# SSL/TLS certificates (relative paths)
+ca ../pki/ov2_ca.crt
+cert ../pki/ov2_client.crt
+key ../pki/ov2_client.key
+tls-auth ../pki/ov2_ta.key 1
+
+# Security
+remote-cert-tls server
+
+# Logging
+verb 3
+EOF</code></pre>
+        </div>
+
+        <h2 id="step5">5. 启动服务</h2>
+        <div class="step">
+            <p><span class="step-number">6</span>启用开机自启</p>
+            <pre><code>systemctl enable openvpn-client@client_ov1.service
+systemctl enable openvpn-client@client_ov2.service</code></pre>
+            
+            <p><span class="step-number">7</span>启动服务</p>
+            <pre><code>systemctl start openvpn-client@client_ov1.service
+systemctl start openvpn-client@client_ov2.service</code></pre>
+            
+            <p><span class="step-number">8</span>检查服务状态</p>
+            <pre><code>systemctl status openvpn-client@client_ov1.service openvpn-client@client_ov2.service</code></pre>
+            
+            <div class="note success">
+                ✅ 成功连接后，状态应显示 <code>Active: active (running)</code> 和 <code>Initialization Sequence Completed</code>
+            </div>
+        </div>
+
+        <h2 id="structure">6. 文件结构</h2>
+        <div class="file-tree">
+            <strong>/etc/openvpn/</strong>
+            <ul>
+                <li><strong>client/</strong>
+                    <ul>
+                        <li><code>client_ov1.conf</code> — 客户端 1 配置</li>
+                        <li><code>client_ov2.conf</code> — 客户端 2 配置</li>
+                    </ul>
+                </li>
+                <li><strong>pki/</strong>
+                    <ul>
+                        <li><code>ov1_ca.crt</code> — 服务器 1 CA 证书</li>
+                        <li><code>ov1_client.crt</code> — 服务器 1 客户端证书</li>
+                        <li><code>ov1_client.key</code> — 服务器 1 客户端密钥</li>
+                        <li><code>ov1_ta.key</code> — 服务器 1 TLS 认证密钥</li>
+                        <li><code>ov2_ca.crt</code> — 服务器 2 CA 证书</li>
+                        <li><code>ov2_client.crt</code> — 服务器 2 客户端证书</li>
+                        <li><code>ov2_client.key</code> — 服务器 2 客户端密钥</li>
+                        <li><code>ov2_ta.key</code> — 服务器 2 TLS 认证密钥</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+
+        <h2 id="troubleshoot">7. 故障排查</h2>
+        
+        <h3>问题 1：域名无法解析</h3>
+        <div class="note warning">
+            <strong>症状：</strong>日志显示 <code>RESOLVE: Cannot resolve host address</code>
+        </div>
+        <p><strong>解决方案：</strong></p>
+        <pre><code># 检查 DNS 解析
+nslookup your-vpn-server.com
+
+# 如果域名不存在，使用 IP 地址或修正域名
+# 编辑配置文件，修改 remote 行
+sed -i 's/old.domain.com/new.domain.com/' /etc/openvpn/client/client_xxx.conf
+
+# 重启服务
+systemctl restart openvpn-client@client_xxx.service</code></pre>
+
+        <h3>问题 2：连接失败</h3>
+        <div class="note warning">
+            <strong>症状：</strong>服务反复重启，无法完成初始化
+        </div>
+        <p><strong>检查步骤：</strong></p>
+        <pre><code># 查看详细日志
+journalctl -u openvpn-client@client_xxx.service -f
+
+# 检查证书文件权限
+ls -la /etc/openvpn/pki/
+
+# 测试手动连接
+sudo openvpn --config /etc/openvpn/client/client_xxx.conf</code></pre>
+
+        <h3>问题 3：路由冲突</h3>
+        <div class="note warning">
+            <strong>症状：</strong>两个客户端都连接成功，但网络访问异常
+        </div>
+        <p><strong>解决方案：</strong>检查路由表，确保两个 VPN 的路由不冲突</p>
+        <pre><code>ip route show
+ip addr show</code></pre>
+
+        <h2 id="commands">8. 常用命令</h2>
+        
+        <table>
+            <tr>
+                <th>操作</th>
+                <th>命令</th>
+            </tr>
+            <tr>
+                <td>启动客户端</td>
+                <td><code>systemctl start openvpn-client@client_xxx.service</code></td>
+            </tr>
+            <tr>
+                <td>停止客户端</td>
+                <td><code>systemctl stop openvpn-client@client_xxx.service</code></td>
+            </tr>
+            <tr>
+                <td>重启客户端</td>
+                <td><code>systemctl restart openvpn-client@client_xxx.service</code></td>
+            </tr>
+            <tr>
+                <td>查看状态</td>
+                <td><code>systemctl status openvpn-client@client_xxx.service</code></td>
+            </tr>
+            <tr>
+                <td>查看日志</td>
+                <td><code>journalctl -u openvpn-client@client_xxx.service -f</code></td>
+            </tr>
+            <tr>
+                <td>禁用自启</td>
+                <td><code>systemctl disable openvpn-client@client_xxx.service</code></td>
+            </tr>
+            <tr>
+                <td>测试配置</td>
+                <td><code>sudo openvpn --config /etc/openvpn/client/client_xxx.conf</code></td>
+            </tr>
+        </table>
+
+        <footer>
+            <p><strong>文档版本：</strong>1.0 | <strong>最后更新：</strong>2026-03-28</p>
+            <p><strong>适用环境：</strong>Ubuntu 24.04 LTS, OpenVPN 2.6.19</p>
+        </footer>
+    </div>
+</body>
+</html>
