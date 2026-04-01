@@ -17,6 +17,7 @@
 
 | 任务 | 完成时间 | 负责人 | 机器人 | 说明 |
 |------|----------|--------|--------|------|
+| 点位设备模型实例前端页面开发 | 2026-04-01 14:08 | 柳生 | subagent-26 | 创建 PointDeviceModelInstanceList.vue 页面（含列表/展开查看实例项/新增对话框选择模型自动生成实例项/编辑实例项对话框选择零部件实例），pointDeviceModelInstance.js API 模块（getList/getDetail/create/update/remove/updateItem），路由配置，使用 v-permission 权限控制 |
 | 零部件实例后端 API 开发 | 2026-04-01 14:05 | 柳生 | subagent-21 | 创建 ComponentInstanceService/Impl、ComponentInstanceController，实现 CRUD API 及状态更新接口，使用 @ApiPermission 权限控制 |
 | 点位设备模型前端页面开发 | 2026-04-01 14:00 | 柳生 | subagent-24 | 创建 PointDeviceModelList.vue 页面（含列表/展开查看模型项/新增编辑对话框/动态模型项管理），pointDeviceModel.js API 模块，路由配置，使用 v-permission 权限控制 |
 | 零部件种类前端页面开发 | 2026-04-01 13:15 | 柳生 | subagent-18 | 创建 ComponentTypeList.vue 页面（含列表/新增/编辑/删除/状态切换），componentType.js API 模块，路由配置，使用 v-permission 权限控制 |
