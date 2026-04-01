@@ -197,13 +197,7 @@
               <el-table :data="formData.items" border style="margin-top: 12px">
                 <el-table-column label="序号" width="80" align="center">
                   <template #default="{ $index }">
-                    <el-input-number
-                      v-model="$index"
-                      :min="1"
-                      :max="999"
-                      size="small"
-                      disabled
-                    />
+                    <span>{{ $index + 1 }}</span>
                   </template>
                 </el-table-column>
                 
