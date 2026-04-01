@@ -46,3 +46,9 @@ permission:
     user-ttl-minutes: 30
     # 角色权限缓存 TTL（分钟，默认：60）
     role-ttl-minutes: 60
+
+# 文档上传配置
+document:
+  upload:
+    path: ${DOCUMENT_UPLOAD_PATH:./uploads/documents}
+    max-size: ${DOCUMENT_MAX_SIZE:52428800}  # 50MB

@@ -3,8 +3,16 @@
     <div class="document-center">
       <!-- 页面头部 -->
       <div class="page-header">
-        <h1>📚 文档中心</h1>
-        <p class="subtitle">系统文档、设计文档、实施报告、技术文档</p>
+        <div class="header-left">
+          <h1>📚 文档中心</h1>
+          <p class="subtitle">系统文档、设计文档、实施报告、技术文档</p>
+        </div>
+        <div class="header-right">
+          <el-button type="primary" @click="showUploadDialog">
+            <el-icon><Upload /></el-icon>
+            上传文档
+          </el-button>
+        </div>
       </div>
 
       <!-- 分类筛选 -->
@@ -24,7 +32,7 @@
             placeholder="搜索文档..."
             prefix-icon="Search"
             clearable
-            @input="filterDocuments"
+            @change="searchDocuments"
           />
         </div>
       </div>
@@ -86,7 +94,18 @@
                   </span>
                   <span class="meta-item">
                     <el-icon><Clock /></el-icon>
-                    {{ formatDate(doc.updatedAt) }}
+                    {{ formatDate(doc.uploadedAt) }}
+                  </span>
+                </div>
+
+                <div class="doc-meta">
+                  <span class="meta-item">
+                    <el-icon><User /></el-icon>
+                    {{ doc.uploaderName || '未知' }}
+                  </span>
+                  <span class="meta-item">
+                    <el-icon><Download /></el-icon>
+                    {{ doc.downloadCount || 0 }}
                   </span>
                 </div>
               </div>
@@ -106,6 +125,18 @@
                   >
                     下载
                   </el-button>
+                  <el-dropdown trigger="click" @command="(cmd) => handleDocCommand(cmd, doc)">
+                    <el-button size="small">
+                      <el-icon><MoreFilled /></el-icon>
+                    </el-button>
+                    <template #dropdown>
+                      <el-dropdown-menu>
+                        <el-dropdown-item command="versions">版本历史</el-dropdown-item>
+                        <el-dropdown-item command="edit">编辑信息</el-dropdown-item>
+                        <el-dropdown-item command="delete" divided>删除</el-dropdown-item>
+                      </el-dropdown-menu>
+                    </template>
+                  </el-dropdown>
                 </div>
               </template>
             </el-card>
@@ -163,13 +194,170 @@
           </el-button>
         </template>
       </el-dialog>
+
+      <!-- 上传文档对话框 -->
+      <el-dialog
+        v-model="uploadDialogVisible"
+        title="上传文档"
+        width="600px"
+      >
+        <el-form
+          ref="uploadFormRef"
+          :model="uploadForm"
+          :rules="uploadRules"
+          label-width="100px"
+        >
+          <el-form-item label="文档标题" prop="title">
+            <el-input v-model="uploadForm.title" placeholder="请输入文档标题" />
+          </el-form-item>
+          <el-form-item label="文档分类" prop="category">
+            <el-select v-model="uploadForm.category" placeholder="请选择文档分类" style="width: 100%">
+              <el-option label="设计文档" value="design" />
+              <el-option label="实施报告" value="implementation" />
+              <el-option label="用户手册" value="manual" />
+              <el-option label="技术文档" value="technical" />
+              <el-option label="测试报告" value="report" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="文档描述" prop="description">
+            <el-input
+              v-model="uploadForm.description"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入文档描述"
+            />
+          </el-form-item>
+          <el-form-item label="标签" prop="tags">
+            <el-input v-model="uploadForm.tags" placeholder="多个标签用逗号分隔" />
+          </el-form-item>
+          <el-form-item label="设为推荐">
+            <el-switch v-model="uploadForm.featured" />
+          </el-form-item>
+          <el-form-item label="版本说明" prop="versionComment">
+            <el-input v-model="uploadForm.versionComment" placeholder="可选，说明版本变更内容" />
+          </el-form-item>
+          <el-form-item label="上传文件" prop="file">
+            <el-upload
+              ref="uploadRef"
+              drag
+              :auto-upload="false"
+              :on-change="handleFileChange"
+              :limit="1"
+              :on-exceed="handleExceed"
+            >
+              <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+              <div class="el-upload__text">
+                将文件拖到此处，或<em>点击上传</em>
+              </div>
+              <template #tip>
+                <div class="el-upload__tip">
+                  支持 pdf, doc, docx, xls, xlsx, md, html, txt 格式
+                </div>
+              </template>
+            </el-upload>
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="uploadDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitUpload" :loading="uploading">
+            上传
+          </el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 编辑文档对话框 -->
+      <el-dialog
+        v-model="editDialogVisible"
+        title="编辑文档信息"
+        width="600px"
+      >
+        <el-form
+          ref="editFormRef"
+          :model="editForm"
+          label-width="100px"
+        >
+          <el-form-item label="文档标题">
+            <el-input v-model="editForm.title" placeholder="请输入文档标题" />
+          </el-form-item>
+          <el-form-item label="文档分类">
+            <el-select v-model="editForm.category" placeholder="请选择文档分类" style="width: 100%">
+              <el-option label="设计文档" value="design" />
+              <el-option label="实施报告" value="implementation" />
+              <el-option label="用户手册" value="manual" />
+              <el-option label="技术文档" value="technical" />
+              <el-option label="测试报告" value="report" />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="文档描述">
+            <el-input
+              v-model="editForm.description"
+              type="textarea"
+              :rows="3"
+              placeholder="请输入文档描述"
+            />
+          </el-form-item>
+          <el-form-item label="标签">
+            <el-input v-model="editForm.tags" placeholder="多个标签用逗号分隔" />
+          </el-form-item>
+          <el-form-item label="设为推荐">
+            <el-switch v-model="editForm.featured" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="editDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitEdit" :loading="updating">
+            保存
+          </el-button>
+        </template>
+      </el-dialog>
+
+      <!-- 版本历史对话框 -->
+      <el-dialog
+        v-model="versionsDialogVisible"
+        title="版本历史"
+        width="700px"
+      >
+        <el-table :data="versions" style="width: 100%">
+          <el-table-column prop="version" label="版本" width="80" />
+          <el-table-column prop="title" label="标题" />
+          <el-table-column prop="versionComment" label="版本说明" />
+          <el-table-column prop="uploadedAt" label="上传时间" width="180">
+            <template #default="{ row }">
+              {{ formatDate(row.uploadedAt) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="isLatest" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag v-if="row.isLatest" type="success" size="small">当前版本</el-tag>
+              <el-tag v-else type="info" size="small">历史版本</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="150">
+            <template #default="{ row }">
+              <el-button
+                type="primary"
+                size="small"
+                @click="viewVersion(row)"
+              >
+                查看
+              </el-button>
+              <el-button
+                size="small"
+                @click="downloadVersion(row)"
+              >
+                下载
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-dialog>
     </div>
   </AdminLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Document,
   Clock,
@@ -180,10 +368,23 @@ import {
   Files,
   Document as DocIcon,
   Notebook,
-  Reading
+  Reading,
+  Upload,
+  UploadFilled,
+  MoreFilled,
+  User
 } from '@element-plus/icons-vue'
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import { getDocumentList, getMarkdownContent } from '@/api/document'
+import {
+  getDocumentList,
+  searchDocuments,
+  getDocumentDetail,
+  getDocumentVersions,
+  uploadDocument,
+  updateDocument,
+  deleteDocument,
+  getMarkdownContent
+} from '@/api/document'
 
 // 状态
 const loading = ref(false)
@@ -191,21 +392,49 @@ const documents = ref([])
 const selectedCategory = ref('')
 const searchQuery = ref('')
 const dialogVisible = ref(false)
+const uploadDialogVisible = ref(false)
+const editDialogVisible = ref(false)
+const versionsDialogVisible = ref(false)
 const currentDoc = ref(null)
+const editingDoc = ref(null)
 const markdownContent = ref('')
 const isFullscreen = ref(false)
+const uploading = ref(false)
+const updating = ref(false)
+const uploadFormRef = ref(null)
+const editFormRef = ref(null)
+const uploadFile = ref(null)
+const versions = ref([])
+
+// 上传表单
+const uploadForm = ref({
+  title: '',
+  category: '',
+  description: '',
+  tags: '',
+  featured: false,
+  versionComment: ''
+})
+
+// 上传表单验证规则
+const uploadRules = {
+  title: [{ required: true, message: '请输入文档标题', trigger: 'blur' }],
+  category: [{ required: true, message: '请选择文档分类', trigger: 'change' }],
+  file: [{ required: true, message: '请选择上传文件', trigger: 'change' }]
+}
+
+// 编辑表单
+const editForm = ref({
+  title: '',
+  category: '',
+  description: '',
+  tags: '',
+  featured: false
+})
 
 // 计算属性：过滤后的文档列表
 const filteredDocuments = computed(() => {
-  if (!searchQuery.value) {
-    return documents.value
-  }
-  
-  const query = searchQuery.value.toLowerCase()
-  return documents.value.filter(doc =>
-    doc.title.toLowerCase().includes(query) ||
-    doc.description.toLowerCase().includes(query)
-  )
+  return documents.value
 })
 
 // 生命周期
@@ -227,9 +456,167 @@ const loadDocuments = async () => {
   }
 }
 
-// 过滤文档（搜索）
-const filterDocuments = () => {
-  // 搜索由 computed 属性处理
+// 搜索文档
+const searchDocuments = async () => {
+  if (!searchQuery.value) {
+    loadDocuments()
+    return
+  }
+  loading.value = true
+  try {
+    const res = await searchDocuments(searchQuery.value)
+    documents.value = res.data || []
+  } catch (error) {
+    console.error('搜索文档失败:', error)
+    ElMessage.error('搜索文档失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 显示上传对话框
+const showUploadDialog = () => {
+  uploadForm.value = {
+    title: '',
+    category: '',
+    description: '',
+    tags: '',
+    featured: false,
+    versionComment: ''
+  }
+  uploadFile.value = null
+  uploadDialogVisible.value = true
+}
+
+// 处理文件选择
+const handleFileChange = (file) => {
+  uploadFile.value = file.raw
+}
+
+// 处理超出限制
+const handleExceed = () => {
+  ElMessage.warning('只能上传一个文件')
+}
+
+// 提交上传
+const submitUpload = async () => {
+  if (!uploadFormRef.value) return
+  
+  await uploadFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    if (!uploadFile.value) {
+      ElMessage.warning('请选择上传文件')
+      return
+    }
+
+    uploading.value = true
+    try {
+      const formData = new FormData()
+      formData.append('title', uploadForm.value.title)
+      formData.append('category', uploadForm.value.category)
+      formData.append('description', uploadForm.value.description || '')
+      formData.append('tags', uploadForm.value.tags || '')
+      formData.append('featured', uploadForm.value.featured)
+      formData.append('versionComment', uploadForm.value.versionComment || '')
+      formData.append('file', uploadFile.value)
+
+      await uploadDocument(formData)
+      ElMessage.success('文档上传成功')
+      uploadDialogVisible.value = false
+      loadDocuments()
+    } catch (error) {
+      console.error('上传文档失败:', error)
+      ElMessage.error(error.response?.data?.message || '上传文档失败')
+    } finally {
+      uploading.value = false
+    }
+  })
+}
+
+// 处理文档操作
+const handleDocCommand = (command, doc) => {
+  switch (command) {
+    case 'versions':
+      showVersions(doc)
+      break
+    case 'edit':
+      showEditDialog(doc)
+      break
+    case 'delete':
+      confirmDelete(doc)
+      break
+  }
+}
+
+// 显示编辑对话框
+const showEditDialog = (doc) => {
+  editingDoc.value = doc
+  editForm.value = {
+    title: doc.title,
+    category: doc.category,
+    description: doc.description,
+    tags: doc.tags,
+    featured: doc.featured
+  }
+  editDialogVisible.value = true
+}
+
+// 提交编辑
+const submitEdit = async () => {
+  updating.value = true
+  try {
+    await updateDocument(editingDoc.value.id, editForm.value)
+    ElMessage.success('文档信息更新成功')
+    editDialogVisible.value = false
+    loadDocuments()
+  } catch (error) {
+    console.error('更新文档失败:', error)
+    ElMessage.error(error.response?.data?.message || '更新文档失败')
+  } finally {
+    updating.value = false
+  }
+}
+
+// 确认删除
+const confirmDelete = async (doc) => {
+  try {
+    await ElMessageBox.confirm(`确定要删除文档"${doc.title}"吗？`, '删除确认', {
+      type: 'warning'
+    })
+    
+    await deleteDocument(doc.id)
+    ElMessage.success('文档已删除')
+    loadDocuments()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除文档失败:', error)
+      ElMessage.error(error.response?.data?.message || '删除文档失败')
+    }
+  }
+}
+
+// 显示版本历史
+const showVersions = async (doc) => {
+  try {
+    const res = await getDocumentVersions(doc.id)
+    versions.value = res.data || []
+    versionsDialogVisible.value = true
+  } catch (error) {
+    console.error('获取版本历史失败:', error)
+    ElMessage.error('获取版本历史失败')
+  }
+}
+
+// 查看版本
+const viewVersion = (version) => {
+  viewDocument(version)
+  versionsDialogVisible.value = false
+}
+
+// 下载版本
+const downloadVersion = (version) => {
+  downloadDocument(version)
 }
 
 // 查看文档
@@ -255,7 +642,7 @@ const downloadDocument = (doc) => {
   
   const link = document.createElement('a')
   link.href = getDocUrl(doc.filename, true)
-  link.download = doc.filename
+  link.download = doc.originalFilename || doc.filename
   link.target = '_blank'
   link.click()
   
@@ -324,7 +711,9 @@ const formatDate = (dateStr) => {
   return date.toLocaleDateString('zh-CN', {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
   })
 }
 </script>
@@ -334,18 +723,23 @@ const formatDate = (dateStr) => {
   padding: 20px;
 
   .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 30px;
 
-    h1 {
-      font-size: 28px;
-      font-weight: 600;
-      color: #303133;
-      margin-bottom: 8px;
-    }
+    .header-left {
+      h1 {
+        font-size: 28px;
+        font-weight: 600;
+        color: #303133;
+        margin-bottom: 8px;
+      }
 
-    .subtitle {
-      font-size: 14px;
-      color: #909399;
+      .subtitle {
+        font-size: 14px;
+        color: #909399;
+      }
     }
   }
 
@@ -426,6 +820,7 @@ const formatDate = (dateStr) => {
           gap: 16px;
           font-size: 12px;
           color: #909399;
+          margin-bottom: 8px;
 
           .meta-item {
             display: flex;
