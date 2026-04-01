@@ -41,7 +41,7 @@ public class PointBatchAssignmentController {
             @RequestBody BatchAssignmentRequest request,
             @RequestAttribute("userId") Long userId) {
         int successCount = pointBatchAssignmentService.batchAssign(request, userId);
-        return Result.success(successCount, "分配成功 " + successCount + " 个点位");
+        return Result.success("分配成功 " + successCount + " 个点位", successCount);
     }
 
     @Operation(summary = "获取点位设备配置", description = "根据点位 ID 获取该点位的设备分配信息")

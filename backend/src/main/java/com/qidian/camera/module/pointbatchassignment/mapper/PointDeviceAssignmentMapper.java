@@ -3,6 +3,7 @@ package com.qidian.camera.module.pointbatchassignment.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.qidian.camera.module.pointbatchassignment.entity.Point;
 import com.qidian.camera.module.pointbatchassignment.entity.PointDeviceAssignment;
+import com.qidian.camera.module.pointbatchassignment.entity.PointDeviceAssignmentWithPointInfo;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;

@@ -64,7 +64,7 @@ public class PointBatchAssignmentServiceImpl implements PointBatchAssignmentServ
             if (point.getWorkAreaId() != null) {
                 WorkArea workArea = workAreaMapper.selectById(point.getWorkAreaId());
                 if (workArea != null) {
-                    dto.setWorkAreaName(workArea.getAreaName());
+                    dto.setWorkAreaName(workArea.getWorkAreaName());
                 }
             }
             
@@ -88,17 +88,17 @@ public class PointBatchAssignmentServiceImpl implements PointBatchAssignmentServ
         
         // 参数校验
         if (request.getModelInstanceId() == null || request.getModelInstanceId() <= 0) {
-            throw new BusinessException(ErrorCode.INVALID_PARAMETER, "设备模型实例 ID 不能为空");
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "设备模型实例 ID 不能为空");
         }
         
         if (request.getPointIds() == null || request.getPointIds().isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_PARAMETER, "待分配的点位列表不能为空");
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "待分配的点位列表不能为空");
         }
         
         // 检查点位是否已被分配
         List<Long> assignedPointIds = pointDeviceAssignmentMapper.selectAssignedPointIds(request.getPointIds());
         if (!assignedPointIds.isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_PARAMETER, 
+            throw new BusinessException(ErrorCode.PARAM_ERROR, 
                     "以下点位已分配设备：" + assignedPointIds.stream().map(String::valueOf).collect(Collectors.joining(", ")));
         }
         
@@ -126,7 +126,7 @@ public class PointBatchAssignmentServiceImpl implements PointBatchAssignmentServ
         log.info("批量分配完成：成功{}条，失败{}条", successCount, request.getPointIds().size() - successCount);
         
         if (successCount == 0) {
-            throw new BusinessException(ErrorCode.OPERATION_FAILED, "点位分配失败，请重试");
+            throw new BusinessException(ErrorCode.ERROR, "点位分配失败，请重试");
         }
         
         return successCount;
@@ -139,7 +139,7 @@ public class PointBatchAssignmentServiceImpl implements PointBatchAssignmentServ
         PointDeviceAssignmentWithPointInfo assignment = pointDeviceAssignmentMapper.selectByPointIdWithPointInfo(pointId);
         
         if (assignment == null) {
-            throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "该点位未分配设备");
+            throw new BusinessException(ErrorCode.NOT_FOUND, "该点位未分配设备");
         }
         
         PointDeviceAssignmentDTO dto = new PointDeviceAssignmentDTO();
