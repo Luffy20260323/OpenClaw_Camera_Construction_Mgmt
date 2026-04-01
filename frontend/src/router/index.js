@@ -15,6 +15,8 @@ const MENU_CODE_MAP = {
   '/system/audit-log': 'audit_log',
   '/system/permission-audit-log': 'permission_audit_log',
   '/system/docs': 'system_docs',
+  '/system/component-types': 'component_types',
+  '/system/component-attr-sets': 'component_attr_sets',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
   '/company': 'company_management',
@@ -106,6 +108,12 @@ const routes = [
     name: 'ResourceManagement',
     component: () => import('@/views/system/ResourceManagement.vue'),
     meta: { title: '资源管理', requiresAuth: true, menuCode: 'resource_management' }
+  },
+  {
+    path: '/system/component-types',
+    name: 'ComponentTypeList',
+    component: () => import('@/views/system/ComponentTypeList.vue'),
+    meta: { title: '零部件种类管理', requiresAuth: true, menuCode: 'component_type_management' }
   },
   {
     path: '/user/profile',
