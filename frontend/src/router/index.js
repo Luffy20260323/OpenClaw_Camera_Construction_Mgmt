@@ -17,6 +17,7 @@ const MENU_CODE_MAP = {
   '/system/docs': 'system_docs',
   '/system/component-types': 'component_types',
   '/system/component-attr-sets': 'component_attr_sets',
+  '/system/component-instances': 'component_instances',
   '/system/point-device-models': 'point_device_models',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
@@ -115,6 +116,12 @@ const routes = [
     name: 'ComponentAttrSets',
     component: () => import('@/views/system/ComponentAttrSetList.vue'),
     meta: { title: '零部件属性集管理', requiresAuth: true, menuCode: 'component_attr_sets' }
+  },
+  {
+    path: '/system/component-instances',
+    name: 'ComponentInstanceList',
+    component: () => import('@/views/system/ComponentInstanceList.vue'),
+    meta: { title: '零部件实例管理', requiresAuth: true, menuCode: 'component_instances' }
   },
   {
     path: '/system/point-device-models',
