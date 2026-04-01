@@ -19,6 +19,7 @@ const MENU_CODE_MAP = {
   '/system/component-attr-sets': 'component_attr_sets',
   '/system/component-instances': 'component_instances',
   '/system/point-device-models': 'point_device_models',
+  '/system/point-device-model-instances': 'point_device_model_instances',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
   '/company': 'company_management',
@@ -128,6 +129,12 @@ const routes = [
     name: 'PointDeviceModels',
     component: () => import('@/views/system/PointDeviceModelList.vue'),
     meta: { title: '点位设备模型管理', requiresAuth: true, menuCode: 'point_device_models' }
+  },
+  {
+    path: '/system/point-device-model-instances',
+    name: 'PointDeviceModelInstanceList',
+    component: () => import('@/views/system/PointDeviceModelInstanceList.vue'),
+    meta: { title: '点位设备模型实例管理', requiresAuth: true, menuCode: 'point_device_model_instances' }
   },
   {
     path: '/system/resources',
