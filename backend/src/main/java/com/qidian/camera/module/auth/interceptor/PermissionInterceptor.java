@@ -29,7 +29,7 @@ import java.util.List;
  * @since 1.0.0
  */
 @Slf4j
-@Component
+@Component("apiPermissionInterceptor")
 @RequiredArgsConstructor
 public class PermissionInterceptor implements HandlerInterceptor {
     

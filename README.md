@@ -18,6 +18,10 @@ Camera Lifecycle Management System
 **环境要求：**
 - Docker 20.10+
 - Docker Compose 2.0+
+- JDK 17+（后端编译）
+- Node.js 18+（前端编译）
+
+**⚠️ 重要说明：** 本项目采用**宿主机编译 + Docker 复制**的优化构建方式，构建速度提升 80%。详见：[BUILD.md](BUILD.md)
 
 **一键启动：**
 
@@ -30,16 +34,36 @@ cd OpenClaw_Camera_Construction_Mgmt
 cp .env.example .env
 # 编辑 .env 文件，修改数据库密码和 JWT 密钥
 
-# 3. 启动所有服务
+# 3. 构建后端（宿主机编译）
+cd backend
+mvn clean package -DskipTests
+docker build -t camera-backend:latest .
+
+# 4. 构建前端（宿主机编译）
+cd ../frontend
+npm install
+npm run build
+docker build -t camera-frontend:latest .
+
+# 5. 启动所有服务
+cd ..
 docker-compose up -d
 
-# 4. 查看日志
+# 6. 查看日志
 docker-compose logs -f
 
-# 5. 访问系统
+# 7. 访问系统
 # 前端：http://localhost
 # 后端 API：http://localhost:8080/api
 # MinIO 控制台：http://localhost:9001
+```
+
+**或使用构建脚本（更简单）：**
+
+```bash
+cd backend && ./build-docker.sh
+cd ../frontend && ./build-docker.sh
+cd .. && docker-compose up -d
 ```
 
 **停止服务：**

@@ -1,43 +1,16 @@
 #===============================================================================
 # 摄像头生命周期管理系统 - 前端 Dockerfile
-# 基于 Node.js 构建 + Nginx 运行
+# 优化版：直接从宿主机复制已构建的 dist（避免每次重新下载 npm 依赖）
+#===============================================================================
+# 使用说明：
+# 1. 在宿主机上先构建：cd frontend && npm install && npm run build
+# 2. 然后构建 Docker：docker build -t camera-frontend .
+# 3. 或使用 docker-compose：docker-compose build frontend
 #===============================================================================
 
-#-------------------------------------------------------------------------------
-# 阶段 1：构建
-#-------------------------------------------------------------------------------
-FROM node:20-alpine AS builder
-
-WORKDIR /build
-
-# 降级 npm（修复 Exit handler never called bug）
-RUN npm install -g npm@9.8.1
-
-# 复制 package 文件（利用 Docker 缓存）
-COPY package*.json ./
-
-# 安装依赖（使用官方 registry，避免镜像源网络问题）
-RUN npm ci --registry=https://registry.npmjs.org/
-
-# 安装 Rollup 可选依赖（Alpine Linux 需要）
-RUN npm install @rollup/rollup-linux-x64-musl --registry=https://registry.npmjs.org/
-
-# 复制源代码
-COPY . .
-
-# 构建参数（可通过 --build-arg 传递）
-ARG VITE_API_BASE_URL=/api
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
-# 构建项目
-RUN npm run build
-
-#-------------------------------------------------------------------------------
-# 阶段 2：运行（Nginx）
-#-------------------------------------------------------------------------------
 FROM nginx:alpine
 
-# 直接写入正确的 Nginx 配置（避免缓存问题）
+# 直接写入 Nginx 配置
 RUN echo 'server { \
     listen 80; \
     server_name localhost; \
@@ -56,8 +29,8 @@ RUN echo 'server { \
     location /health { return 200 "healthy\n"; } \
 }' > /etc/nginx/conf.d/default.conf
 
-# 从构建阶段复制构建产物
-COPY --from=builder /build/dist /usr/share/nginx/html
+# 从宿主机复制已构建的 dist 目录（构建上下文应包含 dist/）
+COPY dist /usr/share/nginx/html
 
 # 创建日志目录
 RUN mkdir -p /var/log/nginx && \

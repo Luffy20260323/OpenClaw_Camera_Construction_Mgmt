@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.executor.Executor;
 import org.apache.ibatis.mapping.BoundSql;
 import org.apache.ibatis.mapping.MappedStatement;
+import org.apache.ibatis.mapping.SqlCommandType;
 import org.apache.ibatis.plugin.*;
 import org.apache.ibatis.reflection.MetaObject;
 import org.apache.ibatis.session.ResultHandler;
@@ -16,6 +17,7 @@ import java.util.Properties;
 /**
  * MyBatis 数据权限拦截器
  * 自动在 SQL 中注入数据权限 WHERE 条件
+ * 支持 ALL/COMPANY/WORKAREA/SELF 四种数据范围
  */
 @Slf4j
 @Component
@@ -28,17 +30,48 @@ import java.util.Properties;
 })
 public class DataPermissionInterceptor implements Interceptor {
     
+    /**
+     * 数据范围类型：全部数据
+     */
+    private static final String SCOPE_ALL = "ALL";
+    
+    /**
+     * 数据范围类型：本公司数据
+     */
+    private static final String SCOPE_COMPANY = "COMPANY";
+    
+    /**
+     * 数据范围类型：本作业区数据
+     */
+    private static final String SCOPE_WORKAREA = "WORKAREA";
+    
+    /**
+     * 数据范围类型：仅个人数据
+     */
+    private static final String SCOPE_SELF = "SELF";
+    
     @Override
     public Object intercept(Invocation invocation) throws Throwable {
+        MappedStatement ms = (MappedStatement) invocation.getArgs()[0];
+        
+        // 只处理 SELECT 语句
+        if (ms.getSqlCommandType() != SqlCommandType.SELECT) {
+            return invocation.proceed();
+        }
+        
         // 获取数据权限 WHERE 条件
         String whereClause = DataScopeContext.getWhereClause();
         
         if (whereClause != null && !whereClause.isEmpty()) {
-            MappedStatement ms = (MappedStatement) invocation.getArgs()[0];
             BoundSql boundSql = ms.getBoundSql(invocation.getArgs()[1]);
             String sql = boundSql.getSql();
             
-            // 在 SQL 末尾追加 WHERE 条件
+            // 跳过已包含数据权限条件的 SQL
+            if (sql.toUpperCase().contains("DATA_PERMISSION_FILTER")) {
+                return invocation.proceed();
+            }
+            
+            // 在 SQL 中注入 WHERE 条件
             String newSql = appendWhereClause(sql, whereClause);
             
             if (!newSql.equals(sql)) {

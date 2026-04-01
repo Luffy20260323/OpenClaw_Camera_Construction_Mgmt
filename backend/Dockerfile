@@ -1,30 +1,13 @@
 #===============================================================================
 # 摄像头生命周期管理系统 - 后端 Dockerfile
-# 基于 Maven 的多阶段构建
+# 优化版：直接从宿主机复制已编译的 jar 包（避免每次重新下载 Maven 依赖）
+#===============================================================================
+# 使用说明：
+# 1. 在宿主机上先编译：cd backend && mvn clean package -DskipTests
+# 2. 然后构建 Docker：docker build -t camera-backend .
+# 3. 或使用 docker-compose：docker-compose build backend
 #===============================================================================
 
-#-------------------------------------------------------------------------------
-# 阶段 1：构建
-#-------------------------------------------------------------------------------
-FROM maven:3.9.6-eclipse-temurin-17 AS builder
-
-WORKDIR /build
-
-# 复制 Maven 配置文件（利用 Docker 缓存）
-COPY pom.xml .
-
-# 下载依赖（如果 pom.xml 未变化，使用缓存）
-RUN mvn dependency:go-offline -B
-
-# 复制源代码
-COPY src ./src
-
-# 构建项目（跳过测试）
-RUN mvn clean package -DskipTests -B
-
-#-------------------------------------------------------------------------------
-# 阶段 2：运行
-#-------------------------------------------------------------------------------
 FROM eclipse-temurin:17-jre-alpine
 
 # 设置工作目录
@@ -34,8 +17,9 @@ WORKDIR /app
 RUN addgroup -g 1001 appgroup && \
     adduser -u 1001 -G appgroup -D appuser
 
-# 从构建阶段复制 jar 包
-COPY --from=builder /build/target/*.jar app.jar
+# 从宿主机复制已编译的 jar 包（假设构建上下文包含 target/*.jar）
+# 如果 jar 包名称固定，可以指定具体名称；否则使用通配符
+COPY target/*.jar app.jar
 
 # 创建日志目录
 RUN mkdir -p /var/log && chown -R appuser:appgroup /var/log

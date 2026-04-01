@@ -78,6 +78,11 @@ public class SecurityConfig {
                 .requestMatchers("/company/**").permitAll()
                 .requestMatchers("/role/**").permitAll()
                 .requestMatchers("/workarea/**").permitAll()
+                // 权限管理接口（权限配置页面使用）
+                .requestMatchers("/permission/list").permitAll()
+                .requestMatchers("/permission/groups").permitAll()
+                .requestMatchers("/permission/roles").permitAll()
+                .requestMatchers("/permission/**").authenticated()
                 // 权限管理接口（依赖菜单权限过滤器控制，此处只需认证）
                 .requestMatchers("/permission/**").authenticated()
                 .requestMatchers("/user/**").authenticated()

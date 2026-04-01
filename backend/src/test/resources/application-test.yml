@@ -1,0 +1,57 @@
+# 测试环境配置
+server:
+  port: 8081
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: camera-lifecycle-system-test
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: 
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-test.sql
+      data-locations: classpath:data-test.sql
+  security:
+    filter:
+      order: -100
+
+# MyBatis-Plus 配置
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 权限缓存配置 - 测试环境禁用缓存以便测试
+permission:
+  cache:
+    enabled: false
+    user-ttl-minutes: 1
+    role-ttl-minutes: 1
+
+# 日志配置
+logging:
+  level:
+    root: WARN
+    com.qidian.camera: DEBUG
+    org.springframework.security: DEBUG

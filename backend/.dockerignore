@@ -1,37 +1,35 @@
-# Docker ignore for backend
-
-# Build output
-target/
-
-# Dependencies
-node_modules/
-
-# Logs
-*.log
-logs/
+# Maven - 不要忽略 target，Docker 构建需要它
+# target/
+!.dockerignore
 
 # IDE
 .idea/
-.vscode/
 *.iml
+.vscode/
+.settings/
+.project/
+.classpath
 
 # Git
 .git/
 .gitignore
 
-# Docker
-Dockerfile
-docker-compose*.yml
-.dockerignore
+# Logs
+*.log
+logs/
 
-# Environment
-.env
-.env.*
+# OS
+.DS_Store
+Thumbs.db
 
 # Test
-*.test
-coverage/
+src/test/
 
-# Misc
+# Documentation
+docs/
 *.md
 !README.md
+
+# Scripts
+*.sh
+!build-docker.sh

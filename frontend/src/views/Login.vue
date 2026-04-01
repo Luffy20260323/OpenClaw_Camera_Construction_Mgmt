@@ -603,7 +603,13 @@ const handleLogin = async () => {
         
         console.log('[Login] 登录响应数据:', {
           userInfo_menus: userInfo?.menus,
-          top_menus: menus,
+          menus_length: menus?.length,
+          menus_sample: menus?.slice(0, 3).map(m => ({
+            code: m.menuCode,
+            name: m.menuName,
+            parentId: m.parentId,
+            parent_id: m.parent_id
+          })),
           userInfo_roles: userInfo?.roles
         })
         
@@ -620,7 +626,12 @@ const handleLogin = async () => {
           menus: menuData
         }
         
-        console.log('[Login] 处理后的菜单数据:', menuData)
+        console.log('[Login] 处理后的菜单数据:', menuData?.slice(0, 3).map(m => ({
+          code: m.menuCode,
+          name: m.menuName,
+          parentId: m?.parentId,
+          parent_id: m?.parent_id
+        })))
         
         // 再保存到 localStorage
         localStorage.setItem('accessToken', accessToken)
@@ -634,12 +645,18 @@ const handleLogin = async () => {
         
         // 验证 localStorage 中的数据
         const savedUserInfo = JSON.parse(localStorage.getItem('userInfo'))
-        console.log('[Login] localStorage 中的菜单数据:', savedUserInfo?.menus)
+        console.log('[Login] localStorage 中的菜单数据:', savedUserInfo?.menus?.slice(0, 3).map(m => ({
+          code: m.menuCode,
+          parentId: m?.parentId
+        })))
         
         // 等待响应式更新完成后再跳转
         await new Promise(resolve => setTimeout(resolve, 100))
         
-        console.log('[Login] userStore.menus:', userStore.menus)
+        console.log('[Login] userStore.menus:', userStore.menus?.slice(0, 3).map(m => ({
+          code: m.menuCode,
+          parentId: m?.parentId
+        })))
         
         // 跳转到首页
         router.push('/')

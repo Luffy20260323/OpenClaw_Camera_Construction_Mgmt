@@ -19,9 +19,9 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 权限拦截器
+ * 权限拦截器（基于 Filter）
  */
-@Component
+@Component("filterPermissionInterceptor")
 @RequiredArgsConstructor
 @Slf4j
 public class PermissionInterceptor implements HandlerInterceptor {

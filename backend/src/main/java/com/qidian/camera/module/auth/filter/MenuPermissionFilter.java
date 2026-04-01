@@ -44,6 +44,15 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
         "/swagger-ui.html"
     };
     
+    // 权限配置相关路径（需要认证，但不检查菜单权限）
+    private static final String[] PERMISSION_CONFIG_PATHS = {
+        "/api/permission/list",
+        "/api/permission/groups",
+        "/api/permission/roles",
+        "/api/permission/role/",
+        "/api/permission/"
+    };
+    
     // 菜单路径映射
     private static final Map<String, String> PATH_TO_MENU_MAP = new HashMap<>();
     static {
@@ -56,8 +65,7 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
         // 不需要权限检查
         PATH_TO_MENU_MAP.put("/api/system/config", "system_config");
         PATH_TO_MENU_MAP.put("/api/menu", "system_config");
-        // 权限管理菜单（用户权限配置、角色权限配置属于系统管理功能）
-        PATH_TO_MENU_MAP.put("/api/permission", "system_config");
+        // /api/permission 相关接口在 PERMISSION_CONFIG_PATHS 中单独处理
     }
     
     @Override
@@ -69,6 +77,12 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
         
         // 检查是否是公开路径
         if (isPublicPath(requestURI)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        // 检查是否是权限配置路径（需要认证但不检查菜单权限）
+        if (isPermissionConfigPath(requestURI)) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -115,6 +129,18 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
     private boolean isPublicPath(String requestURI) {
         for (String publicPath : PUBLIC_PATHS) {
             if (requestURI.startsWith(publicPath)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    /**
+     * 检查是否是权限配置路径（需要认证但不检查菜单权限）
+     */
+    private boolean isPermissionConfigPath(String requestURI) {
+        for (String path : PERMISSION_CONFIG_PATHS) {
+            if (requestURI.startsWith(path)) {
                 return true;
             }
         }

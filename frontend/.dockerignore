@@ -1,35 +1,51 @@
-# Docker ignore for frontend
-
-# Build output
-dist/
+# Build output - 不要忽略 dist，Docker 构建需要它
+# dist/
+!.dockerignore
 
 # Dependencies
 node_modules/
 
-# Logs
-*.log
-logs/
+# Dev dependencies
+package-lock.json
 
 # IDE
 .idea/
 .vscode/
+*.iml
 
 # Git
 .git/
 .gitignore
 
+# Logs
+*.log
+logs/
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Config
+.env
+.env.*
+!env.example
+
+# Scripts
+*.sh
+!build-docker.sh
+
 # Docker
 Dockerfile
 docker-compose*.yml
-.dockerignore
-
-# Environment
-.env
-.env.*
-
-# Test
-coverage/
-
-# Misc
-*.md
-!README.md

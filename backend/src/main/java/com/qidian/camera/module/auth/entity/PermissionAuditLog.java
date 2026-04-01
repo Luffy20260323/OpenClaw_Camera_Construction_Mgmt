@@ -1,24 +1,29 @@
 package com.qidian.camera.module.auth.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
+import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 
 import java.time.LocalDateTime;
 
 /**
- * 权限配置审计日志实体
+ * 权限审计日志实体
+ * 对应表：permission_audit_log
+ * 用于记录所有权限变更
  */
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
+@TableName("permission_audit_log")
 public class PermissionAuditLog {
     
     /**
-     * 日志 ID
+     * 主键 ID
      */
+    @TableId(type = IdType.AUTO)
     private Long id;
     
     /**
@@ -27,23 +32,17 @@ public class PermissionAuditLog {
     private Long operatorId;
     
     /**
-     * 操作人姓名
+     * 操作人名称
      */
     private String operatorName;
     
     /**
-     * 操作类型
-     * CONFIG_ROLE_PERMISSION - 配置角色权限
-     * ROLLBACK_ROLE_PERMISSION - 回滚权限配置
-     * GRANT_USER_PERMISSION - 授予用户权限
-     * REVOKE_USER_PERMISSION - 撤销用户权限
+     * 操作类型：CREATE, UPDATE, DELETE, GRANT, REVOKE
      */
     private String operationType;
     
     /**
-     * 目标类型
-     * ROLE - 角色
-     * USER - 用户
+     * 目标类型：ROLE, USER, PERMISSION
      */
     private String targetType;
     
@@ -58,12 +57,12 @@ public class PermissionAuditLog {
     private String targetName;
     
     /**
-     * 修改前的权限 ID 列表（JSON）
+     * 变更前的权限 ID 列表
      */
     private String permissionIdsBefore;
     
     /**
-     * 修改后的权限 ID 列表（JSON）
+     * 变更后的权限 ID 列表
      */
     private String permissionIdsAfter;
     
@@ -73,12 +72,12 @@ public class PermissionAuditLog {
     private String changeDescription;
     
     /**
-     * 操作 IP
+     * IP 地址
      */
     private String ipAddress;
     
     /**
-     * User-Agent
+     * 用户代理
      */
     private String userAgent;
     

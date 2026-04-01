@@ -16,7 +16,7 @@
       @select="handleMenuSelect"
     >
       <template v-for="menu in menuTree" :key="menu.id">
-        <!-- 有子菜单 -->
+        <!-- 一级菜单有子菜单 -->
         <el-sub-menu v-if="menu.children && menu.children.length > 0" :index="menu.id.toString()">
           <template #title>
             <el-icon v-if="menu.icon">
@@ -24,19 +24,42 @@
             </el-icon>
             <span>{{ menu.menuName || menu.menu_name }}</span>
           </template>
-          <el-menu-item
-            v-for="child in menu.children"
-            :key="child.id"
-            :index="child.menuPath || child.menu_path"
-          >
-            <el-icon v-if="child.icon">
-              <component :is="child.icon" />
-            </el-icon>
-            <template #title>{{ child.menuName || child.menu_name }}</template>
-          </el-menu-item>
+          
+          <!-- 二级菜单 -->
+          <template v-for="child in menu.children" :key="child.id">
+            <!-- 二级菜单有子菜单（三级） -->
+            <el-sub-menu v-if="child.children && child.children.length > 0" :index="child.id.toString()">
+              <template #title>
+                <el-icon v-if="child.icon">
+                  <component :is="child.icon" />
+                </el-icon>
+                <span>{{ child.menuName || child.menu_name }}</span>
+              </template>
+              
+              <!-- 三级菜单 -->
+              <el-menu-item
+                v-for="grandChild in child.children"
+                :key="grandChild.id"
+                :index="grandChild.menuPath || grandChild.menu_path"
+              >
+                <el-icon v-if="grandChild.icon">
+                  <component :is="grandChild.icon" />
+                </el-icon>
+                <template #title>{{ grandChild.menuName || grandChild.menu_name }}</template>
+              </el-menu-item>
+            </el-sub-menu>
+            
+            <!-- 二级菜单无子菜单 -->
+            <el-menu-item v-else :index="child.menuPath || child.menu_path">
+              <el-icon v-if="child.icon">
+                <component :is="child.icon" />
+              </el-icon>
+              <template #title>{{ child.menuName || child.menu_name }}</template>
+            </el-menu-item>
+          </template>
         </el-sub-menu>
         
-        <!-- 无子菜单 -->
+        <!-- 一级菜单无子菜单 -->
         <el-menu-item v-else :index="menu.menuPath || menu.menu_path">
           <el-icon v-if="menu.icon">
             <component :is="menu.icon" />
@@ -88,9 +111,11 @@ const hasMenuPermission = (menu) => {
     return true
   }
   
-  // 如果菜单有 required_permission 字段，检查权限
-  if (menu.required_permission) {
-    const requiredPerms = menu.required_permission.split(',').map(p => p.trim())
+  // 兼容后端返回的数据格式（requiredPermission 或 required_permission）
+  const requiredPerm = menu.requiredPermission || menu.required_permission
+  
+  if (requiredPerm) {
+    const requiredPerms = requiredPerm.split(',').map(p => p.trim())
     return requiredPerms.some(perm => permissions.includes(perm))
   }
   
@@ -98,46 +123,95 @@ const hasMenuPermission = (menu) => {
   return true
 }
 
-// 将扁平菜单转换为树形结构
+// 辅助函数：获取菜单的 parentId（兼容驼峰和下划线）
+const getParentId = (menu) => {
+  return menu.parentId !== undefined ? menu.parentId : menu.parent_id
+}
+
+// 辅助函数：获取菜单的 sortOrder（兼容驼峰和下划线）
+const getSortOrder = (menu) => {
+  return menu.sortOrder !== undefined ? menu.sortOrder : menu.sort_order
+}
+
+// 递归构建菜单树（支持多级菜单）
+const buildMenuTree = (menus, parentId = null) => {
+  const result = []
+  
+  // 找到当前层级的菜单
+  const currentLevelMenus = menus.filter(m => {
+    const pid = getParentId(m)
+    // 处理 null 和 undefined 的情况
+    if (parentId === null || parentId === undefined) {
+      return pid === null || pid === undefined
+    }
+    return pid === parentId
+  })
+  
+  // 按 sortOrder 排序
+  currentLevelMenus.sort((a, b) => getSortOrder(a) - getSortOrder(b))
+  
+  // 为每个菜单递归构建子菜单
+  currentLevelMenus.forEach(menu => {
+    const children = buildMenuTree(menus, menu.id)
+    if (children.length > 0) {
+      menu.children = children
+    }
+    result.push(menu)
+  })
+  
+  return result
+}
+
+// 将扁平菜单转换为树形结构（支持多级）
 const menuTree = computed(() => {
   const menus = [...userMenus.value]
-  console.log('[SidebarMenu] 菜单数量:', menus.length)
+  console.log('[SidebarMenu] 原始菜单数据:', JSON.stringify(menus.map(m => ({ 
+    code: m.menuCode, 
+    name: m.menuName, 
+    parentId: getParentId(m),
+    id: m.id
+  })), null, 2))
   
-  // 先过滤有权限的菜单
+  // 过滤有权限的菜单
   const visibleMenus = menus.filter(menu => hasMenuPermission(menu))
   console.log('[SidebarMenu] 过滤后可见菜单数量:', visibleMenus.length)
   
-  // 兼容后端返回的数据格式（parentId 或 parent_id）
-  const parentMenus = visibleMenus.filter(m => !m.parentId && !m.parent_id)
-  const childMenus = visibleMenus.filter(m => m.parentId || m.parent_id)
+  // 使用递归构建菜单树
+  const tree = buildMenuTree(visibleMenus, null)
   
-  console.log('[SidebarMenu] 父菜单:', parentMenus.map(m => m.menuCode))
-  console.log('[SidebarMenu] 子菜单:', childMenus.map(m => ({ code: m.menuCode, parentId: m.parentId || m.parent_id })))
+  console.log('[SidebarMenu] 最终菜单树:', JSON.stringify(tree.map(m => ({ 
+    code: m.menuCode, 
+    id: m.id,
+    children: m.children?.map(c => c.menuCode) 
+  })), null, 2))
   
-  // 为父菜单添加子菜单
-  parentMenus.forEach(parent => {
-    const parentId = parent.id
-    parent.children = childMenus.filter(child => {
-      const childParentId = child.parentId || child.parent_id
-      return childParentId === parentId
-    })
-    // 按 sortOrder 排序子菜单
-    parent.children.sort((a, b) => (a.sortOrder || a.sort_order || 0) - (b.sortOrder || b.sort_order || 0))
-    console.log('[SidebarMenu] 父菜单', parent.menuCode, '的子菜单:', parent.children.map(c => c.menuCode))
-  })
-  
-  // 按 sortOrder 排序父菜单
-  parentMenus.sort((a, b) => (a.sortOrder || a.sort_order || 0) - (b.sortOrder || b.sort_order || 0))
-  
-  return parentMenus
+  return tree
 })
 
 // 处理菜单选择
 const handleMenuSelect = (index, indexPath) => {
+  console.log('[SidebarMenu] 菜单选择:', index, indexPath)
   // index 是菜单路径
+  // 只有当菜单没有子菜单时才跳转
   if (index && index.startsWith('/')) {
-    router.push(index)
-    emit('menu-select', index)
+    // 查找当前菜单是否有子菜单
+    const currentMenu = userMenus.value.find(m => {
+      const menuPath = m.menuPath || m.menu_path
+      return menuPath === index
+    })
+    
+    // 检查是否有子菜单
+    const hasChildren = userMenus.value.some(m => {
+      const parentId = getParentId(m)
+      return parentId === currentMenu?.id
+    })
+    
+    // 如果没有子菜单，才跳转
+    if (!hasChildren) {
+      router.push(index)
+      emit('menu-select', index)
+    }
+    // 如果有子菜单，el-sub-menu 会自动处理展开/收起
   }
 }
 </script>

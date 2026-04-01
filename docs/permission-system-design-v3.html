@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>权限体系设计方案 V3</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f7fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .header .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        .section h2 {
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+        .section h3 {
+            color: #333;
+            margin: 20px 0 10px 0;
+            font-size: 1.2em;
+        }
+        .section h4 {
+            color: #666;
+            margin: 15px 0 8px 0;
+            font-size: 1em;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px 20px;
+            margin: 15px 0;
+            border-radius: 0 5px 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        table th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+        table tr:hover {
+            background: #f8f9fa;
+        }
+        pre {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        code {
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        .hierarchy-tree {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.4;
+            overflow-x: auto;
+        }
+        .tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            margin: 2px;
+        }
+        .tag-view { background: #d4edda; color: #155724; }
+        .tag-action { background: #cce5ff; color: #004085; }
+        .tag-base { background: #fff3cd; color: #856404; }
+        .tag-level-0 { background: #dc3545; color: white; }
+        .tag-level-1 { background: #fd7e14; color: white; }
+        .tag-level-2 { background: #ffc107; color: #333; }
+        .tag-level-3 { background: #20c997; color: white; }
+        .tag-level-4 { background: #6c757d; color: white; }
+        .phase-badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .phase-p0 { background: #dc3545; color: white; }
+        .phase-p1 { background: #ffc107; color: #333; }
+        .phase-p2 { background: #6c757d; color: white; }
+        ul, ol {
+            margin: 10px 0 10px 25px;
+        }
+        li {
+            margin: 5px 0;
+        }
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .toc h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+        }
+        .toc ul {
+            list-style: none;
+            margin-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+        }
+        .toc a {
+            color: #333;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            color: #667eea;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 权限体系设计方案 V3</h1>
+            <div class="subtitle">摄像机施工项目管理系统 | 最终版 | 2026-03-30</div>
+        </div>
+
+        <div class="toc">
+            <h3>📑 目录</h3>
+            <ul>
+                <li><a href="#section1">1. 核心概念</a></li>
+                <li><a href="#section2">2. 角色层级关系图</a></li>
+                <li><a href="#section3">3. 数据库表设计</a></li>
+                <li><a href="#section4">4. 数据权限规则</a></li>
+                <li><a href="#section5">5. 权限配置权规则</a></li>
+                <li><a href="#section6">6. 表结构总览</a></li>
+                <li><a href="#section7">7. 实施阶段</a></li>
+                <li><a href="#section8">8. 迁移方案</a></li>
+                <li><a href="#section9">9. 开发流程规范</a></li>
+            </ul>
+        </div>
+
+        <div class="section" id="section1">
+            <h2>1. 核心概念</h2>
+            
+            <h3>1.1 权限定义</h3>
+            <div class="info-box">
+                <strong>一个功能 = 一个权限</strong>
+            </div>
+            <pre><code>菜单 ──→ URL ──→ 页面 ──→ 元素 ──→ 功能(权限)
+
+示例：
+用户管理 → /user/management → 用户列表页
+                            ├── [新增] 按钮 → user:create:action
+                            ├── [编辑] 按钮 → user:edit:action
+                            ├── [删除] 按钮 → user:delete:action
+                            └── [列表] 表格 → user:list:view</code></pre>
+
+            <h3>1.2 权限类型</h3>
+            <table>
+                <tr>
+                    <th>类型</th>
+                    <th>说明</th>
+                    <th>示例</th>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-view">VIEW</span></td>
+                    <td>查看类权限（只读）</td>
+                    <td>user:list:view, role:list:view</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-action">ACTION</span></td>
+                    <td>操作类权限（增删改）</td>
+                    <td>user:create:action, user:delete:action</td>
+                </tr>
+            </table>
+
+            <h3>1.3 权限编码规范</h3>
+            <pre><code>格式：{模块}:{实体}:{操作类型}
+
+模块：user, role, workarea, company, system, permission, auth...
+实体：profile, list, detail, config...
+操作类型：view, action
+
+示例：
+auth:login:action          - 登录系统
+auth:logout:action         - 退出系统
+user:profile:view          - 查看个人资料
+user:profile:edit:action   - 编辑个人资料
+user:list:view             - 查看用户列表
+user:create:action         - 创建用户</code></pre>
+
+            <h3>1.4 权限集合分级</h3>
+            <div class="info-box">
+                <h4><span class="tag tag-base">基本权限集合</span></h4>
+                <ul>
+                    <li>所有角色必备的权限</li>
+                    <li>系统内置，不可删除</li>
+                    <li>示例：登录、退出、修改个人信息</li>
+                </ul>
+            </div>
+            <div class="info-box">
+                <h4>缺省权限集合</h4>
+                <ul>
+                    <li>角色创建时的默认权限</li>
+                    <li>包含基本权限集合</li>
+                    <li>可由上级角色配置</li>
+                </ul>
+            </div>
+            <div class="info-box">
+                <h4>实际权限</h4>
+                <ul>
+                    <li>用户最终拥有的权限</li>
+                    <li>可由上级角色单独调整</li>
+                    <li>不超过调整者自身权限</li>
+                </ul>
+            </div>
+
+            <h3>1.5 角色层级与管理关系</h3>
+            <div class="warning-box">
+                <strong>权限约束：下级权限 ⊆ 上级权限</strong>
+            </div>
+            <pre><code>角色层级（Level 0 最高，Level 4 最低）
+
+系统管理员 [Level 0]
+├── 权限：全部
+├── 数据范围：全部
+└── 可管理：所有角色
+    │
+    ├─→ 甲方管理员 [Level 1]
+    │   ├── 权限：甲方管理相关（由系统管理员授权）
+    │   ├── 数据范围：甲方相关数据
+    │   └── 可管理：甲方下属角色
+    │
+    ├─→ 乙方管理员 [Level 1]
+    │   ├── 权限：乙方管理相关
+    │   └── 可管理：乙方下属角色
+    │
+    └─→ 监理方管理员 [Level 1]
+        ├── 权限：监理管理相关
+        └── 可管理：监理方下属角色</code></pre>
+        </div>
+
+        <div class="section" id="section2">
+            <h2>2. 角色层级关系图</h2>
+            
+            <div class="hierarchy-tree">
+系统管理员 (ROLE_SYSTEM_ADMIN) <span class="tag tag-level-0">Level 0</span>
+└── 权限：全部 51 个权限
+└── 数据范围：全部数据
+    │
+    ├──────────────────────────────────────────────────────────────┐
+    │                                                              │
+    ↓                                                              ↓
+甲方管理员 <span class="tag tag-level-1">Level 1</span>                                    乙方管理员 <span class="tag tag-level-1">Level 1</span>
+└── 权限：约 20 个                                              └── 权限：约 15个
+└── 数据：甲方相关                                               └── 数据：乙方
+    │                                                              │
+    ├─────→ 甲方项目经理 <span class="tag tag-level-2">L2</span>                                  ├─────→ ...
+    │         └── 权限：约 10 个                                   │
+    │                                                              │
+    ├─────→ 甲方作业区项目经理 <span class="tag tag-level-3">L3</span>                            └─────→ ...
+    │         └── 权限：约 8 个
+    │             │
+    │             ├─────→ 甲方作业区项目主管 <span class="tag tag-level-4">L4</span>
+    │             │         └── 权限：约 4 个
+    │             │
+    │             └─────→ 甲方作业区项目经办人 <span class="tag tag-level-4">L4</span>
+    │                       └── 权限：约 3 个
+    │
+    ├─────→ 甲方项目经办人 <span class="tag tag-level-3">L3</span>
+    │         └── 权限：约 5 个
+    │
+    └─────→ 甲方普通用户 <span class="tag tag-level-2">L2</span>
+              └── 权限：基本权限
+            </div>
+        </div>
+
+        <div class="section" id="section3">
+            <h2>3. 数据库表设计</h2>
+            
+            <h3>3.1 新增表列表</h3>
+            <table>
+                <tr>
+                    <th>类别</th>
+                    <th>表名</th>
+                    <th>说明</th>
+                </tr>
+                <tr>
+                    <td rowspan="2">API 关联</td>
+                    <td><code>apis</code></td>
+                    <td>API 接口表</td>
+                </tr>
+                <tr>
+                    <td><code>permission_apis</code></td>
+                    <td>权限-API 关联表</td>
+                </tr>
+                <tr>
+                    <td rowspan="4">页面关联</td>
+                    <td><code>pages</code></td>
+                    <td>页面表</td>
+                </tr>
+                <tr>
+                    <td><code>page_elements</code></td>
+                    <td>页面元素表</td>
+                </tr>
+                <tr>
+                    <td><code>element_permissions</code></td>
+                    <td>元素-权限关联表</td>
+                </tr>
+                <tr>
+                    <td><code>permission_groups</code></td>
+                    <td>权限分组表</td>
+                </tr>
+                <tr>
+                    <td rowspan="2">数据权限</td>
+                    <td><code>data_permission_templates</code></td>
+                    <td>数据权限模板表（共享）</td>
+                </tr>
+                <tr>
+                    <td><code>user_data_permissions</code></td>
+                    <td>用户数据权限表</td>
+                </tr>
+                <tr>
+                    <td rowspan="4">审计保护</td>
+                    <td><code>permission_audit_log</code></td>
+                    <td>权限审计日志表</td>
+                </tr>
+                <tr>
+                    <td><code>protected_objects</code></td>
+                    <td>保护对象表</td>
+                </tr>
+                <tr>
+                    <td><code>permission_config_rights</code></td>
+                    <td>权限配置权表</td>
+                </tr>
+                <tr>
+                    <td><code>permission_snapshots</code></td>
+                    <td>权限快照表</td>
+                </tr>
+            </table>
+
+            <h3>3.2 扩展现有表</h3>
+            <pre><code>-- 权限表扩展
+ALTER TABLE permissions ADD COLUMN permission_type VARCHAR(20) DEFAULT 'ACTION';
+ALTER TABLE permissions ADD COLUMN module_code VARCHAR(50);
+ALTER TABLE permissions ADD COLUMN entity_code VARCHAR(50);
+ALTER TABLE permissions ADD COLUMN group_code VARCHAR(50);
+ALTER TABLE permissions ADD COLUMN is_base BOOLEAN DEFAULT FALSE;
+ALTER TABLE permissions ADD COLUMN sort_order INT DEFAULT 0;
+
+-- 角色表扩展
+ALTER TABLE roles ADD COLUMN role_level INT DEFAULT 0;
+ALTER TABLE roles ADD COLUMN managed_by_role_id BIGINT REFERENCES roles(id);</code></pre>
+        </div>
+
+        <div class="section" id="section4">
+            <h2>4. 数据权限规则</h2>
+            
+            <table>
+                <tr>
+                    <th>角色类型</th>
+                    <th>数据范围</th>
+                    <th>约束</th>
+                </tr>
+                <tr>
+                    <td>甲方作业区用户角色</td>
+                    <td>关联的作业区</td>
+                    <td><span class="tag tag-base">不可调整</span></td>
+                </tr>
+                <tr>
+                    <td>甲方非作业区用户角色</td>
+                    <td>本公司管辖范围内全部作业区</td>
+                    <td><span class="tag tag-base">不可调整</span></td>
+                </tr>
+                <tr>
+                    <td>非甲方作业区用户角色</td>
+                    <td>系统管理员配置 或 甲方任务关联</td>
+                    <td><span class="tag tag-view">可调整</span></td>
+                </tr>
+                <tr>
+                    <td>系统管理员</td>
+                    <td>功能权限下的全部数据</td>
+                    <td><span class="tag tag-action">无限制</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section" id="section5">
+            <h2>5. 权限配置权规则</h2>
+            
+            <table>
+                <tr>
+                    <th>角色</th>
+                    <th>权限</th>
+                    <th>约束</th>
+                </tr>
+                <tr>
+                    <td><strong>admin</strong>（缺省系统管理员）</td>
+                    <td>
+                        ✅ 配置基本权限集合<br>
+                        ✅ 配置角色缺省权限集合<br>
+                        ✅ 授权其他系统管理员配置权<br>
+                        ✅ 调整用户权限（无限制）
+                    </td>
+                    <td><span class="tag tag-action">无限制</span></td>
+                </tr>
+                <tr>
+                    <td><strong>被授权的系统管理员</strong></td>
+                    <td>
+                        ✅ 配置角色缺省权限集合（如果被授权）<br>
+                        ✅ 恢复角色缺省权限集合（如果被授权）<br>
+                        ✅ 调整用户权限（不超过自身权限）
+                    </td>
+                    <td><span class="tag tag-view">受限</span></td>
+                </tr>
+                <tr>
+                    <td><strong>非系统管理员</strong></td>
+                    <td>❌ 无任何配置权</td>
+                    <td><span class="tag tag-base">禁止</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section" id="section6">
+            <h2>6. 表结构总览</h2>
+            
+            <div class="hierarchy-tree">
+【核心表】（扩展）
+├── permissions          权限表（+ permission_type, is_base 等）
+├── roles                角色表（+ role_level, managed_by_role_id）
+├── users                用户表
+├── user_roles           用户角色关联表
+└── permission_groups    权限分组表（新增）
+
+【API 关联】（新增）
+├── apis                 API 接口表
+└── permission_apis      权限-API 关联表
+
+【页面关联】（新增）
+├── pages                页面表
+├── page_elements        页面元素表
+└── element_permissions  元素-权限关联表
+
+【权限分配】
+├── role_default_permissions  角色缺省权限集合表
+├── role_permissions     角色权限表
+└── user_permissions     用户权限表
+
+【数据权限】（新增）
+├── data_permission_templates  数据权限模板表（共享）
+└── user_data_permissions      用户数据权限表
+
+【审计与保护】（新增）
+├── permission_audit_log 权限审计日志表
+├── protected_objects    保护对象表
+├── permission_config_rights 权限配置权表
+└── permission_snapshots  权限快照表
+
+────────────────────────────────────────
+总计：19 张表
+            </div>
+        </div>
+
+        <div class="section" id="section7">
+            <h2>7. 实施阶段</h2>
+            
+            <h3>阶段 1：核心功能</h3>
+            <table>
+                <tr>
+                    <th><span class="phase-badge phase-p0">P0</span> 立即实施</th>
+                    <th>说明</th>
+                    <th>涉及表</th>
+                </tr>
+                <tr>
+                    <td>权限分组</td>
+                    <td>按模块分组管理</td>
+                    <td>permission_groups</td>
+                </tr>
+                <tr>
+                    <td>权限-API 关联</td>
+                    <td>明确功能与 API 关系</td>
+                    <td>apis, permission_apis</td>
+                </tr>
+                <tr>
+                    <td>基本权限集合</td>
+                    <td>所有角色必备权限</td>
+                    <td>permissions.is_base</td>
+                </tr>
+                <tr>
+                    <td>角色层级</td>
+                    <td>管理关系约束</td>
+                    <td>roles.role_level</td>
+                </tr>
+                <tr>
+                    <td>审计日志</td>
+                    <td>所有变更可追溯</td>
+                    <td>permission_audit_log</td>
+                </tr>
+                <tr>
+                    <td>保护对象</td>
+                    <td>核心数据保护</td>
+                    <td>protected_objects</td>
+                </tr>
+            </table>
+
+            <h3>阶段 2：增强功能</h3>
+            <table>
+                <tr>
+                    <th><span class="phase-badge phase-p1">P1</span> 近期实施</th>
+                    <th>说明</th>
+                    <th>涉及表</th>
+                </tr>
+                <tr>
+                    <td>页面元素权限</td>
+                    <td>细粒度控制</td>
+                    <td>pages, page_elements</td>
+                </tr>
+                <tr>
+                    <td>权限配置权</td>
+                    <td>分权管理</td>
+                    <td>permission_config_rights</td>
+                </tr>
+                <tr>
+                    <td>缺省权限集合</td>
+                    <td>角色默认权限</td>
+                    <td>role_default_permissions</td>
+                </tr>
+                <tr>
+                    <td>权限快照</td>
+                    <td>回滚和对比</td>
+                    <td>permission_snapshots</td>
+                </tr>
+            </table>
+
+            <h3>阶段 3：数据权限</h3>
+            <table>
+                <tr>
+                    <th><span class="phase-badge phase-p2">P2</span> 后续实施</th>
+                    <th>说明</th>
+                    <th>涉及表</th>
+                </tr>
+                <tr>
+                    <td>数据权限模板</td>
+                    <td>共享复用</td>
+                    <td>data_permission_templates</td>
+                </tr>
+                <tr>
+                    <td>用户数据权限</td>
+                    <td>数据范围控制</td>
+                    <td>user_data_permissions</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section" id="section8">
+            <h2>8. 迁移方案</h2>
+            
+            <div class="warning-box">
+                <strong>重要：迁移前必须备份数据！</strong>
+            </div>
+            
+            <h3>步骤 1：备份数据</h3>
+            <pre><code>CREATE TABLE permissions_backup_20260330 AS SELECT * FROM permissions;
+CREATE TABLE role_permissions_backup_20260330 AS SELECT * FROM role_permissions;
+CREATE TABLE roles_backup_20260330 AS SELECT * FROM roles;</code></pre>
+
+            <h3>步骤 2：确保 admin 全部权限</h3>
+            <pre><code>UPDATE users SET status = 'ACTIVE' WHERE username = 'admin';
+UPDATE roles SET role_level = 0 WHERE role_code = 'ROLE_SYSTEM_ADMIN';</code></pre>
+
+            <h3>步骤 3：创建新表结构</h3>
+            <p>执行完整的表创建脚本（详见 SQL 文件）。</p>
+
+            <h3>步骤 4：admin 登录后重建</h3>
+            <ol>
+                <li>配置基本权限集合</li>
+                <li>设置角色层级关系</li>
+                <li>为各角色配置缺省权限</li>
+                <li>录入 API 和页面数据</li>
+            </ol>
+        </div>
+
+        <div class="section" id="section9">
+            <h2>9. 开发流程规范</h2>
+            
+            <div class="success-box">
+                <strong>新需求开发必须遵循此流程</strong>
+            </div>
+            
+            <table>
+                <tr>
+                    <th>步骤</th>
+                    <th>内容</th>
+                    <th>说明</th>
+                </tr>
+                <tr>
+                    <td><strong>1️⃣ 功能设计</strong></td>
+                    <td>权限设计</td>
+                    <td>确定权限编码、类型、分组</td>
+                </tr>
+                <tr>
+                    <td><strong>2️⃣ API 设计</strong></td>
+                    <td>接口定义</td>
+                    <td>确定 HTTP 方法、路径，关联权限</td>
+                </tr>
+                <tr>
+                    <td><strong>3️⃣ 菜单设计</strong></td>
+                    <td>菜单配置</td>
+                    <td>确定菜单位置、名称、路径</td>
+                </tr>
+                <tr>
+                    <td><strong>4️⃣ 页面设计</strong></td>
+                    <td>页面定义</td>
+                    <td>确定页面名称、路径、组件</td>
+                </tr>
+                <tr>
+                    <td><strong>5️⃣ 元素设计</strong></td>
+                    <td>元素配置</td>
+                    <td>确定按钮、对话框等元素，关联权限</td>
+                </tr>
+                <tr>
+                    <td><strong>6️⃣ 权限分配</strong></td>
+                    <td>角色授权</td>
+                    <td>更新角色缺省权限集合</td>
+                </tr>
+                <tr>
+                    <td><strong>7️⃣ 代码实现</strong></td>
+                    <td>开始开发</td>
+                    <td>编写前后端代码</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="footer">
+            <p>摄像机施工项目管理系统 - 权限体系设计方案 V3</p>
+            <p>最后更新：2026-03-30</p>
+        </div>
+    </div>
+</body>
+</html>
