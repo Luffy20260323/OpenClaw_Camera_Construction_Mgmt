@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -19,6 +22,11 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.2",
+    "@vue/test-utils": "^2.4.6",
+    "@pinia/testing": "^3.0.4",
+    "axios-mock-adapter": "^2.1.0",
+    "jsdom": "^24.1.0",
+    "vitest": "^3.2.4",
     "vite": "^7.3.1"
   }
 }
