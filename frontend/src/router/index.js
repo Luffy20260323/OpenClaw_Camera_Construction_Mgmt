@@ -11,6 +11,7 @@ const MENU_CODE_MAP = {
   '/system/user-permission-detail': 'user_permission_detail',
   '/system/role-permission': 'role_permission',
   '/system/role-default': 'role_default_permission',
+  '/system/data-permission': 'data_permission',
   '/system/audit-log': 'audit_log',
   '/system/permission-audit-log': 'permission_audit_log',
   '/system/docs': 'system_docs',
@@ -75,6 +76,12 @@ const routes = [
     name: 'RoleDefaultPermission',
     component: () => import('@/views/system/RoleDefaultPermission.vue'),
     meta: { title: '角色缺省权限', requiresAuth: true, menuCode: 'role_default_permission' }
+  },
+  {
+    path: '/system/data-permission',
+    name: 'DataPermission',
+    component: () => import('@/views/system/DataPermissionConfig.vue'),
+    meta: { title: '数据权限配置', requiresAuth: true, menuCode: 'data_permission' }
   },
   {
     path: '/system/audit-log',

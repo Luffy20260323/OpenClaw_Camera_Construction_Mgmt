@@ -16,6 +16,8 @@ public class UserContext {
     private List<String> roleCodes;
     private List<String> permissions;
     private List<Long> workAreaIds;
+    private Long deptId;
+    private String deptPath;
     
     /**
      * 判断是否有指定权限

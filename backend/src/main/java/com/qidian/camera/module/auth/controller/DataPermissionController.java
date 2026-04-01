@@ -36,8 +36,8 @@ public class DataPermissionController {
             Map<String, Object> result = new HashMap<>();
             result.put("userId", userId);
             result.put("scopeType", dataPermissionService.getUserDataScopeType(userId));
-            result.put("companyId", dataPermissionService.getUserDataCompanyId(userId));
-            result.put("workAreaIds", dataPermissionService.getUserDataWorkAreaIds(userId));
+            result.put("deptId", dataPermissionService.getUserDataDeptId(userId));
+            result.put("deptIds", dataPermissionService.getUserDataDeptIds(userId));
             result.put("sqlCondition", dataPermissionService.getUserDataPermissionSql(userId, "default"));
             
             return Result.success(result);
@@ -56,8 +56,8 @@ public class DataPermissionController {
             Map<String, Object> result = new HashMap<>();
             result.put("userId", userId);
             result.put("scopeType", dataPermissionService.getUserDataScopeType(userId));
-            result.put("companyId", dataPermissionService.getUserDataCompanyId(userId));
-            result.put("workAreaIds", dataPermissionService.getUserDataWorkAreaIds(userId));
+            result.put("deptId", dataPermissionService.getUserDataDeptId(userId));
+            result.put("deptIds", dataPermissionService.getUserDataDeptIds(userId));
             
             return Result.success(result);
         } catch (Exception e) {
@@ -73,11 +73,11 @@ public class DataPermissionController {
     public Result<Void> setUserDataPermission(
             @PathVariable Long userId,
             @RequestParam String scopeType,
-            @RequestParam(required = false) Long companyId,
-            @RequestParam(required = false) String workAreaIds) {
+            @RequestParam(required = false) Long deptId,
+            @RequestParam(required = false) String deptIds) {
         try {
             UserContext operator = permissionService.getCurrentUser();
-            dataPermissionService.setUserDataPermission(userId, scopeType, companyId, workAreaIds, operator.getUserId());
+            dataPermissionService.setUserDataPermission(userId, scopeType, deptId, deptIds, operator.getUserId());
             return Result.success();
         } catch (Exception e) {
             log.error("设置用户数据权限失败：userId={}", userId, e);
@@ -94,8 +94,8 @@ public class DataPermissionController {
             Map<String, Object> result = new HashMap<>();
             result.put("roleId", roleId);
             result.put("scopeType", dataPermissionService.getRoleDataScopeType(roleId));
-            result.put("companyId", dataPermissionService.getRoleDataCompanyId(roleId));
-            result.put("workAreaIds", dataPermissionService.getRoleDataWorkAreaIds(roleId));
+            result.put("deptId", dataPermissionService.getRoleDataDeptId(roleId));
+            result.put("deptIds", dataPermissionService.getRoleDataDeptIds(roleId));
             
             return Result.success(result);
         } catch (Exception e) {
@@ -111,10 +111,10 @@ public class DataPermissionController {
     public Result<Void> setRoleDataPermission(
             @PathVariable Long roleId,
             @RequestParam String scopeType,
-            @RequestParam(required = false) Long companyId,
-            @RequestParam(required = false) String workAreaIds) {
+            @RequestParam(required = false) Long deptId,
+            @RequestParam(required = false) String deptIds) {
         try {
-            dataPermissionService.setRoleDataPermission(roleId, scopeType, companyId, workAreaIds);
+            dataPermissionService.setRoleDataPermission(roleId, scopeType, deptId, deptIds);
             return Result.success();
         } catch (Exception e) {
             log.error("设置角色数据权限失败：roleId={}", roleId, e);

@@ -12,25 +12,25 @@ public interface DataPermissionService {
      * 获取用户的数据权限范围类型
      * 
      * @param userId 用户 ID
-     * @return 数据范围类型：ALL, COMPANY, WORKAREA, SELF, CUSTOM
+     * @return 数据范围类型：ALL, DEPT, DEPT_AND_SUB, SELF
      */
     String getUserDataScopeType(Long userId);
     
     /**
-     * 获取用户的数据权限公司 ID
+     * 获取用户的数据权限部门 ID
      * 
      * @param userId 用户 ID
-     * @return 公司 ID，如果没有则返回 null
+     * @return 部门 ID，如果没有则返回 null
      */
-    Long getUserDataCompanyId(Long userId);
+    Long getUserDataDeptId(Long userId);
     
     /**
-     * 获取用户的数据权限作业区 ID 列表
+     * 获取用户的数据权限部门 ID 列表
      * 
      * @param userId 用户 ID
-     * @return 作业区 ID 列表（逗号分隔的字符串）
+     * @return 部门 ID 列表（逗号分隔的字符串）
      */
-    String getUserDataWorkAreaIds(Long userId);
+    String getUserDataDeptIds(Long userId);
     
     /**
      * 获取用户的数据权限 SQL 条件
@@ -50,41 +50,41 @@ public interface DataPermissionService {
     String getRoleDataScopeType(Long roleId);
     
     /**
-     * 获取角色的数据权限公司 ID
+     * 获取角色的数据权限部门 ID
      * 
      * @param roleId 角色 ID
-     * @return 公司 ID
+     * @return 部门 ID
      */
-    Long getRoleDataCompanyId(Long roleId);
+    Long getRoleDataDeptId(Long roleId);
     
     /**
-     * 获取角色的数据权限作业区 ID 列表
+     * 获取角色的数据权限部门 ID 列表
      * 
      * @param roleId 角色 ID
-     * @return 作业区 ID 列表
+     * @return 部门 ID 列表
      */
-    String getRoleDataWorkAreaIds(Long roleId);
+    String getRoleDataDeptIds(Long roleId);
     
     /**
      * 设置用户数据权限
      * 
      * @param userId 用户 ID
      * @param scopeType 数据范围类型
-     * @param companyId 公司 ID（当 scopeType 为 COMPANY 时）
-     * @param workAreaIds 作业区 ID 列表（当 scopeType 为 WORKAREA 时）
+     * @param deptId 部门 ID（当 scopeType 为 DEPT 时）
+     * @param deptIds 部门 ID 列表（当 scopeType 为 DEPT_AND_SUB 时）
      * @param operatorId 操作人 ID
      */
-    void setUserDataPermission(Long userId, String scopeType, Long companyId, String workAreaIds, Long operatorId);
+    void setUserDataPermission(Long userId, String scopeType, Long deptId, String deptIds, Long operatorId);
     
     /**
      * 设置角色数据权限
      * 
      * @param roleId 角色 ID
      * @param scopeType 数据范围类型
-     * @param companyId 公司 ID
-     * @param workAreaIds 作业区 ID 列表
+     * @param deptId 部门 ID
+     * @param deptIds 部门 ID 列表
      */
-    void setRoleDataPermission(Long roleId, String scopeType, Long companyId, String workAreaIds);
+    void setRoleDataPermission(Long roleId, String scopeType, Long deptId, String deptIds);
     
     /**
      * 刷新用户数据权限缓存

@@ -74,31 +74,29 @@ public class DataScopeAspect {
         }
         
         return switch (dataScope.scopeType()) {
-            case COMPANY -> {
-                // 本公司数据
-                Long companyId = user.getCompanyId();
-                if (companyId == null) {
-                    yield "1=0";  // 没有公司 ID，无法访问任何数据
-                }
-                yield alias + "company_id = " + companyId;
+            case ALL -> {
+                // 全部数据（不应该到这里，因为系统管理员已经提前返回）
+                yield null;
             }
-            case WORK_AREA -> {
-                // 负责的作业区
-                if (user.getWorkAreaIds() == null || user.getWorkAreaIds().isEmpty()) {
-                    yield "1=0";  // 没有作业区，无法访问任何数据
+            case DEPT -> {
+                // 本部门数据
+                Long deptId = user.getDeptId();
+                if (deptId == null) {
+                    yield "1=0";  // 没有部门 ID，无法访问任何数据
                 }
-                String ids = user.getWorkAreaIds().stream()
-                    .map(String::valueOf)
-                    .collect(java.util.stream.Collectors.joining(","));
-                yield alias + "id IN (" + ids + ")";
+                yield alias + "dept_id = " + deptId;
+            }
+            case DEPT_AND_SUB -> {
+                // 本部门及下级部门
+                String deptPath = user.getDeptPath();
+                if (deptPath == null || deptPath.isEmpty()) {
+                    yield "1=0";
+                }
+                yield alias + "dept_path LIKE '" + deptPath + "%'";
             }
             case SELF -> {
                 // 仅本人创建的数据
                 yield alias + "created_by = " + user.getUserId();
-            }
-            case ALL -> {
-                // 全部数据（不应该到这里，因为系统管理员已经提前返回）
-                yield null;
             }
             case CUSTOM -> {
                 // 自定义条件（通过 user_work_areas 表）

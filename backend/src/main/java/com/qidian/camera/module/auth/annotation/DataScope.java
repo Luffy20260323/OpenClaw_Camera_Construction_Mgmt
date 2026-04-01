@@ -20,12 +20,12 @@ public @interface DataScope {
     /**
      * 数据范围类型
      */
-    ScopeType scopeType() default ScopeType.COMPANY;
+    ScopeType scopeType() default ScopeType.DEPT;
     
     enum ScopeType {
         ALL,            // 全部数据（系统管理员）
-        COMPANY,        // 本公司数据
-        WORK_AREA,      // 负责的作业区
+        DEPT,           // 本部门数据
+        DEPT_AND_SUB,   // 本部门及下级部门
         SELF,           // 仅本人
         CUSTOM          // 自定义
     }

@@ -26,19 +26,19 @@ public class RoleDataPermission {
     private Long roleId;
     
     /**
-     * 数据范围类型：ALL, COMPANY, WORKAREA, SELF, CUSTOM
+     * 数据范围类型：ALL, DEPT, DEPT_AND_SUB, SELF
      */
     private String dataScopeType;
     
     /**
-     * 关联公司 ID
+     * 关联部门 ID
      */
-    private Long companyId;
+    private Long deptId;
     
     /**
-     * 作业区 ID 列表（逗号分隔）
+     * 部门 ID 列表（逗号分隔）
      */
-    private String workareaIds;
+    private String deptIds;
     
     /**
      * 自定义数据范围（JSON 格式）

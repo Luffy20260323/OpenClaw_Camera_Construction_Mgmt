@@ -36,14 +36,14 @@ public class DataPermissionInterceptor implements Interceptor {
     private static final String SCOPE_ALL = "ALL";
     
     /**
-     * 数据范围类型：本公司数据
+     * 数据范围类型：本部门数据
      */
-    private static final String SCOPE_COMPANY = "COMPANY";
+    private static final String SCOPE_DEPT = "DEPT";
     
     /**
-     * 数据范围类型：本作业区数据
+     * 数据范围类型：本部门及下级部门
      */
-    private static final String SCOPE_WORKAREA = "WORKAREA";
+    private static final String SCOPE_DEPT_AND_SUB = "DEPT_AND_SUB";
     
     /**
      * 数据范围类型：仅个人数据
