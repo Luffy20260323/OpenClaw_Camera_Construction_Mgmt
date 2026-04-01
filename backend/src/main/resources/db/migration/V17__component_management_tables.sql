@@ -8,14 +8,14 @@
 -- 1. 创建零部件种类表
 CREATE TABLE IF NOT EXISTS component_types (
     id BIGSERIAL PRIMARY KEY,
-    name VARCHAR(100) NOT NULL COMMENT '种类名称',
-    code VARCHAR(50) NOT NULL UNIQUE COMMENT '种类编码',
-    description TEXT COMMENT '描述',
-    sequence_no INT DEFAULT 10 COMMENT '显示序号',
-    is_active BOOLEAN DEFAULT TRUE COMMENT '是否启用',
-    created_by BIGINT COMMENT '创建人',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间'
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    sequence_no INT DEFAULT 10,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- 2. 创建索引
