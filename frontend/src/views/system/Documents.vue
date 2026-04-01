@@ -32,7 +32,7 @@
             placeholder="搜索文档..."
             prefix-icon="Search"
             clearable
-            @change="searchDocuments"
+            @change="handleSearch"
           />
         </div>
       </div>
@@ -457,7 +457,7 @@ const loadDocuments = async () => {
 }
 
 // 搜索文档
-const searchDocuments = async () => {
+const handleSearch = async () => {
   if (!searchQuery.value) {
     loadDocuments()
     return

@@ -114,4 +114,9 @@ public class DocumentDTO {
      * 更新时间
      */
     private LocalDateTime updatedAt;
+
+    /**
+     * 文件存储路径
+     */
+    private String filePath;
 }
