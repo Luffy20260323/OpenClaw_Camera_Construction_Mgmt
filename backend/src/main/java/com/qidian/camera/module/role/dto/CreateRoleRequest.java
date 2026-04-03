@@ -26,4 +26,7 @@ public class CreateRoleRequest {
     @NotNull(message = "公司类型不能为空")
     @Schema(description = "公司类型 ID", example = "1")
     private Long companyTypeId;
+    
+    @Schema(description = "角色类型：SYSTEM/DEFAULT/PRESET", example = "DEFAULT")
+    private String type;
 }

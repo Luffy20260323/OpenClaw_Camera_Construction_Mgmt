@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { login, logout } from '@/api/auth'
+import { getMyMenus } from '@/api/menu'
 import { ElMessage } from 'element-plus'
 
 export const useUserStore = defineStore('user', {
@@ -79,6 +80,41 @@ export const useUserStore = defineStore('user', {
       localStorage.removeItem('accessToken')
       localStorage.removeItem('refreshToken')
       localStorage.removeItem('userInfo')
+    },
+    
+    // 刷新菜单数据（用于资源管理修改后实时更新侧边栏）
+    async refreshMenus() {
+      if (!this.token) {
+        console.warn('[refreshMenus] 未登录，无法刷新菜单')
+        return
+      }
+      
+      try {
+        const res = await getMyMenus()
+        const menus = res.data || []
+        
+        console.log('[refreshMenus] 获取到新菜单数据:', menus)
+        
+        // 更新 userInfo.menus
+        const userInfoWithMenus = {
+          ...this.userInfo,
+          menus
+        }
+        
+        // 保存到 localStorage 和 state
+        localStorage.setItem('userInfo', JSON.stringify(userInfoWithMenus))
+        this.userInfo = userInfoWithMenus
+        
+        // 强制触发响应式更新
+        this.$patch({
+          userInfo: { ...userInfoWithMenus }
+        })
+        
+        return menus
+      } catch (error) {
+        console.error('[refreshMenus] 刷新菜单失败:', error)
+        throw error
+      }
     }
   }
 })

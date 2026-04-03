@@ -30,4 +30,7 @@ public class RoleDTO {
 
     @Schema(description = "是否系统保护", example = "false")
     private Boolean isSystemProtected;
+    
+    @Schema(description = "角色类型：SYSTEM/DEFAULT/PRESET", example = "DEFAULT")
+    private String type;
 }

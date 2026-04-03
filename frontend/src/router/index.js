@@ -21,6 +21,8 @@ const MENU_CODE_MAP = {
   '/system/point-device-models': 'point_device_models',
   '/system/point-device-model-instances': 'point_device_model_instances',
   '/system/point-batch-assignment': 'point_batch_assignment',
+  '/system/elements': 'element_management',
+  '/system/role-type-permissions': 'role_type_permissions',
   '/user/profile': 'profile',
   '/user/management': 'user_management',
   '/company': 'company_management',
@@ -46,12 +48,6 @@ const routes = [
     name: 'SystemConfig',
     component: () => import('@/views/system/Config.vue'),
     meta: { title: '系统配置', requiresAuth: true, menuCode: 'system_config' }
-  },
-  {
-    path: '/system/menu',
-    name: 'MenuManagement',
-    component: () => import('@/views/system/MenuManagement.vue'),
-    meta: { title: '菜单管理', requiresAuth: true, menuCode: 'menu_management' }
   },
   {
     path: '/system/base-permission',
@@ -146,8 +142,32 @@ const routes = [
   {
     path: '/system/resources',
     name: 'ResourceManagement',
-    component: () => import('@/views/system/ResourceManagement.vue'),
+    component: () => import('@/views/system/ResourceList.vue'),
     meta: { title: '资源管理', requiresAuth: true, menuCode: 'resource_management' }
+  },
+  {
+    path: '/system/resource-validation',
+    name: 'ResourceValidation',
+    component: () => import('@/views/system/ResourceValidation.vue'),
+    meta: { title: '资源完整性检查', requiresAuth: true }
+  },
+  {
+    path: '/system/permission-copy',
+    name: 'PermissionCopy',
+    component: () => import('@/views/system/PermissionCopy.vue'),
+    meta: { title: '权限复制', requiresAuth: true }
+  },
+  {
+    path: '/system/elements',
+    name: 'ElementManagement',
+    component: () => import('@/views/system/ElementList.vue'),
+    meta: { title: 'ELEMENT 管理', requiresAuth: true, menuCode: 'element_management' }
+  },
+  {
+    path: '/system/role-type-permissions',
+    name: 'RoleTypePermissions',
+    component: () => import('@/views/system/RoleTypePermissions.vue'),
+    meta: { title: '角色类型缺省权限', requiresAuth: true, menuCode: 'role_type_permissions' }
   },
   {
     path: '/system/component-attr-set-instances',
@@ -236,11 +256,25 @@ router.beforeEach((to, from, next) => {
         return
       }
       
+      // 递归检查菜单权限（支持树形结构）
+      const checkMenuPermission = (menuList, targetCode) => {
+        for (const menu of menuList) {
+          const code = typeof menu === 'string' ? menu : (menu.menuCode || '')
+          if (code === targetCode) {
+            return true
+          }
+          // 递归检查子菜单
+          if (menu.children && menu.children.length > 0) {
+            if (checkMenuPermission(menu.children, targetCode)) {
+              return true
+            }
+          }
+        }
+        return false
+      }
+      
       // 检查是否有菜单权限
-      const hasPermission = menus.some(m => {
-        const code = typeof m === 'string' ? m : (m.menuCode || '')
-        return code === menuCode
-      })
+      const hasPermission = checkMenuPermission(menus, menuCode)
       
       if (!hasPermission) {
         // 无权限，重定向到首页

@@ -2,10 +2,11 @@ import request from '@/utils/request'
 
 /**
  * 获取当前用户的菜单列表
+ * 【已更新】实际调用 /api/resources/menu-tree
  */
 export function getMyMenus() {
   return request({
-    url: '/menu/my-menus',
+    url: '/resources/menu-tree',
     method: 'get'
   })
 }

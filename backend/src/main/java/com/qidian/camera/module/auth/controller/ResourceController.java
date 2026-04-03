@@ -86,6 +86,9 @@ public class ResourceController {
         resource.setComponent(dto.getComponent());
         resource.setSortOrder(dto.getSortOrder());
         resource.setIsBasic(dto.getIsBasic() != null ? dto.getIsBasic() : 0);
+        resource.setIsVisible(dto.getIsVisible() != null ? dto.getIsVisible() : true);
+        resource.setIsSystemProtected(dto.getIsSystemProtected() != null ? dto.getIsSystemProtected() : false);
+        resource.setRequiredPermission(dto.getRequiredPermission());
         
         return Result.success(resourceService.create(resource));
     }
@@ -113,6 +116,15 @@ public class ResourceController {
         resource.setSortOrder(dto.getSortOrder());
         if (dto.getIsBasic() != null) {
             resource.setIsBasic(dto.getIsBasic());
+        }
+        if (dto.getIsVisible() != null) {
+            resource.setIsVisible(dto.getIsVisible());
+        }
+        if (dto.getIsSystemProtected() != null) {
+            resource.setIsSystemProtected(dto.getIsSystemProtected());
+        }
+        if (dto.getRequiredPermission() != null) {
+            resource.setRequiredPermission(dto.getRequiredPermission());
         }
         
         return Result.success(resourceService.update(resource));

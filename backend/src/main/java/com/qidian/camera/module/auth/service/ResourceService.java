@@ -128,6 +128,7 @@ public class ResourceService {
     
     /**
      * 资源树节点 DTO
+     * 兼容旧的 MenuDTO 字段名
      */
     @lombok.Data
     public static class ResourceTreeNode {
@@ -140,6 +141,17 @@ public class ResourceService {
         private String path;
         private Integer sortOrder;
         private Integer isBasic;
+        private Boolean isVisible;
         private List<ResourceTreeNode> children;
+        
+        // 前端兼容字段（JSON 序列化时作为额外字段）
+        @com.fasterxml.jackson.annotation.JsonProperty("menuName")
+        public String getMenuName() { return name; }
+        
+        @com.fasterxml.jackson.annotation.JsonProperty("menuCode")
+        public String getMenuCode() { return code; }
+        
+        @com.fasterxml.jackson.annotation.JsonProperty("menuPath")
+        public String getMenuPath() { return path; }
     }
 }

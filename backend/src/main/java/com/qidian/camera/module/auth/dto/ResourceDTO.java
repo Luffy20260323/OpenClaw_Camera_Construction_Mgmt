@@ -67,4 +67,19 @@ public class ResourceDTO {
      * 是否基本权限
      */
     private Integer isBasic;
+    
+    /**
+     * 是否可见（用于菜单资源）
+     */
+    private Boolean isVisible;
+    
+    /**
+     * 是否系统保护（用于菜单资源）
+     */
+    private Boolean isSystemProtected;
+    
+    /**
+     * 所需权限（用于菜单资源）
+     */
+    private String requiredPermission;
 }

@@ -47,6 +47,11 @@ public class Role implements Serializable {
     private Boolean isSystemProtected;
 
     /**
+     * 角色类型：SYSTEM/DEFAULT/PRESET
+     */
+    private String type;
+
+    /**
      * 创建时间
      */
     @TableField(fill = FieldFill.INSERT)

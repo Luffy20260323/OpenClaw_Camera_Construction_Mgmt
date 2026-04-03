@@ -1,8 +1,9 @@
 # 权限管理与设计规范
 
-> 文档版本：v1.0  
-> 最后更新：2026-03-31  
-> 状态：设计评审中
+> 文档版本：v2.0  
+> 最后更新：2026-04-02  
+> 状态：✅ 已实施  
+> 实施版本：Camera1001 V29
 
 ---
 
@@ -19,6 +20,9 @@
 9. [数据权限](#9-数据权限)
 10. [权限数据生成规范](#10-权限数据生成规范)
 11. [操作流程](#11-操作流程)
+12. [角色生命周期管理](#12-角色生命周期管理) ⭐ 新增
+13. [用户生命周期管理](#13-用户生命周期管理) ⭐ 新增
+14. [新功能开发流程](#14-新功能开发流程) ⭐ 新增
 
 ---
 
@@ -58,12 +62,17 @@
 | 集合类型 | 说明 | 来源 | 可修改者 |
 |---------|------|------|----------|
 | **基本权限集合** | 最基础的权限，保证用户能登录/退出系统 | 系统初始数据 | 仅 admin 用户 |
-| **缺省权限集合** | 角色创建时预设的权限 | 系统初始数据 / 角色定义 | admin 或授权的系统管理员 |
+| **缺省权限集合** | 角色创建时预设的权限，按角色类型自动分配 | `role_type_default_permissions` 表 | admin 或授权的系统管理员 |
 | **完整权限集合** | 角色当前实际拥有的权限 | 基本权限 + 缺省权限 + 调整 | 通过调整包管理 |
 
 **权限集合关系**：
 ```
 基本权限集合 ⊂ 缺省权限集合 ⊂ 完整权限集合
+
+角色完整权限计算公式：
+角色完整权限 = (role_permissions WHERE type='basic' OR type='default')
+              ∪ (role_permission_adjustment WHERE action='ADD')
+              - (role_permission_adjustment WHERE action='REMOVE')
 ```
 
 ### 2.4 权限调整包
@@ -72,6 +81,30 @@
 - 记录权限变更
 - 计算最终权限
 - 权限审计追溯
+
+### 2.5 角色类型缺省权限模板 ⭐ 新增
+
+**表：`role_type_default_permissions`**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | BIGINT | 主键 |
+| `role_type` | VARCHAR(20) | 角色类型：SYSTEM/DEFAULT/PRESET |
+| `resource_id` | BIGINT | 资源 ID |
+| `permission_key` | VARCHAR(200) | 权限码 |
+| `sort_order` | INT | 排序 |
+
+**作用**：
+- 新增角色时自动从模板表分配缺省权限
+- 系统管理员可通过前端页面配置模板
+- 避免硬编码具体角色的权限
+
+**角色类型说明**：
+| 类型 | 说明 | 缺省权限范围 |
+|------|------|-------------|
+| SYSTEM | 系统管理员角色 | 所有 ELEMENT + 所有资源 |
+| DEFAULT | 普通角色 | 基础查看权限（3 个 ELEMENT） |
+| PRESET | 预设角色 | 可配置 |
 
 ---
 
@@ -139,11 +172,11 @@
 
 ### 4.1 角色分类
 
-| 类型 | 说明 | 示例 |
-|------|------|------|
-| **系统角色** | 系统内置角色，不可删除 | admin（超级管理员） |
-| **默认角色** | 系统预设角色，可修改权限 | 普通用户、部门管理员 |
-| **自定义角色** | 管理员创建的角色 | 项目经理、数据分析师 |
+| 类型 | 说明 | 示例 | 缺省权限来源 |
+|------|------|------|-------------|
+| **系统角色** | 系统内置角色，不可删除 | admin（超级管理员） | `role_type_default_permissions`(SYSTEM) |
+| **默认角色** | 系统预设角色，可修改权限 | 甲方管理员、乙方项目经理 | `role_type_default_permissions`(DEFAULT) |
+| **自定义角色** | 管理员创建的角色 | 项目经理、数据分析师 | `role_type_default_permissions`(对应类型) |
 
 ### 4.2 特殊角色：admin
 
@@ -161,6 +194,35 @@
 | 调整角色权限 | ✅ | ✅ | ❌ |
 | 调整用户权限 | ✅ | ✅ | ❌ |
 | 创建自定义角色 | ✅ | ✅ | ❌ |
+
+### 4.4 角色类型管理 ⭐ 新增
+
+**新增角色时自动分配缺省权限**：
+```sql
+-- 触发器：trg_role_after_insert
+CREATE TRIGGER trg_role_after_insert
+    AFTER INSERT ON roles
+    FOR EACH ROW
+    EXECUTE FUNCTION trg_role_after_insert();
+
+-- 函数逻辑：
+-- 1. 从 role_type_default_permissions 读取 NEW.type 对应的缺省资源
+-- 2. 批量插入 role_resource 表（permission_type='default'）
+```
+
+**删除角色时自动清理权限**：
+```sql
+-- 触发器：trg_role_before_delete
+CREATE TRIGGER trg_role_before_delete
+    BEFORE DELETE ON roles
+    FOR EACH ROW
+    EXECUTE FUNCTION trg_role_before_delete();
+
+-- 函数逻辑：
+-- 1. DELETE FROM role_resource WHERE role_id = OLD.id
+-- 2. DELETE FROM role_permission_adjustment WHERE role_id = OLD.id
+-- 3. DELETE FROM user_roles WHERE role_id = OLD.id
+```
 
 ---
 
@@ -821,3 +883,304 @@ SELECT 2, id, 'basic', 1 FROM resource WHERE is_basic = 1;
 
 > 文档维护：权限管理模块开发团队  
 > 最后审核：待审核
+---
+
+## 12. 角色生命周期管理 ⭐ 新增
+
+### 12.1 新增角色
+
+**需求**：系统自动分配基本权限，系统管理员可定制缺省权限和最终权限。
+
+**流程**：
+```
+1. 管理员创建角色（指定 type=SYSTEM/DEFAULT/PRESET）
+   ↓
+2. 数据库触发器 trg_role_after_insert 执行
+   ↓
+3. 从 role_type_default_permissions 读取对应类型的缺省权限
+   ↓
+4. 批量插入 role_resource 表（permission_type='default'）
+   ↓
+5. 角色自动拥有缺省权限（无需手动配置）
+   ↓
+6. 管理员可通过角色权限配置页面进一步调整权限
+```
+
+**SQL 触发器**：
+```sql
+CREATE OR REPLACE FUNCTION trg_role_after_insert()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO role_resource (role_id, resource_id, permission_type, created_at, created_by)
+    SELECT 
+        NEW.id as role_id,
+        rtdp.resource_id,
+        'default',
+        CURRENT_TIMESTAMP,
+        NEW.created_by
+    FROM role_type_default_permissions rtdp
+    WHERE rtdp.role_type = NEW.type;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**后端服务层**：
+```java
+@Transactional
+public RoleDTO createRole(CreateRoleRequest request) {
+    // 创建角色
+    Role role = new Role();
+    role.setType(request.getType() != null ? request.getType() : "DEFAULT");
+    roleMapper.insert(role);
+    
+    // 自动分配缺省权限
+    assignDefaultPermissions(role);
+    
+    return getRoleById(role.getId());
+}
+```
+
+### 12.2 删除角色
+
+**需求**：二次确认 → 检查用户 → 清理权限 → 删除角色。
+
+**流程**：
+```
+1. 用户点击删除按钮
+   ↓
+2. 前端弹出二次确认对话框（提示检查用户）
+   ↓
+3. 后端检查角色下是否有用户
+   ↓
+4. 有用户 → 返回错误"角色下还有 X 个用户，无法删除"
+   ↓
+5. 无用户 → 触发器清理 role_resource、role_permission_adjustment、user_roles
+   ↓
+6. PermissionService.evictRolePermissionCache 清除缓存
+   ↓
+7. 删除 roles 表记录
+```
+
+**SQL 触发器**：
+```sql
+CREATE OR REPLACE FUNCTION trg_role_before_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 清理 role_resource
+    DELETE FROM role_resource WHERE role_id = OLD.id;
+    -- 清理 role_permission_adjustment
+    DELETE FROM role_permission_adjustment WHERE role_id = OLD.id;
+    -- 清理 user_roles
+    DELETE FROM user_roles WHERE role_id = OLD.id;
+    
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**后端服务层**：
+```java
+@Transactional
+public void deleteRole(Long id) {
+    // 检查是否有关联的用户
+    Long userCount = roleMapper.countUsersByRoleId(id);
+    if (userCount != null && userCount > 0) {
+        throw new BusinessException("角色下还有 " + userCount + " 个用户，无法删除");
+    }
+    
+    // 清除角色权限缓存
+    permissionService.evictRolePermissionCache(id);
+    
+    roleMapper.deleteById(id);
+}
+```
+
+### 12.3 配置缺省权限模板
+
+**前端页面**：`/system/role-type-permissions`
+
+**功能**：
+- 按角色类型（SYSTEM/DEFAULT/PRESET）配置缺省权限
+- 批量添加/删除权限
+- 树形选择资源
+
+**API**：
+- `GET /api/role-type-permissions/{roleType}` - 获取某类型的缺省权限列表
+- `POST /api/role-type-permissions` - 批量添加缺省权限
+- `DELETE /api/role-type-permissions/{id}` - 删除缺省权限
+- `POST /api/role-type-permissions/batch-delete` - 批量删除
+
+---
+
+## 13. 用户生命周期管理 ⭐ 新增
+
+### 13.1 新增用户
+
+**需求**：必须指定角色（可多选），用户具备角色全部权限，支持用户级调整。
+
+**流程**：
+```
+1. 管理员创建用户并分配角色（可多选）
+   ↓
+2. 插入 user_roles 关联
+   ↓
+3. PermissionService.evictUserPermissionCache 清除缓存
+   ↓
+4. 用户自动拥有角色的所有权限
+   ↓
+5. 管理员可通过用户权限配置页面进一步调整权限
+```
+
+**权限计算公式**：
+```
+用户最终权限 = ∑(各角色的完整权限) + 用户调整 (ADD) - 用户调整 (REMOVE)
+```
+
+### 13.2 删除用户
+
+**需求**：二次确认 → 检查未完结任务 → 清理权限 → 删除用户。
+
+**流程**：
+```
+1. 用户点击删除按钮
+   ↓
+2. 前端弹出二次确认对话框（提示检查未完结任务）
+   ↓
+3. 后端检查未完结任务（待任务系统完成后实现）
+   ↓
+4. 有任务 → 返回错误"用户还有 X 个未完结任务"
+   ↓
+5. 无任务 → 触发器清理 user_resource、user_permission_adjustment、user_roles
+   ↓
+6. PermissionService.evictUserPermissionCache 清除缓存
+   ↓
+7. 删除 users 表记录
+```
+
+**SQL 触发器**：
+```sql
+CREATE OR REPLACE FUNCTION trg_user_before_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- 清理 user_resource
+    DELETE FROM user_resource WHERE user_id = OLD.id;
+    -- 清理 user_permission_adjustment
+    DELETE FROM user_permission_adjustment WHERE user_id = OLD.id;
+    -- 清理 user_roles
+    DELETE FROM user_roles WHERE user_id = OLD.id;
+    
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**后端服务层**：
+```java
+@Transactional
+public void deleteUser(Long userId, Long operatorId) {
+    // 检查未完结任务（待实现）
+    // Long taskCount = taskMapper.countUnfinishedTasksByUserId(userId);
+    // if (taskCount != null && taskCount > 0) {
+    //     throw new BusinessException("用户还有 " + taskCount + " 个未完结任务");
+    // }
+    
+    // 清除用户权限缓存
+    permissionService.evictUserPermissionCache(userId);
+    
+    userMapper.deleteById(userId);
+}
+```
+
+---
+
+## 14. 新功能开发流程 ⭐ 强制规范
+
+### 14.1 三步骤流程
+
+**开发新功能时，严格按以下顺序执行：**
+
+| 步骤 | 工作内容 | 验收标准 | 负责人 |
+|------|---------|---------|--------|
+| **第 1 步** | 规划所有资源类型，生成权限数据 | 数据库包含 MODULE/MENU/PAGE/ELEMENT/API/PERMISSION 完整层级 | 后端开发 |
+| **第 2 步** | 将新权限分配给 admin 用户 | admin 用户登录后拥有新功能全部权限 | 后端开发 |
+| **第 3 步** | 实现权限对应的代码 | API 拦截器、前端 v-permission 指令正常工作 | 前后端开发 |
+
+**原因**：
+1. 保证新功能权限数据完备
+2. admin 登录后可立即使用
+3. admin 可根据需要配置给其他角色/用户
+
+**违反后果**：新功能上线后 admin 无法访问，需紧急补权限数据
+
+### 14.2 权限数据检查清单
+
+新功能上线前必须验证：
+
+- [ ] MODULE 资源已创建（模块层级）
+- [ ] MENU 资源已创建（导航菜单）
+- [ ] PAGE 资源已创建（页面）
+- [ ] ELEMENT 资源已创建（按钮/操作）
+- [ ] API 资源已创建（接口权限）
+- [ ] PERMISSION 资源已创建（独立权限）
+- [ ] admin 用户已分配所有新权限
+- [ ] 权限码格式符合 `module:resource:action:type`
+- [ ] 后端 API 拦截器已配置
+- [ ] 前端 v-permission 指令已应用
+
+### 14.3 权限设计模板
+
+| 资源名称 | 资源编码 | 类型 | 父资源 | permission_key | uri_pattern | method |
+|---------|---------|------|--------|----------------|-------------|--------|
+| 订单管理 | order-module | MODULE | - | - | - | - |
+| 订单列表 | order-menu | MENU | order-module | order:view | - | - |
+| 新增订单 | order-create-btn | ELEMENT | order-menu | order:create | - | - |
+| 创建订单 API | - | API | order-create-btn | order:create | POST /api/orders | POST |
+
+### 14.4 权限码命名规范
+
+**格式**：`module:resource:action:type`
+
+**示例**：
+| 资源类型 | 权限码示例 | 说明 |
+|---------|-----------|------|
+| MODULE | `system:user:menu` | 用户管理菜单 |
+| MENU | `system:user:list:menu` | 用户列表菜单 |
+| PAGE | `system:user:list:page` | 用户列表页面 |
+| ELEMENT | `system:user:view:button` | 查看用户按钮 |
+| API | `system:user:create:api` | 创建用户 API |
+| PERMISSION | `system:user:export:permission` | 导出用户独立权限 |
+
+---
+
+## 附录 C. 数据库触发器列表
+
+| 触发器名称 | 时机 | 作用 |
+|-----------|------|------|
+| `trg_role_after_insert` | AFTER INSERT ON roles | 新增角色时自动分配缺省权限 |
+| `trg_role_before_delete` | BEFORE DELETE ON roles | 删除角色时清理关联数据 |
+| `trg_user_before_delete` | BEFORE DELETE ON users | 删除用户时清理关联数据 |
+| `trg_user_role_change` | AFTER INSERT/DELETE/UPDATE ON user_roles | 用户角色变更记录 |
+
+## 附录 D. 缓存清理策略
+
+| 操作 | 清理的缓存 |
+|------|-----------|
+| 新增角色 | 无（新角色无缓存） |
+| 删除角色 | `role:permission:{roleId}` + 该角色下所有用户的 `user:permission:{userId}` |
+| 角色权限调整 | `role:permission:{roleId}` + 该角色下所有用户的 `user:permission:{userId}` |
+| 新增用户 | 无（新用户无缓存） |
+| 删除用户 | `user:permission:{userId}` |
+| 用户角色变更 | `user:permission:{userId}` |
+| 用户权限调整 | `user:permission:{userId}` |
+
+**Redis 缓存键**：
+- `user:permission:{userId}` - TTL: 30 分钟
+- `role:permission:{roleId}` - TTL: 60 分钟
+
+---
+
+> 文档维护：权限管理模块开发团队  
+> 最后审核：2026-04-02  
+> 实施状态：✅ 已完成（V29 迁移）

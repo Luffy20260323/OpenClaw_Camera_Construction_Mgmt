@@ -85,6 +85,8 @@ public class SecurityConfig {
                 .requestMatchers("/permission/**").authenticated()
                 // 权限管理接口（依赖菜单权限过滤器控制，此处只需认证）
                 .requestMatchers("/permission/**").authenticated()
+                // 资源管理接口（暂时 permitAll 用于调试）
+                .requestMatchers("/resource/**").permitAll()
                 .requestMatchers("/user/**").authenticated()
                 .requestMatchers("/system/**").authenticated()
                 .requestMatchers("/menu/**").authenticated()

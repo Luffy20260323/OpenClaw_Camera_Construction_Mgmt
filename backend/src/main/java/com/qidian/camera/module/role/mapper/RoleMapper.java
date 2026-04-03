@@ -26,14 +26,20 @@ public interface RoleMapper extends BaseMapper<Role> {
     List<Role> selectByUserId(@Param("userId") Long userId);
 
     /**
-     * 根据用户 ID 查询权限列表
+     * 根据用户 ID 查询权限列表（从 resource 表）
      *
      * @param userId 用户 ID
      * @return 权限列表
      */
-    @Select("SELECT DISTINCT p.permission_code FROM permissions p " +
-            "INNER JOIN role_permissions rp ON p.id = rp.permission_id " +
+    @Select("SELECT DISTINCT r.permission_key FROM resource r " +
+            "INNER JOIN role_permissions rp ON r.id = rp.permission_id " +
             "INNER JOIN user_roles ur ON rp.role_id = ur.role_id " +
-            "WHERE ur.user_id = #{userId}")
+            "WHERE ur.user_id = #{userId} AND r.type IN ('PERMISSION', 'MODULE', 'MENU', 'PAGE', 'ELEMENT', 'API')")
     List<String> selectPermissionsByUserId(@Param("userId") Long userId);
+    
+    /**
+     * 统计角色关联的用户数
+     */
+    @Select("SELECT COUNT(*) FROM user_roles WHERE role_id = #{roleId}")
+    Long countUsersByRoleId(@Param("roleId") Long roleId);
 }

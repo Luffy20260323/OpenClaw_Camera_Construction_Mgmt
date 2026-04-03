@@ -79,11 +79,36 @@ public class Resource {
      * 状态：1=启用, 0=禁用
      */
     private Integer status;
+
+    /**
+     * 是否可见（用于菜单资源）
+     */
+    private Boolean isVisible;
+    
+    /**
+     * 是否系统保护（用于菜单资源）
+     */
+    private Boolean isSystemProtected;
+    
+    /**
+     * 所需权限（用于菜单资源）
+     */
+    private String requiredPermission;
     
     /**
      * 是否基本权限：1=是, 0=否
      */
     private Integer isBasic;
+    
+    /**
+     * 所属模块编码
+     */
+    private String moduleCode;
+    
+    /**
+     * 描述
+     */
+    private String description;
     
     /**
      * 创建时间

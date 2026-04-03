@@ -4,12 +4,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qidian.camera.common.exception.BusinessException;
 import com.qidian.camera.common.exception.ErrorCode;
+import com.qidian.camera.module.auth.service.PermissionService;
 import com.qidian.camera.module.role.dto.RoleDTO;
 import com.qidian.camera.module.role.dto.CreateRoleRequest;
 import com.qidian.camera.module.role.dto.UpdateRoleRequest;
 import com.qidian.camera.module.role.entity.Role;
 import com.qidian.camera.module.role.mapper.RoleMapper;
+import com.qidian.camera.module.role.mapper.RoleResourceMapper;
 import com.qidian.camera.module.company.mapper.CompanyTypeMapper;
+import com.qidian.camera.module.auth.entity.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ public class RoleService {
 
     private final RoleMapper roleMapper;
     private final CompanyTypeMapper companyTypeMapper;
+    private final PermissionService permissionService;
+    private final RoleResourceMapper roleResourceMapper;
 
     /**
      * 分页查询角色列表
@@ -104,10 +109,14 @@ public class RoleService {
         role.setRoleDescription(request.getRoleDescription());
         role.setCompanyTypeId(request.getCompanyTypeId());
         role.setIsSystemProtected(false);
+        role.setType(request.getType() != null ? request.getType() : "DEFAULT"); // 默认 DEFAULT 类型
         
         roleMapper.insert(role);
         
-        log.info("创建角色成功：id={}, name={}", role.getId(), role.getRoleName());
+        // 自动分配缺省权限（根据角色类型）
+        assignDefaultPermissions(role);
+        
+        log.info("创建角色成功：id={}, name={}, type={}", role.getId(), role.getRoleName(), role.getType());
         
         return getRoleById(role.getId());
     }
@@ -163,11 +172,18 @@ public class RoleService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "系统保护的角色不可删除");
         }
         
-        // TODO: 检查是否有关联的用户
+        // 检查是否有关联的用户
+        Long userCount = roleMapper.countUsersByRoleId(id);
+        if (userCount != null && userCount > 0) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "角色下还有 " + userCount + " 个用户，无法删除");
+        }
+        
+        // 清除角色权限缓存
+        permissionService.evictRolePermissionCache(id);
         
         roleMapper.deleteById(id);
         
-        log.info("删除角色成功：id={}", id);
+        log.info("删除角色成功：id={}, 已清除权限缓存", id);
     }
 
     /**
@@ -181,6 +197,7 @@ public class RoleService {
         dto.setRoleDescription(role.getRoleDescription());
         dto.setCompanyTypeId(role.getCompanyTypeId());
         dto.setIsSystemProtected(role.getIsSystemProtected());
+        dto.setType(role.getType());
         
         // 查询公司类型名称
         if (role.getCompanyTypeId() != null) {
@@ -191,5 +208,24 @@ public class RoleService {
         }
         
         return dto;
+    }
+    
+    /**
+     * 根据角色类型自动分配缺省权限
+     */
+    private void assignDefaultPermissions(Role role) {
+        String roleType = role.getType() != null ? role.getType() : "DEFAULT";
+        
+        // 从 role_type_default_permissions 表获取该类型的缺省权限
+        List<Long> defaultResourceIds = roleResourceMapper.findDefaultResourceIdsByType(roleType);
+        
+        if (defaultResourceIds != null && !defaultResourceIds.isEmpty()) {
+            int count = 0;
+            for (Long resourceId : defaultResourceIds) {
+                roleResourceMapper.insertDefaultPermission(role.getId(), resourceId, 1L);
+                count++;
+            }
+            log.info("角色自动分配缺省权限：roleId={}, type={}, 权限数={}", role.getId(), roleType, count);
+        }
     }
 }

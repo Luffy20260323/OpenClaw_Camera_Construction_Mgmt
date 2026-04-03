@@ -1,240 +1,83 @@
 package com.qidian.camera.module.menu.service;
 
 import com.qidian.camera.module.menu.dto.MenuDTO;
-import com.qidian.camera.module.menu.dto.UpdateUserMenuPermissionRequest;
-import com.qidian.camera.module.menu.dto.UserMenuPermissionDTO;
-import com.qidian.camera.module.menu.entity.Menu;
-import com.qidian.camera.module.menu.entity.RoleMenuPermission;
-import com.qidian.camera.module.menu.entity.UserMenuPermission;
-import com.qidian.camera.module.menu.mapper.MenuMapper;
-import com.qidian.camera.module.role.mapper.RoleMapper;
-import com.qidian.camera.module.user.entity.User;
-import com.qidian.camera.module.user.mapper.UserMapper;
+import com.qidian.camera.module.auth.service.ResourceService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
- * 菜单权限服务
+ * 菜单服务（已整合到资源服务）
+ * 注意：此类仅作为向后兼容的包装器，实际数据从 resource 表读取
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class MenuService {
     
-    private final MenuMapper menuMapper;
-    private final UserMapper userMapper;
-    private final RoleMapper roleMapper;
-    private final JdbcTemplate jdbcTemplate;
+    private final ResourceService resourceService;
     
     /**
      * 获取用户的可见菜单列表
+     * 实际从 resource 表的 MENU 类型资源读取
      */
     public List<MenuDTO> getUserMenus(Long userId) {
-        List<Menu> menus = menuMapper.selectVisibleMenusByUserId(userId);
-        return menus.stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        log.info("获取用户 {} 的菜单列表", userId);
+        // 调用资源服务获取菜单树
+        List<ResourceService.ResourceTreeNode> tree = resourceService.getMenuTree();
+        log.info("获取到 {} 个顶级菜单项", tree.size());
+        for (ResourceService.ResourceTreeNode node : tree) {
+            log.info("  - {}: {} ({} children)", node.getId(), node.getMenuName(), 
+                node.getChildren() != null ? node.getChildren().size() : 0);
+        }
+        // 转换为 MenuDTO 树形结构
+        List<MenuDTO> menus = convertTree(tree);
+        log.info("转换后共 {} 个顶级菜单", menus.size());
+        return menus;
     }
     
     /**
      * 获取所有菜单（系统管理员使用）
+     * 实际从 resource 表的 MENU 类型资源读取
      */
     public List<MenuDTO> getAllMenus() {
-        List<Menu> menus = menuMapper.selectList(null);
-        return menus.stream()
-                .sorted((a, b) -> Integer.compare(a.getSortOrder(), b.getSortOrder()))
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+        log.info("获取所有菜单");
+        List<ResourceService.ResourceTreeNode> tree = resourceService.getMenuTree();
+        return convertTree(tree);
     }
     
     /**
-     * 获取用户的菜单权限详情（包含角色默认权限和自定义权限）
+     * 将 ResourceTreeNode 树转换为 MenuDTO 树
      */
-    public List<UserMenuPermissionDTO> getUserMenuPermissions(Long targetUserId) {
-        User user = userMapper.selectById(targetUserId);
-        if (user == null) {
-            throw new IllegalArgumentException("用户不存在");
-        }
-        
-        String sql = """
-            SELECT 
-                m.id as menu_id,
-                m.menu_code,
-                m.menu_name,
-                COALESCE(ump.can_view, rmp.can_view, false) as can_view,
-                COALESCE(ump.can_operate, rmp.can_operate, false) as can_operate,
-                CASE WHEN ump.id IS NOT NULL THEN 'CUSTOM' ELSE 'ROLE' END as permission_source,
-                ump.id as ump_id,
-                ump.granted_by,
-                ump.granted_at,
-                ? as user_id,
-                (SELECT username FROM users WHERE id = ?) as username,
-                (SELECT real_name FROM users WHERE id = ?) as real_name
-            FROM menus m
-            LEFT JOIN user_menu_permissions ump ON m.id = ump.menu_id AND ump.user_id = ?
-            LEFT JOIN role_menu_permissions rmp ON m.id = rmp.menu_id 
-                AND rmp.role_id IN (SELECT role_id FROM user_roles WHERE user_id = ?)
-            WHERE m.is_visible = TRUE
-            ORDER BY m.sort_order, m.id
-        """;
-        
-        List<Map<String, Object>> results = jdbcTemplate.queryForList(sql, targetUserId, targetUserId, targetUserId, targetUserId, targetUserId);
-        
-        return results.stream().map(row -> {
-            Boolean canView = (Boolean) row.get("can_view");
-            Boolean canOperate = (Boolean) row.get("can_operate");
-            
-            return UserMenuPermissionDTO.builder()
-                    .id(row.get("ump_id") != null ? ((Number) row.get("ump_id")).longValue() : null)
-                    .userId(((Number) row.get("user_id")).longValue())
-                    .username((String) row.get("username"))
-                    .realName((String) row.get("real_name"))
-                    .menuId(((Number) row.get("menu_id")).longValue())
-                    .menuCode((String) row.get("menu_code"))
-                    .menuName((String) row.get("menu_name"))
-                    .canView(canView != null ? canView : false)
-                    .canOperate(canOperate != null ? canOperate : false)
-                    .grantedBy(row.get("granted_by") != null ? ((Number) row.get("granted_by")).longValue() : null)
-                    .grantedAt(row.get("granted_at") != null ? row.get("granted_at").toString() : null)
-                    .permissionSource((String) row.get("permission_source"))
-                    .build();
-        }).collect(Collectors.toList());
+    private List<MenuDTO> convertTree(List<ResourceService.ResourceTreeNode> nodes) {
+        return convertTree(nodes, null);
     }
     
     /**
-     * 更新用户菜单权限（系统管理员操作）
+     * 递归转换树形结构
      */
-    @Transactional
-    public void updateUserMenuPermission(UpdateUserMenuPermissionRequest request, Long operatorId) {
-        // 检查操作人是否为系统管理员
-        User operator = userMapper.selectById(operatorId);
-        if (operator == null) {
-            throw new IllegalArgumentException("操作人不存在");
-        }
-        
-        List<String> operatorRoles = roleMapper.selectByUserId(operatorId).stream()
-                .map(r -> r.getRoleCode())
-                .toList();
-        
-        boolean isSystemAdmin = operatorRoles.stream()
-                .anyMatch(r -> r.contains("SYSTEM_ADMIN"));
-        
-        if (!isSystemAdmin) {
-            throw new SecurityException("只有系统管理员可以修改用户权限");
-        }
-        
-        // 检查目标用户是否存在
-        User targetUser = userMapper.selectById(request.getUserId());
-        if (targetUser == null) {
-            throw new IllegalArgumentException("目标用户不存在");
-        }
-        
-        // 检查菜单是否存在
-        Menu menu = menuMapper.selectById(request.getMenuId());
-        if (menu == null) {
-            throw new IllegalArgumentException("菜单不存在");
-        }
-        
-        // 系统保护菜单不允许修改
-        if (menu.getIsSystemProtected()) {
-            throw new SecurityException("系统保护菜单权限不可修改");
-        }
-        
-        // 查询是否已存在自定义权限
-        String checkSql = "SELECT id FROM user_menu_permissions WHERE user_id = ? AND menu_id = ?";
-        List<Map<String, Object>> existing = jdbcTemplate.queryForList(checkSql, request.getUserId(), request.getMenuId());
-        
-        if (existing.isEmpty()) {
-            // 插入新权限
-            String insertSql = """
-                INSERT INTO user_menu_permissions (user_id, menu_id, can_view, can_operate, granted_by, granted_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """;
-            jdbcTemplate.update(insertSql, 
-                    request.getUserId(), 
-                    request.getMenuId(), 
-                    request.getCanView() != null ? request.getCanView() : false,
-                    request.getCanOperate() != null ? request.getCanOperate() : false,
-                    operatorId);
-        } else {
-            // 更新现有权限
-            String updateSql = """
-                UPDATE user_menu_permissions 
-                SET can_view = ?, can_operate = ?, granted_by = ?, granted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = ? AND menu_id = ?
-            """;
-            jdbcTemplate.update(updateSql,
-                    request.getCanView() != null ? request.getCanView() : false,
-                    request.getCanOperate() != null ? request.getCanOperate() : false,
-                    operatorId,
-                    request.getUserId(),
-                    request.getMenuId());
-        }
-        
-        log.info("系统管理员 {} 更新了用户 {} 的菜单 {} 权限", 
-                operator.getUsername(), targetUser.getUsername(), menu.getMenuName());
-    }
-    
-    /**
-     * 删除用户自定义菜单权限（恢复为角色默认权限）
-     */
-    @Transactional
-    public void deleteUserMenuPermission(Long userId, Long menuId, Long operatorId) {
-        // 检查操作人是否为系统管理员
-        User operator = userMapper.selectById(operatorId);
-        if (operator == null) {
-            throw new IllegalArgumentException("操作人不存在");
-        }
-        
-        List<String> operatorRoles = roleMapper.selectByUserId(operatorId).stream()
-                .map(r -> r.getRoleCode())
-                .toList();
-        
-        boolean isSystemAdmin = operatorRoles.stream()
-                .anyMatch(r -> r.contains("SYSTEM_ADMIN"));
-        
-        if (!isSystemAdmin) {
-            throw new SecurityException("只有系统管理员可以修改用户权限");
-        }
-        
-        String deleteSql = "DELETE FROM user_menu_permissions WHERE user_id = ? AND menu_id = ?";
-        jdbcTemplate.update(deleteSql, userId, menuId);
-        
-        log.info("系统管理员 {} 删除了用户 {} 的菜单 {} 自定义权限", 
-                operator.getUsername(), userId, menuId);
-    }
-    
-    /**
-     * 批量更新用户菜单权限
-     */
-    @Transactional
-    public void batchUpdateUserMenuPermissions(Long userId, List<UpdateUserMenuPermissionRequest> requests, Long operatorId) {
-        for (UpdateUserMenuPermissionRequest request : requests) {
-            request.setUserId(userId);
-            updateUserMenuPermission(request, operatorId);
-        }
-    }
-    
-    private MenuDTO convertToDTO(Menu menu) {
-        return MenuDTO.builder()
-                .id(menu.getId())
-                .menuCode(menu.getMenuCode())
-                .menuName(menu.getMenuName())
-                .menuPath(menu.getMenuPath())
-                .parentId(menu.getParentId())
-                .sortOrder(menu.getSortOrder())
-                .icon(menu.getIcon())
-                .isVisible(menu.getIsVisible())
-                .requiredPermission(menu.getRequiredPermission())
-                .description(menu.getDescription())
+    private List<MenuDTO> convertTree(List<ResourceService.ResourceTreeNode> nodes, Long parentId) {
+        List<MenuDTO> result = new ArrayList<>();
+        for (ResourceService.ResourceTreeNode node : nodes) {
+            MenuDTO dto = MenuDTO.builder()
+                .id(node.getId())
+                .menuName(node.getMenuName())
+                .menuCode(node.getMenuCode())
+                .menuPath(node.getMenuPath())
+                .parentId(parentId)
+                .sortOrder(node.getSortOrder())
+                .icon(node.getIcon())
+                .isVisible(node.getIsVisible() != null ? node.getIsVisible() : true)
+                .requiredPermission(node.getPermissionKey())
+                .userCanView(true)
+                .userCanOperate(false)
+                .children(node.getChildren() != null ? convertTree(node.getChildren(), node.getId()) : null)
                 .build();
+            result.add(dto);
+        }
+        return result;
     }
 }

@@ -47,4 +47,7 @@ public class MenuDTO {
     
     @Schema(description = "用户是否有操作权限")
     private Boolean userCanOperate;
+    
+    @Schema(description = "子菜单列表")
+    private java.util.List<MenuDTO> children;
 }

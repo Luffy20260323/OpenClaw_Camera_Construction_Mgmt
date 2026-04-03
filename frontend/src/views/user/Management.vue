@@ -807,12 +807,13 @@ const handleResetPassword = async () => {
 const confirmDelete = async (user) => {
   try {
     await ElMessageBox.confirm(
-      `确定要删除用户 "${user.username}" 吗？此操作不可恢复！`,
+      `确定要删除用户 "${user.username}" 吗？<br/><br/>⚠️ 注意：删除前请确保该用户没有未完结的任务。`,
       '删除确认',
       {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
-        type: 'warning'
+        type: 'warning',
+        dangerouslyUseHTMLString: true
       }
     )
     deleting.value = true
@@ -824,7 +825,13 @@ const confirmDelete = async (user) => {
       ElMessage.success('删除成功')
       loadUsers()
     } catch (error) {
-      ElMessage.error('删除失败：' + error.message)
+      const errorMsg = error.message || error.response?.data?.message || '未知错误'
+      // 如果有未完结任务的错误，显示更友好的提示
+      if (errorMsg.includes('任务') || errorMsg.includes('未完成')) {
+        ElMessage.warning('该用户还有未完结的任务，请先处理或转移这些任务后再删除用户')
+      } else {
+        ElMessage.error('删除失败：' + errorMsg)
+      }
     } finally {
       deleting.value = false
     }

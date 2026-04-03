@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { VideoPlay } from '@element-plus/icons-vue'
@@ -95,12 +95,19 @@ const activeMenu = computed(() => {
   return route.path
 })
 
-// 用户菜单列表
-const userMenus = computed(() => {
-  const menus = userStore.menus || []
-  console.log('[SidebarMenu] 用户菜单数据:', JSON.stringify(menus, null, 2))
-  return menus
-})
+// 用户菜单列表（只读引用，避免不必要的重新计算）
+const userMenus = ref(userStore.menus || [])
+
+// 监听 store 变化，只在真正变化时更新
+watch(
+  () => userStore.menus,
+  (newMenus) => {
+    if (newMenus !== userMenus.value) {
+      userMenus.value = newMenus || []
+    }
+  },
+  { deep: false }
+)
 
 // 检查用户是否有菜单权限
 const hasMenuPermission = (menu) => {
@@ -162,35 +169,30 @@ const buildMenuTree = (menus, parentId = null) => {
   return result
 }
 
-// 将扁平菜单转换为树形结构（支持多级）
-const menuTree = computed(() => {
-  const menus = [...userMenus.value]
-  console.log('[SidebarMenu] 原始菜单数据:', JSON.stringify(menus.map(m => ({ 
-    code: m.menuCode, 
-    name: m.menuName, 
-    parentId: getParentId(m),
-    id: m.id
-  })), null, 2))
-  
-  // 过滤有权限的菜单
-  const visibleMenus = menus.filter(menu => hasMenuPermission(menu))
-  console.log('[SidebarMenu] 过滤后可见菜单数量:', visibleMenus.length)
-  
-  // 使用递归构建菜单树
-  const tree = buildMenuTree(visibleMenus, null)
-  
-  console.log('[SidebarMenu] 最终菜单树:', JSON.stringify(tree.map(m => ({ 
-    code: m.menuCode, 
-    id: m.id,
-    children: m.children?.map(c => c.menuCode) 
-  })), null, 2))
-  
-  return tree
-})
+// 将扁平菜单转换为树形结构（支持多级）- 使用缓存避免重复计算
+const menuTree = ref([])
+const menuCacheKey = ref('')
+
+// 监听菜单数据变化，只在真正变化时重新计算
+watch(
+  () => userMenus.value,
+  (newMenus) => {
+    // 生成缓存 key（只依赖 id 和 code，避免深度比较）
+    const newCacheKey = newMenus.map(m => `${m.id}:${m.menuCode}`).join('|')
+    
+    // 只在菜单真正变化时重新计算
+    if (newCacheKey !== menuCacheKey.value) {
+      menuCacheKey.value = newCacheKey
+      
+      const visibleMenus = newMenus.filter(menu => hasMenuPermission(menu))
+      menuTree.value = buildMenuTree(visibleMenus, null)
+    }
+  },
+  { immediate: true, deep: false }
+)
 
 // 处理菜单选择
 const handleMenuSelect = (index, indexPath) => {
-  console.log('[SidebarMenu] 菜单选择:', index, indexPath)
   // index 是菜单路径
   // 只有当菜单没有子菜单时才跳转
   if (index && index.startsWith('/')) {

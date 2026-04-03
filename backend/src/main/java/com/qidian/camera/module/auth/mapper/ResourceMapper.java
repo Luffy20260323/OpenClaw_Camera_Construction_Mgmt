@@ -39,6 +39,19 @@ public interface ResourceMapper extends BaseMapper<Resource> {
     List<Resource> findBasicResources();
     
     /**
+     * 查询基本权限资源（别名）
+     */
+    default List<Resource> findBasicPermissions() {
+        return findBasicResources();
+    }
+    
+    /**
+     * 根据模块查询资源
+     */
+    @Select("SELECT * FROM resource WHERE module_code = #{moduleCode} AND status = 1 ORDER BY sort_order")
+    List<Resource> findByModule(@Param("moduleCode") String moduleCode);
+    
+    /**
      * 根据 permission_key 查询资源
      */
     @Select("SELECT * FROM resource WHERE permission_key = #{permissionKey}")
@@ -55,4 +68,10 @@ public interface ResourceMapper extends BaseMapper<Resource> {
      */
     @Select("SELECT * FROM resource WHERE type IN ('MODULE', 'MENU') AND status = 1 ORDER BY sort_order")
     List<Resource> findMenuTree();
+    
+    /**
+     * 查询指定父资源和类型的子资源
+     */
+    @Select("SELECT * FROM resource WHERE parent_id = #{parentId} AND type = #{type} AND status = 1 ORDER BY sort_order")
+    List<Resource> findByParentIdAndType(@Param("parentId") Long parentId, @Param("type") String type);
 }

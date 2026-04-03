@@ -385,12 +385,13 @@ const handleSubmit = async () => {
 // 删除角色
 const handleDelete = (row) => {
   ElMessageBox.confirm(
-    `确定要删除角色"${row.roleName}"吗？此操作不可恢复！`,
+    `确定要删除角色"${row.roleName}"吗？<br/><br/>⚠️ 注意：删除前请确保该角色下没有用户，否则无法删除。`,
     '警告',
     {
       confirmButtonText: '确定',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      dangerouslyUseHTMLString: true
     }
   ).then(async () => {
     try {
@@ -402,7 +403,13 @@ const handleDelete = (row) => {
       getRoleList()
     } catch (error) {
       console.error('删除失败:', error)
-      ElMessage.error(error.message || '删除失败：' + (error.response?.data?.message || '未知错误'))
+      const errorMsg = error.message || error.response?.data?.message || '未知错误'
+      // 如果是角色下有用户的错误，显示更友好的提示
+      if (errorMsg.includes('用户')) {
+        ElMessage.warning('该角色下还有用户，请先移除或删除这些用户后再删除角色')
+      } else {
+        ElMessage.error('删除失败：' + errorMsg)
+      }
     }
   }).catch(() => {})
 }
