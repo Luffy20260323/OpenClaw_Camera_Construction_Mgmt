@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="home-container">
       <!-- 欢迎卡片 -->
       <el-card class="welcome-card">
@@ -72,7 +71,6 @@
         </div>
       </el-card>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
@@ -80,7 +78,6 @@ import { useRouter } from 'vue-router'
 import { computed } from 'vue'
 import { useUserStore } from '@/stores/user'
 import { User, Location, Box, Setting } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import PermButton from '@/components/PermButton.vue'
 
 const router = useRouter()

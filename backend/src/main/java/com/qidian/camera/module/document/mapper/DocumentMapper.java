@@ -21,14 +21,16 @@ public interface DocumentMapper extends BaseMapper<Document> {
      * @param status   状态
      * @return 文档列表
      */
-    @Select("SELECT d.*, u.real_name AS uploader_name " +
+    @Select("<script>" +
+            "SELECT d.*, u.real_name AS uploader_name " +
             "FROM documents d " +
             "LEFT JOIN users u ON d.uploaded_by = u.id " +
             "WHERE d.status = #{status} " +
-            "<if test='category != null and category != '''>" +
+            "<if test=\"category != null and category != ''\">" +
             "AND d.category = #{category} " +
             "</if>" +
-            "ORDER BY d.featured DESC, d.uploaded_at DESC")
+            "ORDER BY d.featured DESC, d.uploaded_at DESC" +
+            "</script>")
     List<Document> selectListWithUploader(@Param("category") String category,
                                           @Param("status") String status);
 

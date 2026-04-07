@@ -87,9 +87,20 @@ public class SecurityConfig {
                 .requestMatchers("/permission/**").authenticated()
                 // 资源管理接口（暂时 permitAll 用于调试）
                 .requestMatchers("/resource/**").permitAll()
+                .requestMatchers("/resources/**").permitAll()
+                // 零部件管理接口
+                .requestMatchers("/component-types/**").permitAll()
+                .requestMatchers("/component-attr-sets/**").permitAll()
+                .requestMatchers("/component-instances/**").permitAll()
+                .requestMatchers("/component-attr-set-instances/**").permitAll()
+                .requestMatchers("/point-device-models/**").permitAll()
+                .requestMatchers("/point-device-model-instances/**").permitAll()
+                .requestMatchers("/point-batch-assignment/**").permitAll()
                 .requestMatchers("/user/**").authenticated()
                 .requestMatchers("/system/**").authenticated()
                 .requestMatchers("/menu/**").authenticated()
+                // 审计日志接口（需要认证）
+                .requestMatchers("/audit-logs/**").authenticated()
                 // Swagger/API 文档
                 .requestMatchers("/doc.html").permitAll()
                 .requestMatchers("/doc/**").permitAll()
@@ -98,6 +109,7 @@ public class SecurityConfig {
                 .requestMatchers("/swagger-resources/**").permitAll()
                 .requestMatchers("/webjars/**").permitAll()
                 // 其他所有请求需要认证
+                .requestMatchers("/actuator/**").permitAll()
                 .anyRequest().authenticated()
             );
 

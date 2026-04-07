@@ -227,8 +227,8 @@ export const permissionMapping = {
   },
 
   // ===== 审计日志模块 =====
-  'audit_log': {
-    apis: ['GET /api/permission/audit-logs'],
+  'system_audit': {
+    apis: ['GET /api/audit-logs/permission'],
     menus: ['审计日志']
   }
 }
@@ -252,5 +252,5 @@ export const permissionModules = {
   'menu': { name: '菜单模块', icon: 'Menu' },
   'system': { name: '系统配置', icon: 'Setting' },
   'permission': { name: '权限管理', icon: 'Key' },
-  'audit_log': { name: '审计日志', icon: 'Document' }
+  'system_audit': { name: '审计日志', icon: 'Document' }
 }

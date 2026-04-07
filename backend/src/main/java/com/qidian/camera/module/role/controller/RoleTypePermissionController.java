@@ -14,7 +14,7 @@ import java.util.List;
  * 角色类型缺省权限控制器
  */
 @RestController
-@RequestMapping("/api/role-type-permissions")
+@RequestMapping("/role-type-permissions")
 @RequiredArgsConstructor
 @Tag(name = "角色类型缺省权限管理")
 public class RoleTypePermissionController {

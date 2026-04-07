@@ -7,6 +7,7 @@ import com.qidian.camera.module.workarea.dto.CreateWorkAreaRequest;
 import com.qidian.camera.module.workarea.dto.UpdateWorkAreaRequest;
 import com.qidian.camera.module.workarea.service.WorkAreaService;
 import com.qidian.camera.module.auth.annotation.ApiPermission;
+import com.qidian.camera.module.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class WorkAreaController {
 
     private final WorkAreaService workAreaService;
+    private final UserService userService;
 
     @Operation(summary = "分页查询作业区列表", description = "支持按公司、关键词筛选")
     @ApiPermission("workarea:list")
@@ -47,7 +49,10 @@ public class WorkAreaController {
     @Operation(summary = "创建作业区", description = "创建新作业区（仅系统管理员）")
     @ApiPermission("workarea:create")
     @PostMapping
-    public Result<WorkAreaDTO> createWorkArea(@Valid @RequestBody CreateWorkAreaRequest request) {
+    public Result<WorkAreaDTO> createWorkArea(
+            @RequestAttribute("userId") Long operatorId,
+            @Valid @RequestBody CreateWorkAreaRequest request) {
+        userService.validateWorkAreaManagementPermission(operatorId);
         WorkAreaDTO workArea = workAreaService.createWorkArea(request);
         return Result.success(workArea);
     }
@@ -57,7 +62,9 @@ public class WorkAreaController {
     @PutMapping("/{id}")
     public Result<WorkAreaDTO> updateWorkArea(
             @PathVariable Long id,
+            @RequestAttribute("userId") Long operatorId,
             @Valid @RequestBody UpdateWorkAreaRequest request) {
+        userService.validateWorkAreaManagementPermission(operatorId);
         WorkAreaDTO workArea = workAreaService.updateWorkArea(id, request);
         return Result.success(workArea);
     }
@@ -65,7 +72,10 @@ public class WorkAreaController {
     @Operation(summary = "删除作业区", description = "删除作业区（仅系统管理员，系统保护的作业区不可删除）")
     @ApiPermission("workarea:delete")
     @DeleteMapping("/{id}")
-    public Result<Void> deleteWorkArea(@PathVariable Long id) {
+    public Result<Void> deleteWorkArea(
+            @PathVariable Long id,
+            @RequestAttribute("userId") Long operatorId) {
+        userService.validateWorkAreaManagementPermission(operatorId);
         workAreaService.deleteWorkArea(id);
         return Result.success();
     }

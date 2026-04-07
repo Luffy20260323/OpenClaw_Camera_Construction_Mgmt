@@ -12,6 +12,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -65,6 +67,77 @@ public class PermissionAuditLogServiceImpl extends ServiceImpl<PermissionAuditLo
     @Override
     public PermissionAuditLog getById(Long id) {
         return super.getById(id);
+    }
+    
+    @Override
+    public List<PermissionAuditLog> queryLogs(String operationType, String targetType, Long targetId,
+                                              Long operatorId, String operatorName,
+                                              LocalDateTime startTime, LocalDateTime endTime,
+                                              Integer pageNum, Integer pageSize) {
+        LambdaQueryWrapper<PermissionAuditLog> wrapper = new LambdaQueryWrapper<>();
+        
+        if (operationType != null && !operationType.isEmpty()) {
+            wrapper.eq(PermissionAuditLog::getOperationType, operationType);
+        }
+        if (targetType != null && !targetType.isEmpty()) {
+            wrapper.eq(PermissionAuditLog::getTargetType, targetType);
+        }
+        if (targetId != null) {
+            wrapper.eq(PermissionAuditLog::getTargetId, targetId);
+        }
+        if (operatorId != null) {
+            wrapper.eq(PermissionAuditLog::getOperatorId, operatorId);
+        }
+        if (operatorName != null && !operatorName.isEmpty()) {
+            wrapper.eq(PermissionAuditLog::getOperatorName, operatorName);
+        }
+        if (startTime != null) {
+            wrapper.ge(PermissionAuditLog::getCreatedAt, startTime);
+        }
+        if (endTime != null) {
+            wrapper.le(PermissionAuditLog::getCreatedAt, endTime);
+        }
+        
+        wrapper.orderByDesc(PermissionAuditLog::getCreatedAt);
+        
+        Page<PermissionAuditLog> mpPage = new Page<>(pageNum, pageSize);
+        Page<PermissionAuditLog> result = page(mpPage, wrapper);
+        
+        return result.getRecords();
+    }
+    
+    @Override
+    public List<PermissionAuditLog> queryByResourceId(Long resourceId, Integer pageNum, Integer pageSize) {
+        return queryLogs(null, "RESOURCE", resourceId, null, null, null, null, pageNum, pageSize);
+    }
+    
+    @Override
+    public List<PermissionAuditLog> queryByRoleId(Long roleId, Integer pageNum, Integer pageSize) {
+        return queryLogs(null, "ROLE", roleId, null, null, null, null, pageNum, pageSize);
+    }
+    
+    @Override
+    public List<PermissionAuditLog> queryByUserId(Long userId, Integer pageNum, Integer pageSize) {
+        return queryLogs(null, "USER", userId, null, null, null, null, pageNum, pageSize);
+    }
+    
+    @Override
+    public List<String> getOperationTypes() {
+        return Arrays.asList(
+            "CONFIG_ROLE_PERMISSION",
+            "ROLLBACK_ROLE_PERMISSION",
+            "GRANT_USER_PERMISSION",
+            "REVOKE_USER_PERMISSION",
+            "CONFIG_DATA_SCOPE",
+            "UPDATE_RESOURCE_PARENT",
+            "CREATE_RESOURCE",
+            "DELETE_RESOURCE"
+        );
+    }
+    
+    @Override
+    public List<String> getTargetTypes() {
+        return Arrays.asList("ROLE", "USER", "RESOURCE");
     }
     
     /**

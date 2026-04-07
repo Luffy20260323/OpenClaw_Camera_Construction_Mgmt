@@ -18,7 +18,7 @@ import java.util.List;
 @Tag(name = "零部件属性集实例管理", description = "零部件属性集实例 CRUD 操作")
 @Slf4j
 @RestController
-@RequestMapping("/api/component-attr-set-instances")
+@RequestMapping("/component-attr-set-instances")
 @RequiredArgsConstructor
 public class ComponentAttrSetInstanceController {
 

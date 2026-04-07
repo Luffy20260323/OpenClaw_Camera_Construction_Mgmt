@@ -20,7 +20,8 @@ public interface ComponentAttrSetInstanceMapper extends BaseMapper<ComponentAttr
      * @param attrSetId 属性集 ID（可选）
      * @return 实例列表
      */
-    @Select("SELECT cai.*, cas.name AS attr_set_name, cas.component_type_id, " +
+    @Select("<script>" +
+            "SELECT cai.*, cas.name AS attr_set_name, cas.component_type_id, " +
             "ct.name AS component_type_name, u.real_name AS creator_name " +
             "FROM component_attr_set_instances cai " +
             "LEFT JOIN component_attr_sets cas ON cai.attr_set_id = cas.id " +
@@ -29,7 +30,8 @@ public interface ComponentAttrSetInstanceMapper extends BaseMapper<ComponentAttr
             "<if test='attrSetId != null'>" +
             "WHERE cai.attr_set_id = #{attrSetId} " +
             "</if>" +
-            "ORDER BY cai.created_at DESC")
+            "ORDER BY cai.created_at DESC" +
+            "</script>")
     List<ComponentAttrSetInstance> selectListWithDetails(@Param("attrSetId") Long attrSetId);
 
     /**

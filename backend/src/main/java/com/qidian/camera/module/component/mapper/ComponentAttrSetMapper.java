@@ -21,7 +21,8 @@ public interface ComponentAttrSetMapper extends BaseMapper<ComponentAttrSet> {
      * @param isActive        是否启用（可选）
      * @return 属性集列表
      */
-    @Select("SELECT cas.*, ct.name AS component_type_name, u.real_name AS creator_name " +
+    @Select("<script>" +
+            "SELECT cas.*, ct.name AS component_type_name, u.real_name AS creator_name " +
             "FROM component_attr_sets cas " +
             "LEFT JOIN component_types ct ON cas.component_type_id = ct.id " +
             "LEFT JOIN users u ON cas.created_by = u.id " +
@@ -32,7 +33,8 @@ public interface ComponentAttrSetMapper extends BaseMapper<ComponentAttrSet> {
             "<if test='isActive != null'>" +
             "AND cas.is_active = #{isActive} " +
             "</if>" +
-            "ORDER BY cas.sequence_no ASC, cas.created_at DESC")
+            "ORDER BY cas.sequence_no ASC, cas.created_at DESC" +
+            "</script>")
     List<ComponentAttrSet> selectListWithDetails(@Param("componentTypeId") Long componentTypeId,
                                                   @Param("isActive") Boolean isActive);
 

@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="user-permission-detail-page">
       <!-- 头部卡片 -->
       <el-card class="header-card">
@@ -257,14 +256,12 @@
         <el-empty description="请从上方列表中选择一个用户查看权限详情" />
       </el-card>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, Menu, Check } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import request from '@/utils/request'
 
 // 用户列表相关

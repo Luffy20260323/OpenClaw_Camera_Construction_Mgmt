@@ -21,7 +21,8 @@ public interface ComponentInstanceMapper extends BaseMapper<ComponentInstance> {
      * @param status 状态（可选）
      * @return 实例列表
      */
-    @Select("SELECT ci.*, ct.name AS component_type_name, " +
+    @Select("<script>" +
+            "SELECT ci.*, ct.name AS component_type_name, " +
             "cai.name AS attr_set_instance_name, u.real_name AS creator_name " +
             "FROM component_instances ci " +
             "LEFT JOIN component_types ct ON ci.component_type_id = ct.id " +
@@ -31,11 +32,12 @@ public interface ComponentInstanceMapper extends BaseMapper<ComponentInstance> {
             "<if test='componentTypeId != null'>" +
             "AND ci.component_type_id = #{componentTypeId} " +
             "</if>" +
-            "<if test='status != null and status != '''>" +
+            "<if test=\"status != null and status != ''\">" +
             "AND ci.status = #{status} " +
             "</if>" +
             "</where>" +
-            "ORDER BY ci.created_at DESC")
+            "ORDER BY ci.created_at DESC" +
+            "</script>")
     List<ComponentInstance> selectListWithDetails(@Param("componentTypeId") Long componentTypeId,
                                                    @Param("status") String status);
 

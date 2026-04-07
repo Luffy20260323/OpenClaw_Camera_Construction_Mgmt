@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="point-batch-assignment-page">
       <!-- 页面头部 -->
       <div class="page-header">
@@ -118,14 +117,12 @@
         </el-card>
       </div>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Check, Search } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { 
   getAvailablePoints, 
   batchAssign, 

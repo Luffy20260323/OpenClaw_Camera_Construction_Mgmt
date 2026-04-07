@@ -1,0 +1,45 @@
+# =====================================================
+# 日志配置文件
+# =====================================================
+
+# 日志根级别
+logging.level.root=INFO
+
+# 项目日志级别（可通过 API 动态调整）
+logging.level.com.qidian.camera=DEBUG
+
+# 关键模块日志级别
+logging.level.com.qidian.camera.module.auth=DEBUG
+logging.level.com.qidian.camera.module.menu=DEBUG
+logging.level.com.qidian.camera.module.auth.service.ResourceService=DEBUG
+logging.level.com.qidian.camera.module.auth.controller=DEBUG
+
+# 日志切面
+logging.level.com.qidian.camera.common.logging=DEBUG
+
+# Spring Security 日志
+logging.level.org.springframework.security=INFO
+
+# 数据库日志
+logging.level.org.mybatis=INFO
+logging.level.com.qidian.camera.*.mapper=INFO
+
+# =====================================================
+# 日志文件配置
+# =====================================================
+
+# 日志文件路径
+logging.file.path=/root/.openclaw/workspace/OpenClaw_Camera_Construction_Mgmt/backend/logs
+
+# 日志文件名称
+logging.file.name=${logging.file.path}/app.log
+
+# =====================================================
+# Logback 配置（通过 logback-spring.xml 详细配置）
+# =====================================================
+
+# 控制台输出格式
+logging.pattern.console=%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} [%X{sessionId}] - %msg%n
+
+# 文件输出格式
+logging.pattern.file=%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} [%X{sessionId}] - %msg%n

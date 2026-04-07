@@ -5,19 +5,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.qidian.camera.common.exception.BusinessException;
 import com.qidian.camera.common.exception.ErrorCode;
 import com.qidian.camera.module.auth.service.PermissionService;
+import com.qidian.camera.module.auth.mapper.RolePermissionMapper;
 import com.qidian.camera.module.role.dto.RoleDTO;
 import com.qidian.camera.module.role.dto.CreateRoleRequest;
 import com.qidian.camera.module.role.dto.UpdateRoleRequest;
 import com.qidian.camera.module.role.entity.Role;
 import com.qidian.camera.module.role.mapper.RoleMapper;
-import com.qidian.camera.module.role.mapper.RoleResourceMapper;
+import com.qidian.camera.module.role.mapper.RoleTypePermissionMapper;
 import com.qidian.camera.module.company.mapper.CompanyTypeMapper;
-import com.qidian.camera.module.auth.entity.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,7 +33,8 @@ public class RoleService {
     private final RoleMapper roleMapper;
     private final CompanyTypeMapper companyTypeMapper;
     private final PermissionService permissionService;
-    private final RoleResourceMapper roleResourceMapper;
+    private final RolePermissionMapper rolePermissionMapper;
+    private final RoleTypePermissionMapper roleTypePermissionMapper;
 
     /**
      * 分页查询角色列表
@@ -109,7 +111,7 @@ public class RoleService {
         role.setRoleDescription(request.getRoleDescription());
         role.setCompanyTypeId(request.getCompanyTypeId());
         role.setIsSystemProtected(false);
-        role.setType(request.getType() != null ? request.getType() : "DEFAULT"); // 默认 DEFAULT 类型
+        role.setType(request.getType() != null ? request.getType() : "DEFAULT");
         
         roleMapper.insert(role);
         
@@ -212,20 +214,35 @@ public class RoleService {
     
     /**
      * 根据角色类型自动分配缺省权限
+     * 从 role_type_default_permissions 表获取缺省权限，插入到 permission 表
      */
     private void assignDefaultPermissions(Role role) {
         String roleType = role.getType() != null ? role.getType() : "DEFAULT";
         
-        // 从 role_type_default_permissions 表获取该类型的缺省权限
-        List<Long> defaultResourceIds = roleResourceMapper.findDefaultResourceIdsByType(roleType);
-        
-        if (defaultResourceIds != null && !defaultResourceIds.isEmpty()) {
-            int count = 0;
-            for (Long resourceId : defaultResourceIds) {
-                roleResourceMapper.insertDefaultPermission(role.getId(), resourceId, 1L);
-                count++;
+        try {
+            // 获取该类型的缺省权限列表
+            var defaultPerms = roleTypePermissionMapper.selectByRoleType(roleType);
+            
+            if (defaultPerms != null && !defaultPerms.isEmpty()) {
+                int count = 0;
+                for (var perm : defaultPerms) {
+                    // 插入到 permission 表
+                    rolePermissionMapper.insertPermission(
+                        role.getId(),
+                        perm.getResourceId(),
+                        (short) 0,  // grant_level = 0，不可传递
+                        false,      // grantable = false
+                        1L,         // granted_by = admin
+                        LocalDateTime.now()
+                    );
+                    count++;
+                }
+                log.info("角色自动分配缺省权限：roleId={}, type={}, 权限数={}", role.getId(), roleType, count);
             }
-            log.info("角色自动分配缺省权限：roleId={}, type={}, 权限数={}", role.getId(), roleType, count);
+        } catch (Exception e) {
+            // 如果 role_type_default_permissions 表不存在，跳过缺省权限分配
+            log.warn("角色缺省权限分配失败（可能缺少配置表）：roleId={}, type={}, error={}", 
+                role.getId(), roleType, e.getMessage());
         }
     }
 }

@@ -49,4 +49,12 @@ public interface ComponentTypeService {
      * @param id 种类 ID
      */
     void deleteComponentType(Long id);
+
+    /**
+     * 切换零部件种类状态
+     *
+     * @param id 种类 ID
+     * @return 更新后的种类信息
+     */
+    ComponentTypeDTO toggleComponentTypeStatus(Long id);
 }

@@ -6,6 +6,7 @@ import com.qidian.camera.module.auth.dto.RolePermissionDTO;
 import com.qidian.camera.module.auth.entity.PermissionAuditLog;
 import com.qidian.camera.module.auth.entity.UserContext;
 import com.qidian.camera.module.auth.mapper.UserRoleMapper;
+import com.qidian.camera.module.auth.service.GrantAuthorityService;
 import com.qidian.camera.module.auth.service.PermissionAuditLogService;
 import com.qidian.camera.module.auth.service.PermissionService;
 import com.qidian.camera.module.auth.service.impl.PermissionServiceImpl;
@@ -24,6 +25,11 @@ import java.util.*;
 
 /**
  * 权限管理控制器
+ * 
+ * 授权规则：
+ * 1. 只有 admin 用户可以授权
+ * 2. admin 只能授权给系统管理员角色（company_type_id = 4）
+ * 3. 获得授权的系统管理员不能二次授权
  */
 @Tag(name = "权限管理", description = "权限配置管理")
 @RestController
@@ -38,11 +44,12 @@ public class PermissionController {
     private final PermissionAuditLogService auditLogService;
     private final com.qidian.camera.module.auth.service.PermissionCacheService permissionCacheService;
     private final UserRoleMapper userRoleMapper;
+    private final GrantAuthorityService grantAuthorityService;
     
     @Operation(summary = "获取所有权限列表", description = "获取系统中所有权限定义")
     @GetMapping("/list")
     public Result<List<Map<String, Object>>> getAllPermissions() {
-        String sql = "SELECT id, permission_code, permission_name, description, group_code, is_base, permission_type, module_code FROM permissions ORDER BY id";
+        String sql = "SELECT id, code as permission_code, name as permission_name, description, module_code, type as permission_type FROM resource WHERE permission_key IS NOT NULL ORDER BY id";
         List<Map<String, Object>> permissions = jdbcTemplate.queryForList(sql);
         return Result.success(permissions);
     }
@@ -50,7 +57,15 @@ public class PermissionController {
     @Operation(summary = "获取所有角色列表", description = "获取系统中所有角色定义")
     @GetMapping("/roles")
     public Result<List<Map<String, Object>>> getAllRoles() {
-        String sql = "SELECT id, role_name, role_code, role_description FROM roles ORDER BY id";
+        String sql = "SELECT id, role_name, role_code, role_description, company_type_id FROM roles ORDER BY id";
+        List<Map<String, Object>> roles = jdbcTemplate.queryForList(sql);
+        return Result.success(roles);
+    }
+    
+    @Operation(summary = "获取系统管理员角色列表", description = "获取可以被授权的系统管理员角色（company_type_id = 4）")
+    @GetMapping("/roles/system-admin")
+    public Result<List<Map<String, Object>>> getSystemAdminRoles() {
+        String sql = "SELECT id, role_name, role_code, role_description FROM roles WHERE company_type_id = 4 ORDER BY id";
         List<Map<String, Object>> roles = jdbcTemplate.queryForList(sql);
         return Result.success(roles);
     }
@@ -63,84 +78,17 @@ public class PermissionController {
         return Result.success(groups);
     }
     
-    @Operation(summary = "设置基本权限", description = "设置或取消权限的基本权限状态")
-    @PutMapping("/{permissionId}/base")
-    public Result<Void> setBasePermission(
-            @PathVariable Long permissionId,
-            @RequestBody Map<String, Object> request,
-            @RequestAttribute(value = "userId", required = false) Object userIdObj,
-            HttpServletRequest httpRequest) {
-        
-        Boolean isBase = (Boolean) request.get("is_base");
-        if (isBase == null) {
-            return Result.error("缺少 is_base 参数");
-        }
-        
-        // 处理 userId 类型转换
-        Long userId = null;
-        if (userIdObj instanceof Number) {
-            userId = ((Number) userIdObj).longValue();
-        } else if (userIdObj != null) {
-            userId = Long.parseLong(userIdObj.toString());
-        }
-        
-        // 获取权限信息
-        String permSql = "SELECT permission_code, permission_name FROM permissions WHERE id = ?";
-        Map<String, Object> permInfo = jdbcTemplate.queryForMap(permSql, permissionId);
-        
-        // 检查是否是系统保护权限（认证相关不可修改）
-        String permCode = (String) permInfo.get("permission_code");
-        if ("auth:login".equals(permCode) || "auth:logout".equals(permCode)) {
-            return Result.error("认证相关权限不可修改基本权限状态");
-        }
-        
-        // 更新基本权限状态
-        jdbcTemplate.update("UPDATE permissions SET is_base = ? WHERE id = ?", isBase, permissionId);
-        
-        // 获取权限名称
-        String permName = (String) permInfo.get("permission_name");
-        
-        // 获取用户名用于日志
-        String username = "system";
-        if (userId != null) {
-            try {
-                username = jdbcTemplate.queryForObject(
-                    "SELECT username FROM users WHERE id = ?", String.class, userId);
-            } catch (Exception e) {
-                log.warn("获取用户名失败: {}", e.getMessage());
-            }
-        }
-        
-        // 记录审计日志
-        PermissionAuditLog auditLog = PermissionAuditLog.builder()
-            .operatorId(userId != null ? userId : 0L)
-            .operatorName(username)
-            .operationType("UPDATE_BASE_PERMISSION")
-            .targetType("PERMISSION")
-            .targetId(permissionId)
-            .targetName(permName)
-            .changeDescription(isBase ? "设为基本权限" : "取消基本权限")
-            .ipAddress(getClientIp(httpRequest))
-            .userAgent(httpRequest.getHeader("User-Agent"))
-            .build();
-        
-        auditLogService.logPermissionConfig(auditLog);
-        
-        log.info("权限 {} 基本权限状态更新为 {}, 操作人：{}", 
-            permCode, isBase, username);
-        return Result.success();
-    }
-    
     @Operation(summary = "获取角色的权限配置", description = "获取指定角色的权限列表")
     @GetMapping("/role/{roleId}")
     public Result<RolePermissionDTO> getRolePermissions(@PathVariable Long roleId) {
-        // 获取角色信息
         String roleSql = "SELECT id, role_name, role_code FROM roles WHERE id = ?";
         Map<String, Object> roleMap = jdbcTemplate.queryForMap(roleSql, roleId);
         
-        // 获取角色权限
-        String permSql = "SELECT permission_id FROM role_permissions WHERE role_id = ?";
-        List<Long> permissionIds = jdbcTemplate.queryForList(permSql, Long.class, roleId);
+        String permSql = "SELECT permission_id, grant_level, grantable, granted_by FROM permission WHERE role_id = ?";
+        List<Map<String, Object>> permRecords = jdbcTemplate.queryForList(permSql, roleId);
+        List<Long> permissionIds = permRecords.stream()
+            .map(r -> ((Number) r.get("permission_id")).longValue())
+            .toList();
         
         RolePermissionDTO dto = new RolePermissionDTO();
         dto.setRoleId(roleId);
@@ -151,105 +99,7 @@ public class PermissionController {
         return Result.success(dto);
     }
     
-    @Operation(summary = "获取角色的缺省权限", description = "获取角色创建时的默认权限列表")
-    @GetMapping("/role/{roleId}/default")
-    public Result<Map<String, Object>> getRoleDefaultPermissions(@PathVariable Long roleId) {
-        Map<String, Object> result = new HashMap<>();
-        
-        // 获取角色信息
-        String roleSql = "SELECT id, role_name, role_code FROM roles WHERE id = ?";
-        Map<String, Object> roleMap = jdbcTemplate.queryForMap(roleSql, roleId);
-        result.put("role_id", roleId);
-        result.put("role_name", roleMap.get("role_name"));
-        result.put("role_code", roleMap.get("role_code"));
-        
-        // 获取角色缺省权限
-        String permSql = "SELECT permission_id FROM role_default_permissions WHERE role_id = ?";
-        List<Long> permissionIds = jdbcTemplate.queryForList(permSql, Long.class, roleId);
-        result.put("permission_ids", permissionIds);
-        
-        return Result.success(result);
-    }
-    
-    @Operation(summary = "配置角色缺省权限", description = "设置角色创建时的默认权限")
-    @PutMapping("/role/{roleId}/default")
-    public Result<Void> updateRoleDefaultPermissions(
-            @PathVariable Long roleId,
-            @RequestBody Map<String, Object> request,
-            @RequestAttribute(value = "userId", required = false) Object userIdObj,
-            HttpServletRequest httpRequest) {
-        
-        // 处理 userId 类型转换
-        Long userId = null;
-        if (userIdObj instanceof Number) {
-            userId = ((Number) userIdObj).longValue();
-        } else if (userIdObj != null) {
-            userId = Long.parseLong(userIdObj.toString());
-        }
-        
-        // 处理 permission_ids（JSON 反序列化可能是 Integer）
-        @SuppressWarnings("unchecked")
-        List<?> rawPermissionIds = (List<?>) request.get("permission_ids");
-        List<Long> permissionIds = null;
-        if (rawPermissionIds != null) {
-            permissionIds = rawPermissionIds.stream()
-                .map(obj -> {
-                    if (obj instanceof Number) {
-                        return ((Number) obj).longValue();
-                    }
-                    return Long.parseLong(obj.toString());
-                })
-                .toList();
-        }
-        
-        // 删除原有缺省权限
-        jdbcTemplate.update("DELETE FROM role_default_permissions WHERE role_id = ?", roleId);
-        
-        // 添加新的缺省权限
-        if (permissionIds != null && !permissionIds.isEmpty()) {
-            for (Long permissionId : permissionIds) {
-                jdbcTemplate.update(
-                    "INSERT INTO role_default_permissions (role_id, permission_id, configured_by) VALUES (?, ?, ?)",
-                    roleId, permissionId, userId != null ? userId : 0L);
-            }
-        }
-        
-        // 获取角色名称
-        String roleName = jdbcTemplate.queryForObject(
-            "SELECT role_name FROM roles WHERE id = ?", String.class, roleId);
-        
-        // 获取用户名用于日志
-        String username = "system";
-        if (userId != null) {
-            try {
-                username = jdbcTemplate.queryForObject(
-                    "SELECT username FROM users WHERE id = ?", String.class, userId);
-            } catch (Exception e) {
-                log.warn("获取用户名失败: {}", e.getMessage());
-            }
-        }
-        
-        // 记录审计日志
-        PermissionAuditLog auditLog = PermissionAuditLog.builder()
-            .operatorId(userId != null ? userId : 0L)
-            .operatorName(username)
-            .operationType("UPDATE_ROLE_DEFAULT_PERMISSION")
-            .targetType("ROLE")
-            .targetId(roleId)
-            .targetName(roleName)
-            .changeDescription("更新角色缺省权限，共 " + (permissionIds != null ? permissionIds.size() : 0) + " 个权限")
-            .ipAddress(getClientIp(httpRequest))
-            .userAgent(httpRequest.getHeader("User-Agent"))
-            .build();
-        
-        auditLogService.logPermissionConfig(auditLog);
-        
-        log.info("角色 {} 缺省权限配置更新，操作人：{}, 权限数量：{}", 
-            roleId, username, permissionIds != null ? permissionIds.size() : 0);
-        return Result.success();
-    }
-    
-    @Operation(summary = "配置角色权限", description = "为角色分配权限（仅系统管理员）")
+    @Operation(summary = "配置角色权限", description = "为角色分配权限（仅 admin，且只能授权给系统管理员角色）")
     @PutMapping("/role/{roleId}")
     public Result<Void> updateRolePermissions(
             @PathVariable Long roleId,
@@ -262,20 +112,38 @@ public class PermissionController {
         
         // 获取当前用户
         UserContext currentUser = permissionServiceImpl.getCurrentUser();
+        Long operatorId = currentUser.getUserId();
         
+        // ===== 授权规则检查 =====
+        // 1. 只有 admin 可以授权
+        if (!grantAuthorityService.isAdmin(operatorId)) {
+            log.warn("非 admin 用户尝试授权：operatorId={}, username={}", operatorId, currentUser.getUsername());
+            return Result.error(403, "只有 admin 用户可以分配权限");
+        }
+        
+        // 2. 目标角色必须是系统管理员类型（company_type_id = 4）
+        if (!grantAuthorityService.isSystemAdminRole(roleId)) {
+            log.warn("admin 只能授权给系统管理员角色：roleId={}, companyTypeId != 4", roleId);
+            String roleName = jdbcTemplate.queryForObject(
+                "SELECT role_name FROM roles WHERE id = ?", String.class, roleId);
+            return Result.error(403, "只能授权给系统管理员角色，当前角色 '" + roleName + "' 不是系统管理员类型");
+        }
+        
+        // ===== 执行授权 =====
         // 获取原有权限
-        String oldPermSql = "SELECT ARRAY_AGG(permission_id) FROM role_permissions WHERE role_id = ?";
+        String oldPermSql = "SELECT STRING_AGG(permission_id::text, ',') FROM permission WHERE role_id = ?";
         String oldPermissionIds = jdbcTemplate.queryForObject(oldPermSql, String.class, roleId);
         
         // 删除原有权限
-        jdbcTemplate.update("DELETE FROM role_permissions WHERE role_id = ?", roleId);
+        jdbcTemplate.update("DELETE FROM permission WHERE role_id = ?", roleId);
         
-        // 添加新权限
+        // 添加新权限（设置 grant_level = 1，表示一级授权）
         if (permissionIds != null && !permissionIds.isEmpty()) {
             for (Long permissionId : permissionIds) {
                 jdbcTemplate.update(
-                    "INSERT INTO role_permissions (role_id, permission_id) VALUES (?, ?)",
-                    roleId, permissionId);
+                    "INSERT INTO permission (role_id, permission_id, grant_level, grantable, granted_by, granted_at) " +
+                    "VALUES (?, ?, 1, false, ?, CURRENT_TIMESTAMP)",
+                    roleId, permissionId, operatorId);
             }
         }
         
@@ -293,7 +161,7 @@ public class PermissionController {
             .targetName(roleName)
             .permissionIdsBefore(oldPermissionIds)
             .permissionIdsAfter(permissionIds != null ? permissionIds.toString() : "[]")
-            .changeDescription(comment)
+            .changeDescription(comment + " (授权级别: 一级授权, 授权人: " + currentUser.getUsername() + ")")
             .ipAddress(getClientIp(httpRequest))
             .userAgent(httpRequest.getHeader("User-Agent"))
             .build();
@@ -302,13 +170,12 @@ public class PermissionController {
         
         // 失效缓存
         permissionCacheService.evictRolePermissions(roleId);
-        // 获取该角色下的所有用户并清除缓存
-        java.util.List<Long> userIds = userRoleMapper.findUserIdsByRoleId(roleId);
+        List<Long> userIds = userRoleMapper.findUserIdsByRoleId(roleId);
         if (userIds != null && !userIds.isEmpty()) {
             permissionCacheService.evictUserPermissionsByRole(roleId, userIds);
         }
         
-        log.info("角色 {} 权限配置更新，操作人：{}, 权限数量：{}", 
+        log.info("角色 {} 权限配置更新，操作人：{}, 权限数量：{}, 授权级别：一级授权", 
             roleId, currentUser.getUsername(), permissionIds != null ? permissionIds.size() : 0);
         return Result.success();
     }
@@ -318,18 +185,15 @@ public class PermissionController {
     public Result<Map<String, Object>> getPermissionMatrix() {
         Map<String, Object> matrix = new HashMap<>();
         
-        // 获取所有角色
-        String rolesSql = "SELECT id, role_code, role_name, role_description FROM roles ORDER BY id";
+        String rolesSql = "SELECT id, role_code, role_name, role_description, company_type_id FROM roles ORDER BY id";
         List<Map<String, Object>> roles = jdbcTemplate.queryForList(rolesSql);
         matrix.put("roles", roles);
         
-        // 获取所有权限（按 resource_type 分组）
-        String permsSql = "SELECT id, permission_code, permission_name, resource_type, action " +
-                         "FROM permissions ORDER BY resource_type, action";
+        String permsSql = "SELECT id, code as permission_code, name as permission_name, type as resource_type, 'view' as action " +
+                         "FROM resource WHERE permission_key IS NOT NULL ORDER BY type, code";
         List<Map<String, Object>> permissions = jdbcTemplate.queryForList(permsSql);
         matrix.put("permissions", permissions);
         
-        // 按 resource_type 分组
         Map<String, List<Map<String, Object>>> permissionGroups = new HashMap<>();
         for (Map<String, Object> perm : permissions) {
             String resourceType = (String) perm.get("resource_type");
@@ -337,11 +201,10 @@ public class PermissionController {
         }
         matrix.put("permissionGroups", permissionGroups);
         
-        // 获取角色 - 权限映射
         Map<Long, Set<Long>> rolePermissionMap = new HashMap<>();
         for (Map<String, Object> role : roles) {
             Long roleId = ((Number) role.get("id")).longValue();
-            String permSql = "SELECT permission_id FROM role_permissions WHERE role_id = ?";
+            String permSql = "SELECT permission_id FROM permission WHERE role_id = ?";
             List<Long> permIds = jdbcTemplate.queryForList(permSql, Long.class, roleId);
             rolePermissionMap.put(roleId, new HashSet<>(permIds));
         }
@@ -387,34 +250,5 @@ public class PermissionController {
             ip = request.getRemoteAddr();
         }
         return ip;
-    }
-    
-    @Operation(summary = "更新权限描述", description = "更新指定权限的描述信息（需要 permission:edit 权限）")
-    @PutMapping("/{id}")
-    public Result<Void> updatePermissionDescription(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> request) {
-        
-        String description = request.get("description");
-        
-        // 检查用户是否有编辑权限的权限
-        UserContext currentUser = permissionServiceImpl.getCurrentUser();
-        boolean hasEditPermission = permissionServiceImpl.hasPermission("permission:edit");
-        
-        if (!hasEditPermission) {
-            return Result.error(403, "您没有编辑权限描述的权限");
-        }
-        
-        // 更新权限描述
-        int updated = jdbcTemplate.update(
-            "UPDATE permissions SET description = ? WHERE id = ?",
-            description, id);
-        
-        if (updated == 0) {
-            return Result.error(404, "权限不存在");
-        }
-        
-        log.info("权限 {} 描述已更新，操作人：{}", id, currentUser.getUsername());
-        return Result.success();
     }
 }

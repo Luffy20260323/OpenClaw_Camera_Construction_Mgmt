@@ -5,7 +5,7 @@ import request from '@/utils/request'
  */
 export function getCurrentDataPermission() {
   return request({
-    url: '/api/data-permission/current',
+    url: '/data-permission/current',
     method: 'get'
   })
 }
@@ -15,7 +15,7 @@ export function getCurrentDataPermission() {
  */
 export function getUserDataPermission(userId) {
   return request({
-    url: `/api/data-permission/user/${userId}`,
+    url: `/data-permission/user/${userId}`,
     method: 'get'
   })
 }
@@ -25,7 +25,7 @@ export function getUserDataPermission(userId) {
  */
 export function setUserDataPermission(userId, data) {
   return request({
-    url: `/api/data-permission/user/${userId}`,
+    url: `/data-permission/user/${userId}`,
     method: 'post',
     params: data
   })
@@ -36,7 +36,7 @@ export function setUserDataPermission(userId, data) {
  */
 export function getRoleDataPermission(roleId) {
   return request({
-    url: `/api/data-permission/role/${roleId}`,
+    url: `/data-permission/role/${roleId}`,
     method: 'get'
   })
 }
@@ -46,7 +46,7 @@ export function getRoleDataPermission(roleId) {
  */
 export function setRoleDataPermission(roleId, data) {
   return request({
-    url: `/api/data-permission/role/${roleId}`,
+    url: `/data-permission/role/${roleId}`,
     method: 'post',
     params: data
   })

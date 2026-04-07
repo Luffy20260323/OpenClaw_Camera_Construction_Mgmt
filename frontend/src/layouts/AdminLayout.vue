@@ -6,25 +6,13 @@
       :style="sidebarStyle"
       class="sidebar"
     >
-      <SidebarMenu :is-collapse="isCollapse" @menu-select="handleMenuSelect" />
+      <SidebarMenu :is-collapse="isCollapse" @menu-select="handleMenuSelect" @collapse-toggle="toggleCollapse" />
     </el-aside>
 
-    <el-container class="main-wrapper">
+    <el-container class="main-wrapper" direction="vertical">
       <!-- 顶部导航栏 -->
       <el-header class="header">
         <div class="header-left">
-          <!-- 折叠/展开按钮（仅在可折叠模式下显示） -->
-          <el-button 
-            v-if="isCollapsible"
-            text 
-            @click="toggleCollapse" 
-            class="collapse-btn"
-            :title="isCollapse ? '展开侧边栏' : '折叠侧边栏'"
-          >
-            <el-icon>
-              <component :is="isCollapse ? 'Expand' : 'Fold'" />
-            </el-icon>
-          </el-button>
           <span class="app-title">视频监控点位施工项目管理系统</span>
         </div>
         <div class="header-right">
@@ -56,7 +44,7 @@
 
       <!-- 主内容区 -->
       <el-main class="main-content">
-        <slot></slot>
+        <router-view />
       </el-main>
 
       <!-- 底部版权声明 -->
@@ -84,41 +72,102 @@ const sidebarConfig = ref({
   mode: 'FIXED' // FIXED 或 COLLAPSIBLE
 })
 
-// 侧边栏折叠状态
+// 侧边栏折叠状态（用户手动隐藏）
+const isSidebarHidden = ref(false)
+
+// 侧边栏宽度折叠状态（COLLAPSIBLE 模式下的窄/宽）
 const isCollapse = ref(false)
 
-// 计算侧边栏是否可折叠
+// 计算侧边栏是否可折叠（宽度变化）
 const isCollapsible = computed(() => {
   return sidebarConfig.value.mode === 'COLLAPSIBLE'
 })
 
 // 计算侧边栏实际显示状态
 const isSidebarVisible = computed(() => {
+  // 用户手动隐藏时，不显示侧边栏
+  if (isSidebarHidden.value) {
+    return false
+  }
+  // FIXED 模式始终显示（除非用户隐藏）
   if (sidebarConfig.value.mode === 'FIXED') {
     return true
   }
-  return !isCollapse.value
+  // COLLAPSIBLE 模式：显示但可能宽度窄
+  return true
 })
 
-// 计算侧边栏样式
+// 计算侧边栏样式（order 已移除，由 CSS flex-direction: row-reverse 处理右侧布局）
 const sidebarStyle = computed(() => {
   const baseStyle = {
-    order: sidebarConfig.value.position === 'RIGHT' ? 1 : 0,
     transition: 'width 0.3s, opacity 0.3s'
   }
-  if (!isSidebarVisible.value) {
+  // 用户手动隐藏时，完全隐藏侧边栏
+  if (isSidebarHidden.value) {
     baseStyle.width = '0px'
     baseStyle.opacity = '0'
     baseStyle.overflow = 'hidden'
-  } else {
-    baseStyle.width = isCollapse.value ? '64px' : '240px'
-    baseStyle.opacity = '1'
+    return baseStyle
   }
+  // 正常显示状态
+  if (sidebarConfig.value.mode === 'COLLAPSIBLE' && isCollapse.value) {
+    baseStyle.width = '64px'  // 折叠模式下的窄宽度
+  } else {
+    baseStyle.width = '240px'  // 正常宽度
+  }
+  baseStyle.opacity = '1'
   return baseStyle
 })
 
-// 加载侧边栏配置（优先从 localStorage 读取）
-const loadSidebarConfig = () => {
+// 加载侧边栏配置（从后端 API 加载，localStorage 作为降级方案）
+const loadSidebarConfig = async () => {
+  try {
+    const token = localStorage.getItem('accessToken')
+    const response = await fetch('/api/system/config/sidebar', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    const result = await response.json()
+    if (result.success && result.data) {
+      // 从后端加载配置
+      sidebarConfig.value = {
+        position: result.data.sidebarPosition || 'LEFT',
+        mode: result.data.sidebarMode || 'FIXED'
+      }
+      // 同步到 localStorage 作为缓存
+      localStorage.setItem('sidebarConfig', JSON.stringify(sidebarConfig.value))
+      console.log('[AdminLayout] 从后端加载侧边栏配置:', sidebarConfig.value)
+    } else {
+      // 后端返回失败，使用 localStorage 降级
+      loadSidebarConfigFromLocal()
+    }
+  } catch (error) {
+    console.error('[AdminLayout] 从后端加载侧边栏配置失败:', error)
+    // 使用 localStorage 降级
+    loadSidebarConfigFromLocal()
+  }
+  
+  // 根据配置初始化折叠状态
+  // 加载用户手动隐藏状态
+  const savedHidden = localStorage.getItem('sidebarHidden')
+  if (savedHidden !== null) {
+    isSidebarHidden.value = savedHidden === 'true'
+  }
+  
+  // COLLAPSIBLE 模式下的宽度折叠状态
+  if (sidebarConfig.value.mode === 'COLLAPSIBLE') {
+    const savedCollapse = localStorage.getItem('sidebarCollapsed')
+    if (savedCollapse !== null) {
+      isCollapse.value = savedCollapse === 'true'
+    }
+  } else {
+    isCollapse.value = false
+  }
+}
+
+// 从 localStorage 加载配置（降级方案）
+const loadSidebarConfigFromLocal = () => {
   const savedConfig = localStorage.getItem('sidebarConfig')
   if (savedConfig) {
     try {
@@ -128,18 +177,6 @@ const loadSidebarConfig = () => {
       sidebarConfig.value = { position: 'LEFT', mode: 'FIXED' }
     }
   }
-  
-  // 根据配置初始化折叠状态
-  if (sidebarConfig.value.mode === 'COLLAPSIBLE') {
-    // 可折叠模式下，从 localStorage 读取折叠状态
-    const savedCollapse = localStorage.getItem('sidebarCollapsed')
-    if (savedCollapse !== null) {
-      isCollapse.value = savedCollapse === 'true'
-    }
-  } else {
-    // 固定模式下，不折叠
-    isCollapse.value = false
-  }
 }
 
 // 保存侧边栏配置到 localStorage
@@ -147,44 +184,87 @@ const saveSidebarConfig = () => {
   localStorage.setItem('sidebarConfig', JSON.stringify(sidebarConfig.value))
 }
 
-// 监听配置变化，保存到 localStorage
-watch(sidebarConfig, () => {
-  saveSidebarConfig()
-}, { deep: true })
+// 监听配置变化不再自动保存（改为通过 API 保存）
+// watch(sidebarConfig, () => {
+//   saveSidebarConfig()
+// }, { deep: true })
 
-// 切换折叠状态
+// 切换侧边栏折叠状态（根据模式有不同行为）
 const toggleCollapse = () => {
-  if (sidebarConfig.value.mode === 'FIXED') {
-    ElMessage.warning('固定模式下不可折叠侧边栏')
-    return
+  if (sidebarConfig.value.mode === 'COLLAPSIBLE') {
+    // COLLAPSIBLE 模式：切换宽度（240px ↔ 64px）
+    isCollapse.value = !isCollapse.value
+    localStorage.setItem('sidebarCollapsed', String(isCollapse.value))
+  } else {
+    // FIXED 模式：完全隐藏/显示侧边栏
+    isSidebarHidden.value = !isSidebarHidden.value
+    localStorage.setItem('sidebarHidden', String(isSidebarHidden.value))
   }
-  isCollapse.value = !isCollapse.value
-  localStorage.setItem('sidebarCollapsed', String(isCollapse.value))
 }
 
-// 更新侧边栏位置
-const updateSidebarPosition = (position) => {
-  sidebarConfig.value.position = position
-  ElMessage.success(`侧边栏已切换到${position === 'LEFT' ? '左侧' : '右侧'}`)
+// 更新侧边栏位置（调用后端 API 保存）
+const updateSidebarPosition = async (position) => {
+  try {
+    const token = localStorage.getItem('accessToken')
+    const response = await fetch('/api/system/config/sidebar/position', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ position })
+    })
+    const result = await response.json()
+    if (result.success) {
+      sidebarConfig.value.position = position
+      localStorage.setItem('sidebarConfig', JSON.stringify(sidebarConfig.value))
+      ElMessage.success(`侧边栏已切换到${position === 'LEFT' ? '左侧' : '右侧'}`)
+    } else {
+      ElMessage.error(result.message || '保存配置失败')
+    }
+  } catch (error) {
+    console.error('[AdminLayout] 更新侧边栏位置失败:', error)
+    ElMessage.error('保存配置失败：网络错误')
+  }
 }
 
-// 更新侧边栏模式
-const updateSidebarMode = (mode) => {
-  sidebarConfig.value.mode = mode
-  if (mode === 'FIXED') {
-    isCollapse.value = false
-    localStorage.removeItem('sidebarCollapsed')
+// 更新侧边栏模式（调用后端 API 保存）
+const updateSidebarMode = async (mode) => {
+  try {
+    const token = localStorage.getItem('accessToken')
+    const response = await fetch('/api/system/config/sidebar/mode', {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ mode })
+    })
+    const result = await response.json()
+    if (result.success) {
+      sidebarConfig.value.mode = mode
+      localStorage.setItem('sidebarConfig', JSON.stringify(sidebarConfig.value))
+      if (mode === 'FIXED') {
+        isCollapse.value = false
+        localStorage.removeItem('sidebarCollapsed')
+      }
+      ElMessage.success(`侧边栏模式已切换为${mode === 'FIXED' ? '固定显示' : '可折叠'}`)
+    } else {
+      ElMessage.error(result.message || '保存配置失败')
+    }
+  } catch (error) {
+    console.error('[AdminLayout] 更新侧边栏模式失败:', error)
+    ElMessage.error('保存配置失败：网络错误')
   }
-  ElMessage.success(`侧边栏模式已切换为${mode === 'FIXED' ? '固定显示' : '可折叠'}`)
 }
 
 // 暴露方法供外部调用（用于系统设置页面）
-const setSidebarConfig = (config) => {
+const setSidebarConfig = async (config) => {
   if (config.position) {
-    updateSidebarPosition(config.position)
+    await updateSidebarPosition(config.position)
   }
   if (config.mode) {
-    updateSidebarMode(config.mode)
+    await updateSidebarMode(config.mode)
   }
 }
 
@@ -202,7 +282,6 @@ defineExpose({
 // 处理菜单选择
 const handleMenuSelect = (menuPath) => {
   // SidebarMenu 已经处理了路由跳转，这里可以添加额外逻辑
-  console.log('[AdminLayout] 菜单选择:', menuPath)
 }
 
 // 菜单分组定义（用于下拉菜单显示顺序）
@@ -215,7 +294,7 @@ const menuGroupConfig = [
   {
     key: 'system',
     divided: true,
-    codes: ['system_config', 'menu_management', 'base_permission', 'user_permission', 'user_permission_detail', 'role_permission', 'role_default_permission', 'audit_log', 'permission_audit_log', 'system_docs']
+    codes: ['system_config', 'menu_management', 'base_permission', 'user_permission', 'user_permission_detail', 'role_permission', 'role_default_permission', 'system_audit', 'permission_audit_log', 'system_docs']
   }
 ]
 
@@ -284,7 +363,7 @@ const getMenuPath = (menuCode) => {
     'user_permission_detail': '/system/user-permission-detail',
     'role_permission': '/system/role-permission',
     'role_default_permission': '/system/role-default',
-    'audit_log': '/system/audit-log',
+    'system_audit': '/system/audit-log',
     'permission_audit_log': '/system/permission-audit-log',
     'system_docs': '/system/docs'
   }
@@ -329,7 +408,7 @@ const getDefaultMenuName = (menuCode) => {
     'user_permission_detail': '用户权限查看',
     'role_permission': '角色权限配置',
     'role_default_permission': '角色缺省权限',
-    'audit_log': '审计日志',
+    'system_audit': '审计日志',
     'permission_audit_log': '权限审计日志',
     'system_docs': '文档中心'
   }
@@ -390,27 +469,30 @@ onMounted(() => {
 })
 </script>
 
-<style scoped lang="scss">
+<style lang="scss">
 .admin-layout {
   height: 100vh;
-  display: flex;
-  flex-direction: row;
+  display: flex !important;
+  flex-direction: row !important;
   overflow: hidden;
   
-  // 侧边栏在右侧时的布局
+  // 侧边栏在右侧时的布局（只反转外层 sidebar 和 main-wrapper 的顺序）
   &.sidebar-right {
-    flex-direction: row-reverse;
+    flex-direction: row-reverse !important;
     
+    // 确保 main-wrapper 内部仍保持垂直布局
     .main-wrapper {
-      flex-direction: row-reverse;
+      flex-direction: column !important;
     }
   }
   
+  // main-wrapper 内部始终保持垂直布局（header -> main -> footer）
   .main-wrapper {
-    display: flex;
-    flex-direction: column;
+    display: flex !important;
+    flex-direction: column !important;
     flex: 1;
     overflow: hidden;
+    min-width: 0; // 防止 flex 子元素溢出
   }
   
   .sidebar {
@@ -437,16 +519,6 @@ onMounted(() => {
       align-items: center;
       gap: 12px;
       color: #fff;
-      
-      .collapse-btn {
-        color: #fff;
-        font-size: 18px;
-        padding: 8px;
-        
-        &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
-        }
-      }
       
       .app-title {
         font-size: 18px;

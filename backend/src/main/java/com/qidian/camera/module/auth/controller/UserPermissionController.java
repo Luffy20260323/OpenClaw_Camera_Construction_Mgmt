@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Tag(name = "用户权限", description = "查询用户的权限信息")
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserPermissionController {
     
@@ -115,8 +115,8 @@ public class UserPermissionController {
     /**
      * 获取用户权限详情（包含来源追溯信息）
      * 权限来源分类：
-     * - BASIC: 基本权限（来自 role_permissions）
-     * - DEFAULT: 缺省权限（来自 role_default_permissions）
+     * - BASIC: 基本权限（来自 role_permission）
+     * - DEFAULT: 缺省权限（来自 role_permission）
      * - ADJUSTMENT: 调整权限（来自 user_permission_adjustments）
      */
     @Operation(summary = "获取用户权限详情", description = "返回用户权限详情，包含来源追溯信息")
@@ -147,14 +147,14 @@ public class UserPermissionController {
             }
         }
         
-        // 1. 获取基本权限（来自 role_permissions）
+        // 1. 获取基本权限（来自 permission 表）
         String basicPermSql = """
             SELECT DISTINCT r.id as resource_id, r.name as resource_name, r.code as resource_code,
                    r.type as resource_type, r.permission_key, 'BASIC' as permission_source,
-                   rp.role_id, null as adjustment_type
-            FROM role_permissions rp
-            JOIN resources r ON rp.resource_id = r.id
-            WHERE rp.role_id IN (?::bigint[])
+                   p.role_id, null as adjustment_type
+            FROM permission p
+            JOIN resource r ON p.permission_id = r.id
+            WHERE p.role_id IN (?::bigint[])
             ORDER BY r.type, r.code
             """;
         
@@ -183,14 +183,14 @@ public class UserPermissionController {
             log.warn("查询基本权限失败：{}", e.getMessage());
         }
         
-        // 2. 获取缺省权限（来自 role_default_permissions）
+        // 2. 获取缺省权限（临时从 permission 表获取）
         String defaultPermSql = """
             SELECT DISTINCT r.id as resource_id, r.name as resource_name, r.code as resource_code,
                    r.type as resource_type, r.permission_key, 'DEFAULT' as permission_source,
-                   rdp.role_id, null as adjustment_type
-            FROM role_default_permissions rdp
-            JOIN resources r ON rdp.resource_id = r.id
-            WHERE rdp.role_id IN (?::bigint[])
+                   p.role_id, null as adjustment_type
+            FROM permission p
+            JOIN resource r ON p.permission_id = r.id
+            WHERE p.role_id IN (?::bigint[])
             ORDER BY r.type, r.code
             """;
         

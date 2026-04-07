@@ -19,7 +19,7 @@ import java.util.List;
 @Tag(name = "零部件实例管理", description = "零部件实例 CRUD 操作及状态管理")
 @Slf4j
 @RestController
-@RequestMapping("/api/component-instances")
+@RequestMapping("/component-instances")
 @RequiredArgsConstructor
 public class ComponentInstanceController {
 

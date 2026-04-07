@@ -163,4 +163,22 @@ public class ComponentTypeServiceImpl implements ComponentTypeService {
         componentTypeMapper.deleteById(id);
         log.info("零部件种类已删除：{}", id);
     }
+
+    @Override
+    @Transactional
+    public ComponentTypeDTO toggleComponentTypeStatus(Long id) {
+        ComponentType componentType = componentTypeMapper.selectById(id);
+        if (componentType == null) {
+            throw new BusinessException("零部件种类不存在");
+        }
+
+        // 切换状态
+        Boolean newStatus = !Boolean.TRUE.equals(componentType.getIsActive());
+        componentType.setIsActive(newStatus);
+
+        componentTypeMapper.updateById(componentType);
+        log.info("零部件种类状态已切换：{} -> isActive={}", id, newStatus);
+
+        return entityToDTO(componentType);
+    }
 }

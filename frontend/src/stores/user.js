@@ -30,13 +30,26 @@ export const useUserStore = defineStore('user', {
         
         console.log('[Login] 登录响应数据:', { userInfo, menus })
         
-        // 将完整菜单数据添加到 userInfo 中（优先使用 menus，如果没有则用 userInfo.menus）
+        // 调试：检查 menus 的 children
+        console.log('[Login] menus 详细结构:')
+        menus?.forEach((m, i) => {
+          const childCount = m.children?.length || 0
+          console.log(`  [${i}] code=${m.menuCode || m.code}, name=${m.menuName || m.name}, children=${childCount}`)
+        })
+        
+        // userInfo.menus 是菜单编码数组（字符串数组），用于路由权限检查
+        // menus 是完整的菜单树（对象数组），用于侧边栏渲染
+        // 路由守卫期望 menus 是编码数组，所以使用 userInfo.menus
         const userInfoWithMenus = {
           ...userInfo,
-          menus: menus || userInfo.menus || []
+          menus: userInfo.menus || [],  // 使用编码数组，不是菜单树
+          menuTree: menus || []  // 保存菜单树供侧边栏使用
         }
         
-        console.log('[Login] 保存的菜单数据:', userInfoWithMenus.menus)
+        console.log('[Login] userInfoWithMenus.menuTree 长度:', userInfoWithMenus.menuTree?.length)
+        console.log('[Login] userInfoWithMenus.menuTree 第一个元素的 children:', userInfoWithMenus.menuTree?.[0]?.children?.length)
+        
+        console.log('[Login] 保存的菜单编码:', userInfoWithMenus.menus)
         
         // 先保存到 localStorage
         localStorage.setItem('accessToken', accessToken)
@@ -91,14 +104,14 @@ export const useUserStore = defineStore('user', {
       
       try {
         const res = await getMyMenus()
-        const menus = res.data || []
+        const menuTree = res.data || []
         
-        console.log('[refreshMenus] 获取到新菜单数据:', menus)
+        console.log('[refreshMenus] 获取到新菜单数据:', menuTree)
         
-        // 更新 userInfo.menus
+        // 更新 userInfo.menuTree（完整菜单树）
         const userInfoWithMenus = {
           ...this.userInfo,
-          menus
+          menuTree
         }
         
         // 保存到 localStorage 和 state
@@ -110,7 +123,7 @@ export const useUserStore = defineStore('user', {
           userInfo: { ...userInfoWithMenus }
         })
         
-        return menus
+        return menuTree
       } catch (error) {
         console.error('[refreshMenus] 刷新菜单失败:', error)
         throw error

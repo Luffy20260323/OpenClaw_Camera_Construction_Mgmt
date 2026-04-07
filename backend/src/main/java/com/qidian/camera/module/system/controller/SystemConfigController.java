@@ -102,4 +102,52 @@ public class SystemConfigController {
         systemConfigService.updateSidebarMode(mode);
         return Result.success(null);
     }
+
+    @Operation(summary = "更新验证码类型", description = "更新验证码类型配置（none/math/click/slide 等）")
+    @ApiPermission("system:config:edit")
+    @PutMapping("/captcha-type")
+    public Result<Void> updateCaptchaType(@RequestBody Map<String, String> updateData) {
+        String captchaType = updateData.get("captchaType");
+        if (captchaType == null) {
+            return Result.error(400, "验证码类型不能为空");
+        }
+        systemConfigService.updateConfig("captcha-type", captchaType, "验证码类型：none-无，math-数学，click-点击，slide-滑动");
+        return Result.success(null);
+    }
+
+    @Operation(summary = "更新验证码长度", description = "更新验证码长度配置（数字）")
+    @ApiPermission("system:config:edit")
+    @PutMapping("/captcha-length")
+    public Result<Void> updateCaptchaLength(@RequestBody Map<String, Integer> updateData) {
+        Integer captchaLength = updateData.get("captchaLength");
+        if (captchaLength == null || captchaLength < 1 || captchaLength > 10) {
+            return Result.error(400, "验证码长度必须在 1-10 之间");
+        }
+        systemConfigService.updateConfig("captcha-length", String.valueOf(captchaLength), "验证码长度：1-10 之间的数字");
+        return Result.success(null);
+    }
+
+    @Operation(summary = "更新验证码过期时间", description = "更新验证码过期时间配置（分钟）")
+    @ApiPermission("system:config:edit")
+    @PutMapping("/captcha-expire-minutes")
+    public Result<Void> updateCaptchaExpireMinutes(@RequestBody Map<String, Integer> updateData) {
+        Integer captchaExpireMinutes = updateData.get("captchaExpireMinutes");
+        if (captchaExpireMinutes == null || captchaExpireMinutes < 1 || captchaExpireMinutes > 60) {
+            return Result.error(400, "验证码过期时间必须在 1-60 分钟之间");
+        }
+        systemConfigService.updateConfig("captcha-expire-minutes", String.valueOf(captchaExpireMinutes), "验证码过期时间：1-60 分钟");
+        return Result.success(null);
+    }
+
+    @Operation(summary = "更新短信验证码发送间隔", description = "更新短信验证码发送间隔配置（秒）")
+    @ApiPermission("system:config:edit")
+    @PutMapping("/sms-interval-seconds")
+    public Result<Void> updateSmsIntervalSeconds(@RequestBody Map<String, Integer> updateData) {
+        Integer smsIntervalSeconds = updateData.get("smsIntervalSeconds");
+        if (smsIntervalSeconds == null || smsIntervalSeconds < 10 || smsIntervalSeconds > 300) {
+            return Result.error(400, "短信发送间隔必须在 10-300 秒之间");
+        }
+        systemConfigService.updateConfig("sms-interval-seconds", String.valueOf(smsIntervalSeconds), "短信验证码发送间隔：10-300 秒");
+        return Result.success(null);
+    }
 }

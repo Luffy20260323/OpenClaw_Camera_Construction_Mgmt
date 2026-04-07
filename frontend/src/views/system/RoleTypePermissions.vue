@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="role-type-permissions">
       <!-- 页面标题 -->
       <el-card class="header-card">
@@ -87,13 +86,11 @@
         </template>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import request from '@/utils/request'
 
 // 过滤表单
@@ -117,7 +114,7 @@ const resourceTree = ref([])
 // 加载权限列表
 const loadPermissions = async () => {
   try {
-    const res = await request.get(`/api/role-type-permissions/${filterForm.roleType}`)
+    const res = await request.get(`/role-type-permissions/${filterForm.roleType}`)
     permissions.value = res.data || []
   } catch (error) {
     ElMessage.error('加载权限列表失败：' + error.message)
@@ -127,7 +124,7 @@ const loadPermissions = async () => {
 // 加载资源树
 const loadResourceTree = async () => {
   try {
-    const res = await request.get('/api/resource/tree')
+    const res = await request.get('/resources/tree')
     resourceTree.value = res.data?.tree || []
   } catch (error) {
     ElMessage.error('加载资源树失败：' + error.message)
@@ -178,7 +175,7 @@ const submitBatchAdd = async () => {
   }
 
   try {
-    await request.post('/api/role-type-permissions', {
+    await request.post('/role-type-permissions', {
       roleType: filterForm.roleType,
       resourceIds: batchAddForm.resourceIds
     })
@@ -198,7 +195,7 @@ const handleDelete = (id) => {
     type: 'warning'
   }).then(async () => {
     try {
-      await request.delete(`/api/role-type-permissions/${id}`)
+      await request.delete(`/role-type-permissions/${id}`)
       ElMessage.success('删除成功')
       loadPermissions()
     } catch (error) {
@@ -215,7 +212,7 @@ const handleBatchDelete = () => {
     type: 'warning'
   }).then(async () => {
     try {
-      await request.post('/api/role-type-permissions/batch-delete', {
+      await request.post('/role-type-permissions/batch-delete', {
         ids: selectedIds.value
       })
       ElMessage.success('删除成功')

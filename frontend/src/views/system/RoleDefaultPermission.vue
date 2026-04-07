@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="role-default-permission-page">
       <div class="page-header">
         <h1>角色缺省权限配置</h1>
@@ -92,12 +91,10 @@
         </ul>
       </div>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
 // 数据
@@ -240,8 +237,9 @@ const loadRoles = async () => {
     const result = await response.json()
     if (result.success) {
       roles.value = result.data || []
-      // 排除系统管理员角色（不可修改）
-      roles.value = roles.value.filter(r => r.role_code !== 'ROLE_SYSTEM_ADMIN')
+      // 排除系统保护角色（不可修改）
+      // 不硬编码角色 Code，根据 is_system_protected 字段判断
+      roles.value = roles.value.filter(r => !r.is_system_protected)
     }
   } catch (error) {
     ElMessage.error('加载角色列表失败')

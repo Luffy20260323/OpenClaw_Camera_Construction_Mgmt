@@ -18,7 +18,7 @@ import java.util.List;
 @Tag(name = "点位设备模型管理", description = "点位设备模型的增删改查")
 @Slf4j
 @RestController
-@RequestMapping("/api/point-device-models")
+@RequestMapping("/point-device-models")
 @RequiredArgsConstructor
 public class PointDeviceModelController {
 

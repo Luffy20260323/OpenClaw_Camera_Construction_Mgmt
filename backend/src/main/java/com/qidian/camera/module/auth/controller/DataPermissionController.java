@@ -16,7 +16,7 @@ import java.util.Map;
  * 提供数据权限查询和配置接口
  */
 @RestController
-@RequestMapping("/api/data-permission")
+@RequestMapping("/data-permission")
 @RequiredArgsConstructor
 @Slf4j
 public class DataPermissionController {

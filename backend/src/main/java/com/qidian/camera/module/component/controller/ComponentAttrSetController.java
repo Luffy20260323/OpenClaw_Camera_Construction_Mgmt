@@ -18,7 +18,7 @@ import java.util.List;
 @Tag(name = "零部件属性集管理", description = "零部件属性集的增删改查")
 @Slf4j
 @RestController
-@RequestMapping("/api/component-attr-sets")
+@RequestMapping("/component-attr-sets")
 @RequiredArgsConstructor
 public class ComponentAttrSetController {
 
@@ -68,5 +68,15 @@ public class ComponentAttrSetController {
     public Result<Void> deleteAttrSet(@PathVariable Long id) {
         componentAttrSetService.deleteAttrSet(id);
         return Result.success(null);
+    }
+
+    @Operation(summary = "更新属性集序号", description = "更新零部件属性集的显示序号")
+    @ApiPermission("component-attr-set:edit")
+    @PutMapping("/{id}/sequence")
+    public Result<ComponentAttrSetDTO> updateAttrSetSequence(
+            @PathVariable Long id,
+            @RequestParam Integer sequenceNo) {
+        ComponentAttrSetDTO updated = componentAttrSetService.updateAttrSetSequence(id, sequenceNo);
+        return Result.success(updated);
     }
 }

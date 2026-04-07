@@ -3,6 +3,7 @@ package com.qidian.camera;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 
 /**
  * 摄像头生命周期管理系统启动类
@@ -11,6 +12,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @since 1.0.0
  */
 @SpringBootApplication
+@ComponentScan(basePackages = "com.qidian.camera")
 @MapperScan("com.qidian.camera.**.mapper")
 public class CameraApplication {
 

@@ -17,7 +17,5 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-#app {
-  min-height: 100vh;
-}
+/* #app 样式已在 style.css 中统一定义，此处不再重复 */
 </style>

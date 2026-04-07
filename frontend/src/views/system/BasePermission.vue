@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="base-permission-page">
       <div class="page-header">
         <h1>基本权限配置</h1>
@@ -61,12 +60,10 @@
         </ul>
       </div>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ElMessage } from 'element-plus'
 
 // 数据

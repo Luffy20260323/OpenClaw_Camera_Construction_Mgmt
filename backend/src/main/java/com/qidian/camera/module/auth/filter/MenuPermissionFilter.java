@@ -50,7 +50,11 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
         "/api/permission/groups",
         "/api/permission/roles",
         "/api/permission/role/",
-        "/api/permission/"
+        "/api/permission/",
+        "/api/menu/user-permissions",  // 用户菜单权限配置
+        "/api/menu/user-permission",    // 用户菜单权限更新
+        "/api/audit-logs",               // 审计日志查询
+        "/api/audit-logs/permission"    // 权限审计日志
     };
     
     // 菜单路径映射
@@ -179,35 +183,20 @@ public class MenuPermissionFilter extends OncePerRequestFilter {
     }
     
     /**
-     * 检查用户是否有菜单权限
+     * 检查用户是否有菜单权限（已废弃）
+     * 菜单权限功能已整合到资源管理，使用 permission 表
      */
+    @Deprecated
     private boolean checkMenuPermission(Long userId, String menuCode) {
         try {
-            // 先检查自定义权限
-            String customSql = """
-                SELECT can_view FROM user_menu_permissions ump
-                INNER JOIN menus m ON ump.menu_id = m.id
-                WHERE ump.user_id = ? AND m.menu_code = ?
+            // 使用 permission 表检查菜单权限
+            String sql = """
+                SELECT COUNT(*) > 0 FROM permission p
+                JOIN resource r ON p.permission_id = r.id
+                JOIN user_roles ur ON p.role_id = ur.role_id
+                WHERE ur.user_id = ? AND r.code = ?
             """;
-            List<Boolean> customResult = jdbcTemplate.queryForList(customSql, Boolean.class, userId, menuCode);
-            if (!customResult.isEmpty()) {
-                return customResult.get(0) != null && customResult.get(0);
-            }
-            
-            // 再检查角色默认权限
-            String roleSql = """
-                SELECT rmp.can_view FROM role_menu_permissions rmp
-                INNER JOIN menus m ON rmp.menu_id = m.id
-                INNER JOIN user_roles ur ON ur.role_id = rmp.role_id
-                WHERE ur.user_id = ? AND m.menu_code = ?
-                LIMIT 1
-            """;
-            List<Boolean> roleResult = jdbcTemplate.queryForList(roleSql, Boolean.class, userId, menuCode);
-            if (!roleResult.isEmpty()) {
-                return roleResult.get(0) != null && roleResult.get(0);
-            }
-            
-            return false;
+            return jdbcTemplate.queryForObject(sql, Boolean.class, userId, menuCode);
         } catch (Exception e) {
             log.error("检查菜单权限失败：{}", e.getMessage(), e);
             return false;

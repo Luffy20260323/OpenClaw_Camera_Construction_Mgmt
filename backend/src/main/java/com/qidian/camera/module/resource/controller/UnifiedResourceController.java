@@ -180,6 +180,19 @@ public class UnifiedResourceController {
         }
     }
     
+    @Operation(summary = "创建菜单", description = "创建新的菜单资源（仅支持MENU类型）")
+    @PostMapping("/menu")
+    public Result<Resource> createMenu(@RequestBody Resource menu) {
+        try {
+            menu.setType("MENU");  // 强制为菜单类型
+            Resource created = resourceService.createMenu(menu);
+            return Result.success(created);
+        } catch (RuntimeException e) {
+            log.error("创建菜单失败: {}", e.getMessage());
+            return Result.error(400, e.getMessage());
+        }
+    }
+    
     @Operation(summary = "删除资源", description = "删除资源（仅允许删除没有子资源的模块）")
     @DeleteMapping("/{id}")
     public Result<Void> deleteResource(

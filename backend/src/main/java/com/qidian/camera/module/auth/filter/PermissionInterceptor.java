@@ -138,10 +138,10 @@ public class PermissionInterceptor implements HandlerInterceptor {
         userContext.setRoleCodes(roleCodes);
         
         // 查询用户权限
-        String permSql = "SELECT DISTINCT p.permission_code FROM user_roles ur " +
-                         "JOIN role_permissions rp ON ur.role_id = rp.role_id " +
-                         "JOIN permissions p ON rp.permission_id = p.id " +
-                         "WHERE ur.user_id = ?";
+        String permSql = "SELECT DISTINCT r.permission_key FROM user_roles ur " +
+                         "JOIN permission p ON ur.role_id = p.role_id " +
+                         "JOIN resource r ON p.resource_id = r.id " +
+                         "WHERE ur.user_id = ? AND r.permission_key IS NOT NULL";
         List<String> permissions = jdbcTemplate.queryForList(permSql, String.class, userId);
         userContext.setPermissions(permissions);
         

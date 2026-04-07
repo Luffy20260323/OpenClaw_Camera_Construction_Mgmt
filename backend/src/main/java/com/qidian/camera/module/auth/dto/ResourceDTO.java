@@ -69,17 +69,27 @@ public class ResourceDTO {
     private Integer isBasic;
     
     /**
-     * 是否可见（用于菜单资源）
+     * 是否顶级资源
      */
-    private Boolean isVisible;
+    private Boolean isTopLevel;
     
     /**
-     * 是否系统保护（用于菜单资源）
+     * 文件路径
      */
-    private Boolean isSystemProtected;
+    private String filePath;
     
     /**
      * 所需权限（用于菜单资源）
      */
     private String requiredPermission;
+    
+    /**
+     * 描述
+     */
+    private String description;
+    
+    /**
+     * 模块编码
+     */
+    private String moduleCode;
 }

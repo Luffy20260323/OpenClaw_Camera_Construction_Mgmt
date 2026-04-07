@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="document-center">
       <!-- 页面头部 -->
       <div class="page-header">
@@ -352,7 +351,6 @@
         </el-table>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
@@ -374,7 +372,6 @@ import {
   MoreFilled,
   User
 } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import {
   getDocumentList,
   searchDocuments,
@@ -432,9 +429,100 @@ const editForm = ref({
   featured: false
 })
 
+// 预置文档列表（包含 v4.3 权限设计文档）
+const presetDocuments = [
+  {
+    id: 'v4.3',
+    title: '权限设计方案 V4.3',
+    description: '资源与权限分离设计 + 审计日志 + 软删除机制',
+    category: 'design',
+    fileType: 'html',
+    filename: 'permission-design-v4.3.html',
+    fileSize: 524288,
+    uploadedAt: '2026-04-04T11:45:00',
+    uploaderName: 'AI',
+    downloadCount: 0,
+    featured: true,
+    tags: ['权限', '设计', 'V4.3']
+  },
+  {
+    id: 'v4.2',
+    title: '权限设计方案 V4.2',
+    description: '资源与权限合并设计',
+    category: 'design',
+    fileType: 'md',
+    filename: 'permission-design-v4.2.md',
+    fileSize: 262144,
+    uploadedAt: '2026-04-04T08:00:00',
+    uploaderName: 'AI',
+    downloadCount: 12,
+    featured: false,
+    tags: ['权限', '设计', 'V4.2']
+  },
+  {
+    id: 'v4.1',
+    title: '权限设计方案 V4.1',
+    description: '合并 resource 表和 permission 表',
+    category: 'design',
+    fileType: 'md',
+    filename: 'permission-design-v4.1.md',
+    fileSize: 245760,
+    uploadedAt: '2026-04-04T07:00:00',
+    uploaderName: 'AI',
+    downloadCount: 8,
+    featured: false,
+    tags: ['权限', '设计', 'V4.1']
+  },
+  {
+    id: 'v4',
+    title: '权限设计方案 V4.0',
+    description: '权限驱动开发流程规范（8 步流程）',
+    category: 'design',
+    fileType: 'md',
+    filename: 'permission-design-v4.md',
+    fileSize: 229376,
+    uploadedAt: '2026-04-03T18:00:00',
+    uploaderName: 'AI',
+    downloadCount: 15,
+    featured: false,
+    tags: ['权限', '设计', 'V4']
+  },
+  {
+    id: 'impl-001',
+    title: '用户管理功能实现总结',
+    description: '用户 CRUD、分页、搜索功能的完整实现',
+    category: 'implementation',
+    fileType: 'md',
+    filename: 'user-implementation.md',
+    fileSize: 102400,
+    uploadedAt: '2026-04-02T10:00:00',
+    uploaderName: 'AI',
+    downloadCount: 20,
+    featured: false,
+    tags: ['用户', '实现', '总结']
+  }
+]
+
 // 计算属性：过滤后的文档列表
 const filteredDocuments = computed(() => {
-  return documents.value
+  let result = presetDocuments
+  
+  // 按分类筛选
+  if (selectedCategory.value) {
+    result = result.filter(doc => doc.category === selectedCategory.value)
+  }
+  
+  // 按搜索关键词筛选
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(doc =>
+      doc.title.toLowerCase().includes(query) ||
+      doc.description.toLowerCase().includes(query) ||
+      doc.tags.some(tag => tag.toLowerCase().includes(query))
+    )
+  }
+  
+  return result
 })
 
 // 生命周期
@@ -651,6 +739,13 @@ const downloadDocument = (doc) => {
 
 // 获取文档 URL
 const getDocUrl = (filename, isDownload = false) => {
+  // 本地预置文档（在 public/docs/ 目录下）
+  const localDocs = ['permission-design-v4.3.html', 'permission-design-v4.2.md', 'permission-design-v4.1.md', 'permission-design-v4.md']
+  if (localDocs.includes(filename)) {
+    return `/docs/${filename}`
+  }
+  
+  // 服务器文档
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
   const action = isDownload ? 'download' : 'view'
   return `${baseUrl}/system/docs/${action}/${encodeURIComponent(filename)}`

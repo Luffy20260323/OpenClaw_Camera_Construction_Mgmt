@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <el-card class="box-card">
       <template #header>
         <div class="card-header">
@@ -94,11 +93,9 @@
         </el-tab-pane>
       </el-tabs>
     </el-card>
-  </AdminLayout>
 </template>
 
 <script setup>
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/utils/request'

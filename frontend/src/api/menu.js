@@ -1,12 +1,12 @@
 import request from '@/utils/request'
 
 /**
- * 获取当前用户的菜单列表
- * 【已更新】实际调用 /api/resources/menu-tree
+ * 获取当前用户的菜单列表（权限过滤）
+ * 【已修复】调用用户专属菜单API，返回与登录时一致的菜单树
  */
 export function getMyMenus() {
   return request({
-    url: '/resources/menu-tree',
+    url: '/resources/my-menu-tree',
     method: 'get'
   })
 }

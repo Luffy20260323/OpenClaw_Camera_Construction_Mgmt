@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <el-card class="box-card">
         <template #header>
           <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -162,11 +161,9 @@
         </template>
       </el-dialog>
     </el-card>
-  </AdminLayout>
 </template>
 
 <script setup>
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'

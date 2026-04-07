@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="element-list">
       <el-card class="header-card">
         <div class="page-header">
@@ -239,7 +238,6 @@
         </template>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>

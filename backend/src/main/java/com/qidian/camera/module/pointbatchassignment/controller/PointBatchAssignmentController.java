@@ -20,7 +20,7 @@ import java.util.List;
 @Tag(name = "点位批量分配管理", description = "点位设备模型实例的批量分配")
 @Slf4j
 @RestController
-@RequestMapping("/api/point-batch-assignment")
+@RequestMapping("/point-batch-assignment")
 @RequiredArgsConstructor
 public class PointBatchAssignmentController {
 

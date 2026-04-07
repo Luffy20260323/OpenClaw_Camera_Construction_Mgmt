@@ -362,24 +362,37 @@ const handleDelete = async (data) => {
     return
   }
   
-  const childCount = countChildren(data)
-  const message = childCount > 0 
-    ? `确定删除资源"${data.name}"及其 ${childCount} 个子资源吗？`
-    : `确定删除资源"${data.name}"吗？`
-  
   try {
+    // 获取删除预览信息
+    const previewRes = await request.get(`/api/resources/${data.id}/delete-preview`)
+    const preview = previewRes.data
+    
+    // 根据删除模式显示不同的确认信息
+    let message = ''
+    if (preview.deleteMode === 'selfOnly') {
+      // 模块/菜单：只删除本身，子资源变为未分类
+      message = `确定删除${getTypeLabel(preview.type)}"${preview.name}"吗？\n\n${preview.message}\n\n删除后可以在资源列表中找到这些子资源，重新设置父级。`
+    } else {
+      // 其他资源：级联删除
+      message = preview.childCount > 0
+        ? `确定删除资源"${preview.name}"及其 ${preview.childCount} 个子资源吗？此操作不可恢复！`
+        : `确定删除资源"${preview.name}"吗？`
+    }
+    
     await ElMessageBox.confirm(message, '确认删除', {
-      confirmButtonText: '确定',
+      confirmButtonText: '确定删除',
       cancelButtonText: '取消',
-      type: 'warning'
+      type: 'warning',
+      dangerouslyUseHTMLString: true
     })
     
+    // 执行删除
     await request.delete(`/api/resources/${data.id}`)
     ElMessage.success('删除成功')
     loadResourceTree()
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败')
+      ElMessage.error('删除失败：' + (error.message || '未知错误'))
       console.error(error)
     }
   }

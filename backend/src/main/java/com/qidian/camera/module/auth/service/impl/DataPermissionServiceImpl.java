@@ -40,8 +40,8 @@ public class DataPermissionServiceImpl implements DataPermissionService {
             return cached;
         }
         
-        // 2. 从数据库查询用户数据权限
-        String sql = "SELECT data_scope_type FROM user_data_permissions WHERE user_id = ?";
+        // 2. 从数据库查询用户数据权限（使用 user_data_scope 表）
+        String sql = "SELECT scope_type FROM user_data_scope WHERE user_id = ? AND is_effective = true";
         try {
             String scopeType = jdbcTemplate.queryForObject(sql, String.class, userId);
             if (scopeType != null) {
@@ -58,24 +58,34 @@ public class DataPermissionServiceImpl implements DataPermissionService {
     
     @Override
     public Long getUserDataDeptId(Long userId) {
-        String sql = "SELECT dept_id FROM user_data_permissions WHERE user_id = ?";
+        // 临时实现，从 custom_rule JSON 中提取
+        String sql = "SELECT custom_rule FROM user_data_scope WHERE user_id = ? AND is_effective = true";
         try {
-            return jdbcTemplate.queryForObject(sql, Long.class, userId);
+            String customRule = jdbcTemplate.queryForObject(sql, String.class, userId);
+            if (customRule != null && !customRule.isEmpty()) {
+                // 从 JSON 中提取 dept_id（临时实现）
+                return null; // TODO: 解析 JSON
+            }
         } catch (Exception e) {
             log.debug("查询用户部门 ID 失败：userId={}", userId, e);
-            return null;
         }
+        return null;
     }
     
     @Override
     public String getUserDataDeptIds(Long userId) {
-        String sql = "SELECT dept_ids FROM user_data_permissions WHERE user_id = ?";
+        // 临时实现，从 custom_rule JSON 中提取
+        String sql = "SELECT custom_rule FROM user_data_scope WHERE user_id = ? AND is_effective = true";
         try {
-            return jdbcTemplate.queryForObject(sql, String.class, userId);
+            String customRule = jdbcTemplate.queryForObject(sql, String.class, userId);
+            if (customRule != null && !customRule.isEmpty()) {
+                // 从 JSON 中提取 dept_ids（临时实现）
+                return null; // TODO: 解析 JSON
+            }
         } catch (Exception e) {
             log.debug("查询用户部门 ID 列表失败：userId={}", userId, e);
-            return null;
         }
+        return null;
     }
     
     @Override
@@ -91,31 +101,43 @@ public class DataPermissionServiceImpl implements DataPermissionService {
     
     @Override
     public String getRoleDataScopeType(Long roleId) {
-        String sql = "SELECT data_scope_type FROM role_data_permissions WHERE role_id = ?";
+        String sql = "SELECT scope_type FROM role_data_scope WHERE role_id = ? AND is_effective = true";
         try {
-            return jdbcTemplate.queryForObject(sql, String.class, roleId);
+            String scopeType = jdbcTemplate.queryForObject(sql, String.class, roleId);
+            return scopeType != null ? scopeType : "SELF"; // 默认为仅个人数据
         } catch (Exception e) {
             log.debug("查询角色数据权限失败：roleId={}", roleId, e);
-            return "SELF"; // 默认为仅个人数据
+            return "SELF";
         }
     }
     
     @Override
     public Long getRoleDataDeptId(Long roleId) {
-        String sql = "SELECT dept_id FROM role_data_permissions WHERE role_id = ?";
+        // 临时实现，从 custom_rule JSON 中提取
+        String sql = "SELECT custom_rule FROM role_data_scope WHERE role_id = ? AND is_effective = true";
         try {
-            return jdbcTemplate.queryForObject(sql, Long.class, roleId);
+            String customRule = jdbcTemplate.queryForObject(sql, String.class, roleId);
+            if (customRule != null && !customRule.isEmpty()) {
+                // 从 JSON 中提取 dept_id（临时实现）
+                return null; // TODO: 解析 JSON
+            }
         } catch (Exception e) {
             log.debug("查询角色部门 ID 失败：roleId={}", roleId, e);
-            return null;
         }
+        return null;
     }
     
     @Override
     public String getRoleDataDeptIds(Long roleId) {
-        String sql = "SELECT dept_ids FROM role_data_permissions WHERE role_id = ?";
+        // 临时实现，从 custom_rule JSON 中提取
+        String sql = "SELECT custom_rule FROM role_data_scope WHERE role_id = ? AND is_effective = true";
         try {
-            return jdbcTemplate.queryForObject(sql, String.class, roleId);
+            String customRule = jdbcTemplate.queryForObject(sql, String.class, roleId);
+            if (customRule != null && !customRule.isEmpty()) {
+                // 从 JSON 中提取 dept_ids（临时实现）
+                return null; // TODO: 解析 JSON
+            }
+            return null;
         } catch (Exception e) {
             log.debug("查询角色部门 ID 列表失败：roleId={}", roleId, e);
             return null;
@@ -126,31 +148,29 @@ public class DataPermissionServiceImpl implements DataPermissionService {
     @Transactional
     public void setUserDataPermission(Long userId, String scopeType, Long deptId, 
                                       String deptIds, Long operatorId) {
-        // 检查是否已存在
-        String checkSql = "SELECT id FROM user_data_permissions WHERE user_id = ?";
+        // 检查是否已存在（使用 user_data_scope 表）
+        String checkSql = "SELECT id FROM user_data_scope WHERE user_id = ? AND module_code = 'global'";
         List<Long> existing = jdbcTemplate.queryForList(checkSql, Long.class, userId);
         
         if (existing.isEmpty()) {
             // 插入新记录
             String insertSql = """
-                INSERT INTO user_data_permissions 
-                (user_id, data_scope_type, dept_id, dept_ids, source, granted_by, granted_at, created_at, updated_at)
-                VALUES (?, ?, ?, ?, 'MANUAL', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                INSERT INTO user_data_scope 
+                (user_id, module_code, scope_type, source_type, is_effective, adjusted_by, adjusted_at, created_at, updated_at)
+                VALUES (?, 'global', ?, 'direct', true, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """;
-            jdbcTemplate.update(insertSql, userId, scopeType, deptId, deptIds, operatorId);
-            log.info("设置用户数据权限：userId={}, scopeType={}, deptId={}, deptIds={}", 
-                    userId, scopeType, deptId, deptIds);
+            jdbcTemplate.update(insertSql, userId, scopeType, operatorId);
+            log.info("设置用户数据权限：userId={}, scopeType={}", userId, scopeType);
         } else {
             // 更新现有记录
             String updateSql = """
-                UPDATE user_data_permissions 
-                SET data_scope_type = ?, dept_id = ?, dept_ids = ?, 
-                    granted_by = ?, granted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-                WHERE user_id = ?
+                UPDATE user_data_scope 
+                SET scope_type = ?, source_type = 'direct', is_effective = true,
+                    adjusted_by = ?, adjusted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+                WHERE user_id = ? AND module_code = 'global'
             """;
-            jdbcTemplate.update(updateSql, scopeType, deptId, deptIds, operatorId, userId);
-            log.info("更新用户数据权限：userId={}, scopeType={}, deptId={}, deptIds={}", 
-                    userId, scopeType, deptId, deptIds);
+            jdbcTemplate.update(updateSql, scopeType, operatorId, userId);
+            log.info("更新用户数据权限：userId={}, scopeType={}", userId, scopeType);
         }
         
         // 清除缓存
@@ -160,29 +180,28 @@ public class DataPermissionServiceImpl implements DataPermissionService {
     @Override
     @Transactional
     public void setRoleDataPermission(Long roleId, String scopeType, Long deptId, String deptIds) {
-        // 检查是否已存在
-        String checkSql = "SELECT id FROM role_data_permissions WHERE role_id = ?";
+        // 检查是否已存在（使用 role_data_scope 表）
+        String checkSql = "SELECT id FROM role_data_scope WHERE role_id = ? AND module_code = 'global'";
         List<Long> existing = jdbcTemplate.queryForList(checkSql, Long.class, roleId);
         
         if (existing.isEmpty()) {
             // 插入新记录
             String insertSql = """
-                INSERT INTO role_data_permissions 
-                (role_id, data_scope_type, dept_id, dept_ids, created_at)
-                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+                INSERT INTO role_data_scope 
+                (role_id, module_code, scope_type, is_default, is_effective, created_at, updated_at)
+                VALUES (?, 'global', ?, true, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             """;
-            jdbcTemplate.update(insertSql, roleId, scopeType, deptId, deptIds);
-            log.info("设置角色数据权限：roleId={}, scopeType={}, deptId={}, deptIds={}", 
-                    roleId, scopeType, deptId, deptIds);
+            jdbcTemplate.update(insertSql, roleId, scopeType);
+            log.info("设置角色数据权限：roleId={}, scopeType={}", roleId, scopeType);
         } else {
             // 更新现有记录
             String updateSql = """
-                UPDATE role_data_permissions 
-                SET data_scope_type = ?, dept_id = ?, dept_ids = ?
-                WHERE role_id = ?
+                UPDATE role_data_scope 
+                SET scope_type = ?, is_effective = true, updated_at = CURRENT_TIMESTAMP
+                WHERE role_id = ? AND module_code = 'global'
             """;
-            jdbcTemplate.update(updateSql, scopeType, deptId, deptIds, roleId);
-            log.info("更新角色数据权限：roleId={}, scopeType={}, deptId={}, deptIds={}", 
+            jdbcTemplate.update(updateSql, scopeType, roleId);
+            log.info("更新角色数据权限：roleId={}, scopeType={}", 
                     roleId, scopeType, deptId, deptIds);
         }
     }

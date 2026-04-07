@@ -18,7 +18,7 @@ import java.util.List;
 @Tag(name = "零部件种类管理", description = "零部件种类的增删改查")
 @Slf4j
 @RestController
-@RequestMapping("/api/component-types")
+@RequestMapping("/component-types")
 @RequiredArgsConstructor
 public class ComponentTypeController {
 
@@ -67,5 +67,13 @@ public class ComponentTypeController {
     public Result<Void> deleteComponentType(@PathVariable Long id) {
         componentTypeService.deleteComponentType(id);
         return Result.success(null);
+    }
+
+    @Operation(summary = "切换零部件种类状态", description = "切换零部件种类的启用/禁用状态")
+    @ApiPermission("system:component:edit")
+    @PatchMapping("/{id}/status")
+    public Result<ComponentTypeDTO> toggleComponentTypeStatus(@PathVariable Long id) {
+        ComponentTypeDTO updated = componentTypeService.toggleComponentTypeStatus(id);
+        return Result.success(updated);
     }
 }

@@ -175,4 +175,23 @@ public class ComponentAttrSetServiceImpl implements ComponentAttrSetService {
         componentAttrSetMapper.deleteById(id);
         log.info("属性集已删除：{} (ID: {})", attrSet.getName(), id);
     }
+
+    @Override
+    @Transactional
+    public ComponentAttrSetDTO updateAttrSetSequence(Long id, Integer sequenceNo) {
+        ComponentAttrSet attrSet = componentAttrSetMapper.selectById(id);
+        if (attrSet == null) {
+            throw new BusinessException("属性集不存在");
+        }
+
+        if (sequenceNo == null) {
+            throw new BusinessException("序号不能为空");
+        }
+
+        attrSet.setSequenceNo(sequenceNo);
+        componentAttrSetMapper.updateById(attrSet);
+        log.info("属性集序号已更新：{} -> sequenceNo={}", id, sequenceNo);
+
+        return entityToDTO(attrSet);
+    }
 }

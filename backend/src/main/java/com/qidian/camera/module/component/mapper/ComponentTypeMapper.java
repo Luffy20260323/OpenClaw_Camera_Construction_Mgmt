@@ -20,14 +20,16 @@ public interface ComponentTypeMapper extends BaseMapper<ComponentType> {
      * @param isActive 是否启用
      * @return 种类列表
      */
-    @Select("SELECT ct.*, u.real_name AS creator_name " +
+    @Select("<script>" +
+            "SELECT ct.*, u.real_name AS creator_name " +
             "FROM component_types ct " +
             "LEFT JOIN users u ON ct.created_by = u.id " +
             "WHERE 1=1 " +
             "<if test='isActive != null'>" +
             "AND ct.is_active = #{isActive} " +
             "</if>" +
-            "ORDER BY ct.sequence_no ASC, ct.id ASC")
+            "ORDER BY ct.sequence_no ASC, ct.id ASC" +
+            "</script>")
     List<ComponentType> selectListWithCreator(@Param("isActive") Boolean isActive);
 
     /**

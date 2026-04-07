@@ -68,24 +68,36 @@ public class SystemConfigService {
 
     /**
      * 更新配置（仅管理员）
+     * 如果配置不存在则创建新记录
      */
     @Transactional
     public SystemConfigDTO updateConfig(String key, String value, String description) {
-        // 验证配置是否存在
-        SystemConfigDTO existing = getConfigByKey(key);
-        if (existing == null) {
-            throw new RuntimeException("配置项不存在：" + key);
+        // 检查配置是否存在
+        SystemConfigDTO existing = null;
+        try {
+            existing = getConfigByKey(key);
+        } catch (Exception e) {
+            // 配置不存在，忽略异常
+            log.debug("配置项不存在，将创建新记录：{}", key);
         }
 
-        // 更新数据库
-        String sql = "UPDATE system_configs SET config_value = ?, description = ?, updated_at = ? " +
-                     "WHERE config_key = ?";
-        jdbcTemplate.update(sql, value, description, new Timestamp(System.currentTimeMillis()), key);
+        if (existing == null) {
+            // 创建新配置记录
+            String insertSql = "INSERT INTO system_configs (config_key, config_value, config_type, description, created_at, updated_at) " +
+                               "VALUES (?, ?, 'string', ?, ?, ?)";
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            jdbcTemplate.update(insertSql, key, value, description, now, now);
+            log.info("系统配置已创建：{} = {}", key, value);
+        } else {
+            // 更新现有配置
+            String updateSql = "UPDATE system_configs SET config_value = ?, description = ?, updated_at = ? " +
+                               "WHERE config_key = ?";
+            jdbcTemplate.update(updateSql, value, description, new Timestamp(System.currentTimeMillis()), key);
+            log.info("系统配置已更新：{} = {}", key, value);
+        }
 
         // 清除缓存
         clearCache(key);
-
-        log.info("系统配置已更新：{} = {}", key, value);
 
         // 返回更新后的配置
         return getConfigByKey(key);

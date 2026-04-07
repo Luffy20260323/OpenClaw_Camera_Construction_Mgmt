@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="permission-audit-log-container">
       <el-card>
         <template #header>
@@ -139,7 +138,6 @@
         />
       </el-card>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
@@ -147,7 +145,6 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Download, Refresh, Search, RefreshLeft } from '@element-plus/icons-vue'
 import { getPermissionAuditLogs, exportPermissionAuditLogs } from '@/api/permission'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const loading = ref(false)
 const exporting = ref(false)

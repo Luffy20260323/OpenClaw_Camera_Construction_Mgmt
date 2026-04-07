@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="component-attr-set-instance-list">
       <!-- 页面头部 -->
       <el-card class="header-card">
@@ -331,14 +330,12 @@
         </el-descriptions>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Edit, Delete, Refresh, Search, Upload } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import {
   getList,
   getDetail,

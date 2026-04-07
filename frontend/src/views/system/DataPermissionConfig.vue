@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <el-card class="box-card">
       <template #header>
         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -146,11 +145,9 @@
         <el-empty v-else description="请选择要配置的用户" />
       </div>
     </el-card>
-  </AdminLayout>
 </template>
 
 <script setup>
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -204,12 +201,18 @@ const checkPermissions = () => {
     router.push('/login')
     return false
   }
-  if (userStore.companyTypeId !== 4) {
-    ElMessage.warning('您没有权限访问此页面')
-    router.push('/')
-    return false
+  // 超级管理员角色可以访问
+  const roles = userStore.roles || []
+  if (roles.includes('ROLE_SUPER_ADMIN')) {
+    return true
   }
-  return true
+  // 系统管理员类型（companyTypeId = 4）也可以访问
+  if (userStore.companyTypeId === 4) {
+    return true
+  }
+  ElMessage.warning('您没有权限访问此页面')
+  router.push('/')
+  return false
 }
 
 // 加载角色列表

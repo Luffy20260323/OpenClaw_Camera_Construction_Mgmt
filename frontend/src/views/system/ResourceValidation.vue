@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="resource-validation">
       <el-card class="header-card">
         <div class="page-header">
@@ -95,7 +94,6 @@
         <el-empty v-if="!checking && orphanedResources.length === 0 && circularReferences.length === 0 && !overallStatus" description="点击按钮开始检查" />
       </el-card>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
@@ -103,7 +101,6 @@ import request from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const userStore = useUserStore()
 

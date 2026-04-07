@@ -141,9 +141,11 @@ public class AuthServiceImpl implements AuthService {
 
         // 7. 获取用户菜单权限
         List<MenuDTO> menus = menuService.getUserMenus(user.getId());
-        List<String> menuCodes = menus.stream()
-                .map(MenuDTO::getMenuCode)
-                .toList();
+        // 递归收集所有层级的菜单编码（包括子菜单）
+        List<String> menuCodes = new java.util.ArrayList<>();
+        collectMenuCodes(menus, menuCodes);
+        
+        log.info("用户 {} 的菜单编码列表: {}", username, menuCodes);
 
         // 8. 构建用户信息
         LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
@@ -160,7 +162,14 @@ public class AuthServiceImpl implements AuthService {
                 .menus(menuCodes)
                 .build();
 
-        log.info("用户登录成功：{}, 菜单权限：{}", username, menuCodes);
+        log.info("用户登录成功：{}, 菜单权限数量：{}", username, menuCodes.size());
+        
+        // 调试：打印菜单树结构
+        log.info("menus 顶级数量: {}", menus.size());
+        for (com.qidian.camera.module.menu.dto.MenuDTO m : menus) {
+            int childCount = m.getChildren() != null ? m.getChildren().size() : 0;
+            log.info("  菜单: code={}, name={}, children数量={}", m.getMenuCode(), m.getMenuName(), childCount);
+        }
 
         // 9. 返回响应（包含菜单列表）
         return LoginResponse.builder()
@@ -171,6 +180,21 @@ public class AuthServiceImpl implements AuthService {
                 .userInfo(userInfo)
                 .menus(menus)
                 .build();
+    }
+    
+    /**
+     * 递归收集所有层级的菜单编码
+     */
+    private void collectMenuCodes(List<com.qidian.camera.module.menu.dto.MenuDTO> menus, List<String> menuCodes) {
+        if (menus == null) return;
+        for (com.qidian.camera.module.menu.dto.MenuDTO menu : menus) {
+            if (menu.getMenuCode() != null) {
+                menuCodes.add(menu.getMenuCode());
+            }
+            if (menu.getChildren() != null && !menu.getChildren().isEmpty()) {
+                collectMenuCodes(menu.getChildren(), menuCodes);
+            }
+        }
     }
 
     @Override

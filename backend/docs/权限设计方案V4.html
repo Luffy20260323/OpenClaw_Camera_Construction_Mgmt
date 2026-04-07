@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camera 项目权限设计方案 V4.0</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #7f8c8d;
+            margin-top: 25px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #3498db;
+            color: white;
+            font-weight: 600;
+        }
+        tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        tr:hover {
+            background: #e8f4f8;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Courier New", Courier, monospace;
+            color: #e74c3c;
+        }
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .info-box {
+            background: #e8f4f8;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .flow-chart {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-family: monospace;
+            white-space: pre;
+        }
+        .toc {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .toc li {
+            margin: 8px 0;
+        }
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .toc a:hover {
+            text-decoration: underline;
+        }
+        .version-info {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Camera 项目权限设计方案 V4.0</h1>
+        
+        <div class="version-info">
+            <strong>版本：</strong>V4.0<br>
+            <strong>创建日期：</strong>2026-04-04<br>
+            <strong>提出人：</strong>柳生<br>
+            <strong>状态：</strong>待审核
+        </div>
+
+        <div class="toc">
+            <h2>📑 目录</h2>
+            <ul>
+                <li><a href="#section1">1. 核心理念</a></li>
+                <li><a href="#section2">2. 权限驱动开发流程（8 步）</a></li>
+                <li><a href="#section3">3. 资源模型架构</a></li>
+                <li><a href="#section4">4. 权限码命名规范</a></li>
+                <li><a href="#section5">5. 数据库表结构</a></li>
+                <li><a href="#section6">6. 两种管理员角色设计</a></li>
+                <li><a href="#section7">7. 后端实现方案</a></li>
+                <li><a href="#section8">8. 前端实现方案</a></li>
+                <li><a href="#section9">9. 权限缓存机制</a></li>
+                <li><a href="#section10">10. 实施步骤</a></li>
+            </ul>
+        </div>
+
+        <h2 id="section1">一、核心理念</h2>
+        
+        <div class="info-box">
+            <strong>核心原则：</strong>开发与权限配置分离。新功能开发时先完成功能和不带父资源的资源收集，开发完成后再通过配置建立权限层级关系。
+        </div>
+
+        <h3>1.1 设计目标</h3>
+        <table>
+            <tr>
+                <th>目标</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td>开发友好</td>
+                <td>新功能开发不受权限配置影响，可独立进行</td>
+            </tr>
+            <tr>
+                <td>配置灵活</td>
+                <td>开发完成后，管理员可灵活配置权限层级和分配</td>
+            </tr>
+            <tr>
+                <td>实时生效</td>
+                <td>权限变更后无需退出系统，实时刷新菜单</td>
+            </tr>
+            <tr>
+                <td>高性能</td>
+                <td>权限验证响应时间 &lt; 50ms（缓存命中）</td>
+            </tr>
+            <tr>
+                <td>可追溯</td>
+                <td>所有权限配置操作记录审计日志</td>
+            </tr>
+        </table>
+
+        <h2 id="section2">二、权限驱动开发流程（8 步）</h2>
+
+        <div class="flow-chart">
+┌─────────────────────────────────────────────────────────────────┐
+│                      权限驱动开发流程                            │
+├─────────────────────────────────────────────────────────────────┤
+│  开发阶段（1-4）              运行阶段（5-8）                    │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ │
+│  │Step1│→│Step2│→│Step3│→│Step4│   │Step5│→│Step6│→│Step7│→│Step8│ │
+│  └─────┘ └─────┘ └─────┘ └─────┘   └─────┘ └─────┘ └─────┘ └─────┘ │
+│   功能开发  权限生成  admin 授权  资源树构建   资源配置   admin 验证  权限分配  用户验证  │
+└─────────────────────────────────────────────────────────────────┘
+        </div>
+
+        <h3>第 1 步：开发阶段 - 功能开发与资源收集</h3>
+        <div class="info-box">
+            <strong>工作内容：</strong>完成功能开发（页面 URL、布局、元素、数据库、API），实时更新资源表（增删改），资源此时<strong>无父资源</strong>（孤儿状态）。
+        </div>
+
+        <h3>第 2 步：开发阶段 - 权限代码生成</h3>
+        <div class="info-box">
+            <strong>权限码格式：</strong><code>module:resource:action:type</code>
+        </div>
+
+        <h3>第 3 步：开发阶段 - Admin 授权</h3>
+        <div class="info-box">
+            <strong>工作内容：</strong>将新生成的权限全部分配给 admin 用户，确保 admin 用户登录后可访问新功能。
+        </div>
+
+        <h3>第 4 步：开发阶段 - 资源树构建</h3>
+        <div class="info-box">
+            <strong>层级规则：</strong>MENU 的父资源只能是 MODULE，MODULE 的父资源只能是 MODULE（支持嵌套模块）。
+        </div>
+
+        <h3>第 5 步：运行阶段 - 资源配置</h3>
+        <div class="info-box">
+            <strong>操作人员：</strong>admin 或被授权的<strong>系统管理员</strong><br>
+            <strong>工作内容：</strong>在资源管理页面对 MODULE、MENU 进行增删改查，对其他资源编辑其父资源和展示顺序。
+        </div>
+
+        <h3>第 6 步：运行阶段 - Admin 验证</h3>
+        <div class="warning-box">
+            <strong>验收标准：</strong>admin 用户可访问所有菜单、页面、按钮、 API。如有问题，直接修正数据库配置。
+        </div>
+
+        <h3>第 7 步：运行阶段 - 权限分配</h3>
+        <table>
+            <tr>
+                <th>页面名称</th>
+                <th>路径</th>
+                <th>功能</th>
+            </tr>
+            <tr>
+                <td>角色基本权限配置</td>
+                <td><code>/system/role-basic-permission</code></td>
+                <td>配置所有角色共享的基础权限</td>
+            </tr>
+            <tr>
+                <td>角色缺省权限配置</td>
+                <td><code>/system/role-default-permission</code></td>
+                <td>按角色类型配置缺省权限</td>
+            </tr>
+            <tr>
+                <td>角色完整权限配置</td>
+                <td><code>/system/role-permission</code></td>
+                <td>完整配置单个角色的权限集</td>
+            </tr>
+            <tr>
+                <td>用户权限配置</td>
+                <td><code>/system/user-permission</code></td>
+                <td>配置单个用户的权限（可覆盖角色）</td>
+            </tr>
+        </table>
+
+        <h3>第 8 步：运行阶段 - 用户验证</h3>
+        <div class="warning-box">
+            <strong>验收标准：</strong>用户可访问已授权的菜单、页面、按钮、API；用户不可访问未授权的资源。
+        </div>
+
+        <h2 id="section3">三、资源模型架构</h2>
+
+        <h3>3.1 资源层级结构</h3>
+        <div class="flow-chart">
+MODULE（模块）
+└── MODULE（子模块，可选）
+    └── MENU（菜单）→ 用户在侧边栏看到
+        └── PAGE（页面）→ 菜单对应的页面
+            └── ELEMENT（元素）→ 页面上的按钮/字段
+                └── PAGE（子页面）→ 触发后的详情页
+        </div>
+
+        <h3>3.2 资源类型定义</h3>
+        <table>
+            <tr>
+                <th>类型</th>
+                <th>代码</th>
+                <th>说明</th>
+                <th>父资源类型</th>
+                <th>示例</th>
+            </tr>
+            <tr>
+                <td>MODULE</td>
+                <td><code>MODULE</code></td>
+                <td>功能模块</td>
+                <td>MODULE/null</td>
+                <td>系统设置、零部件管理</td>
+            </tr>
+            <tr>
+                <td>MENU</td>
+                <td><code>MENU</code></td>
+                <td>导航菜单</td>
+                <td>MODULE</td>
+                <td>用户管理、角色管理</td>
+            </tr>
+            <tr>
+                <td>PAGE</td>
+                <td><code>PAGE</code></td>
+                <td>页面</td>
+                <td>MENU/MODULE</td>
+                <td>用户列表、用户详情</td>
+            </tr>
+            <tr>
+                <td>ELEMENT</td>
+                <td><code>ELEMENT</code></td>
+                <td>操作元素</td>
+                <td>PAGE</td>
+                <td>查看详情、新建用户</td>
+            </tr>
+            <tr>
+                <td>API</td>
+                <td><code>API</code></td>
+                <td>接口权限</td>
+                <td>PAGE/ELEMENT</td>
+                <td>获取用户列表 API</td>
+            </tr>
+            <tr>
+                <td>PERMISSION</td>
+                <td><code>PERMISSION</code></td>
+                <td>独立权限</td>
+                <td>MODULE</td>
+                <td>后台任务权限</td>
+            </tr>
+        </table>
+
+        <h2 id="section4">四、权限码命名规范</h2>
+
+        <h3>4.1 权限码格式</h3>
+        <pre>module:resource:action:type</pre>
+
+        <h3>4.2 组成部分</h3>
+        <table>
+            <tr>
+                <th>部分</th>
+                <th>说明</th>
+                <th>示例</th>
+            </tr>
+            <tr>
+                <td><code>module</code></td>
+                <td>模块编码</td>
+                <td><code>system</code>, <code>auth</code>, <code>user</code>, <code>part</code></td>
+            </tr>
+            <tr>
+                <td><code>resource</code></td>
+                <td>资源类型</td>
+                <td><code>user</code>, <code>role</code>, <code>permission</code>, <code>document</code></td>
+            </tr>
+            <tr>
+                <td><code>action</code></td>
+                <td>操作类型</td>
+                <td><code>list</code>, <code>view</code>, <code>create</code>, <code>edit</code>, <code>delete</code></td>
+            </tr>
+            <tr>
+                <td><code>type</code></td>
+                <td>权限类型</td>
+                <td><code>page</code>, <code>button</code>, <code>menu</code>, <code>api</code></td>
+            </tr>
+        </table>
+
+        <h3>4.3 完整示例</h3>
+        <pre># 用户管理模块
+system:user:menu                    # 用户管理菜单
+system:user:list:page               # 用户列表页面
+system:user:view:button             # 查看用户按钮
+system:user:create:button           # 新建用户按钮
+system:user:create:page             # 用户创建页面
+system:user:edit:button             # 编辑用户按钮
+system:user:delete:button           # 删除用户按钮
+system:user:list:api                # 获取用户列表 API
+
+# 零部件管理模块
+part:component_type:menu            # 零部件种类菜单
+part:component_type:list:page       # 零部件种类列表页面
+part:component_type:create:button   # 新建零部件种类按钮
+part:component_type:list:api        # 获取零部件种类列表 API</pre>
+
+        <h2 id="section5">五、数据库表结构</h2>
+
+        <h3>5.1 核心表</h3>
+        <table>
+            <tr>
+                <th>表名</th>
+                <th>用途</th>
+                <th>关键字段</th>
+            </tr>
+            <tr>
+                <td><code>resource</code></td>
+                <td>资源表</td>
+                <td>id, name, code, type, parent_id, permission_key, module_code</td>
+            </tr>
+            <tr>
+                <td><code>permission</code></td>
+                <td>权限表</td>
+                <td>id, permission_key, name, resource_id</td>
+            </tr>
+            <tr>
+                <td><code>role</code></td>
+                <td>角色表</td>
+                <td>id, role_name, role_code, type</td>
+            </tr>
+            <tr>
+                <td><code>user</code></td>
+                <td>用户表</td>
+                <td>id, username, real_name, company_id</td>
+            </tr>
+            <tr>
+                <td><code>role_resource</code></td>
+                <td>角色 - 资源关联</td>
+                <td>role_id, resource_id, permission_type</td>
+            </tr>
+            <tr>
+                <td><code>user_resource</code></td>
+                <td>用户 - 资源关联</td>
+                <td>user_id, resource_id, permission_type</td>
+            </tr>
+            <tr>
+                <td><code>user_role</code></td>
+                <td>用户 - 角色关联</td>
+                <td>user_id, role_id</td>
+            </tr>
+        </table>
+
+        <h2 id="section6">六、两种管理员角色设计</h2>
+
+        <h3>6.1 角色定义</h3>
+        <table>
+            <tr>
+                <th>角色</th>
+                <th>代码</th>
+                <th>用户</th>
+                <th>权限来源</th>
+                <th>说明</th>
+            </tr>
+            <tr>
+                <td><strong>超级管理员</strong></td>
+                <td><code>ROLE_SUPER_ADMIN</code></td>
+                <td>admin（唯一）</td>
+                <td>系统预置，自动拥有全部权限</td>
+                <td>新功能缺省授权对象，不受权限限制</td>
+            </tr>
+            <tr>
+                <td><strong>系统管理员</strong></td>
+                <td><code>ROLE_SYSTEM_ADMIN</code></td>
+                <td>可由 admin 创建多个</td>
+                <td>由 admin 分配权限</td>
+                <td>日常运维角色，权限取决于 admin 配置</td>
+            </tr>
+        </table>
+
+        <h2 id="section7">七、后端实现方案</h2>
+
+        <h3>7.1 权限注解</h3>
+        <pre>@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+@PreAuthorize("hasPermission(#permission)")
+public @interface ApiPermission {
+    String value(); // 权限代码，如 "system:user:list:api"
+}</pre>
+
+        <h3>7.2 Controller 示例</h3>
+        <pre>@RestController
+@RequestMapping("/api/user")
+public class UserController {
+    
+    @GetMapping("/list")
+    @ApiPermission("system:user:list:api")
+    public Result&lt;Page&lt;UserDTO&gt;&gt; queryUsers(
+            @ModelAttribute UserQueryRequest query,
+            @RequestAttribute("userId") Long operatorId) {
+        Page&lt;UserDTO&gt; page = userService.queryUsers(query, operatorId);
+        return Result.success(page);
+    }
+}</pre>
+
+        <h2 id="section8">八、前端实现方案</h2>
+
+        <h3>8.1 权限指令</h3>
+        <pre>&lt;!-- 单个权限 --&gt;
+&lt;el-button v-permission="'system:user:create:button'"&gt;
+  新建用户
+&lt;/el-button&gt;
+
+&lt;!-- 多个权限（任一即可） --&gt;
+&lt;el-button v-permission="['system:user:edit:button', 'system:user:delete:button']"&gt;
+  操作
+&lt;/el-button&gt;</pre>
+
+        <h3>8.2 刷新菜单功能</h3>
+        <pre>// stores/user.js
+async function refreshMenus() {
+  const res = await getMyMenus();
+  const newMenus = res.data || [];
+  userInfo.value = { ...userInfo.value, menus: newMenus };
+  localStorage.setItem('userInfo', JSON.stringify(userInfo.value));
+}</pre>
+
+        <h2 id="section9">九、权限缓存机制</h2>
+
+        <h3>9.1 缓存结构</h3>
+        <pre># 用户权限缓存
+user:permission:{userId} → Set&lt;Long&gt; resourceIds, TTL: 30 minutes
+
+# 角色权限缓存
+role:permission:{roleId} → Set&lt;Long&gt; resourceIds, TTL: 60 minutes
+
+# 用户菜单缓存
+user:menus:{userId} → Array&lt;menu&gt;, TTL: 30 minutes</pre>
+
+        <h3>9.2 缓存策略</h3>
+        <table>
+            <tr>
+                <th>操作</th>
+                <th>缓存处理</th>
+            </tr>
+            <tr>
+                <td>用户登录</td>
+                <td>写入用户权限缓存 + 菜单缓存</td>
+            </tr>
+            <tr>
+                <td>权限查询</td>
+                <td>先查缓存，未命中则查数据库</td>
+            </tr>
+            <tr>
+                <td>角色权限变更</td>
+                <td>清除角色缓存 + 该角色下所有用户缓存</td>
+            </tr>
+            <tr>
+                <td>用户权限变更</td>
+                <td>清除该用户缓存</td>
+            </tr>
+            <tr>
+                <td>资源结构变更</td>
+                <td>清除所有用户菜单缓存</td>
+            </tr>
+            <tr>
+                <td>手动刷新</td>
+                <td>强制重新加载并更新缓存</td>
+            </tr>
+        </table>
+
+        <h2 id="section10">十、实施步骤</h2>
+
+        <h3>10.1 总计划</h3>
+        <table>
+            <tr>
+                <th>阶段</th>
+                <th>工作内容</th>
+                <th>预计时间</th>
+                <th>状态</th>
+            </tr>
+            <tr>
+                <td>Phase 1</td>
+                <td>数据库准备</td>
+                <td>1 天</td>
+                <td>待开始</td>
+            </tr>
+            <tr>
+                <td>Phase 2</td>
+                <td>后端服务开发</td>
+                <td>2 天</td>
+                <td>待开始</td>
+            </tr>
+            <tr>
+                <td>Phase 3</td>
+                <td>前端页面开发</td>
+                <td>2 天</td>
+                <td>待开始</td>
+            </tr>
+            <tr>
+                <td>Phase 4</td>
+                <td>权限缓存优化</td>
+                <td>1 天</td>
+                <td>待开始</td>
+            </tr>
+            <tr>
+                <td>Phase 5</td>
+                <td>测试验证</td>
+                <td>1 天</td>
+                <td>待开始</td>
+            </tr>
+            <tr>
+                <td><strong>合计</strong></td>
+                <td></td>
+                <td><strong>7 天</strong></td>
+                <td></td>
+            </tr>
+        </table>
+
+        <div class="success-box">
+            <strong>文档版本：</strong>V4.0<br>
+            <strong>创建日期：</strong>2026-04-04<br>
+            <strong>状态：</strong>待柳生审核
+        </div>
+    </div>
+</body>
+</html>

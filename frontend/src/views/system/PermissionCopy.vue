@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="permission-copy">
       <el-card class="header-card">
         <div class="page-header">
@@ -134,14 +133,12 @@
         </div>
       </el-card>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const roleList = ref([])
 const sourceRoleId = ref(null)

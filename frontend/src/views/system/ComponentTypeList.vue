@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="component-type-page">
       <!-- 页面头部 -->
       <div class="page-header">
@@ -162,14 +161,12 @@
         </template>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Search } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { getList, getDetail, create, update, remove, toggleStatus } from '@/api/componentType'
 
 // 表格数据

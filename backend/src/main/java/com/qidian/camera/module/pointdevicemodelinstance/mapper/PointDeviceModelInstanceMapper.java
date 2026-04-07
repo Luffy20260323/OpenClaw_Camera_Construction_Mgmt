@@ -20,7 +20,8 @@ public interface PointDeviceModelInstanceMapper extends BaseMapper<PointDeviceMo
      * @param isActive 是否启用
      * @return 实例列表
      */
-    @Select("SELECT pdmi.*, u.real_name AS creator_name, pdm.name AS model_name, pdm.code AS model_code " +
+    @Select("<script>" +
+            "SELECT pdmi.*, u.real_name AS creator_name, pdm.name AS model_name, pdm.code AS model_code " +
             "FROM point_device_model_instances pdmi " +
             "LEFT JOIN users u ON pdmi.created_by = u.id " +
             "LEFT JOIN point_device_models pdm ON pdmi.model_id = pdm.id " +
@@ -28,7 +29,8 @@ public interface PointDeviceModelInstanceMapper extends BaseMapper<PointDeviceMo
             "<if test='isActive != null'>" +
             "AND pdmi.is_active = #{isActive} " +
             "</if>" +
-            "ORDER BY pdmi.id ASC")
+            "ORDER BY pdmi.id ASC" +
+            "</script>")
     List<PointDeviceModelInstance> selectListWithCreator(@Param("isActive") Boolean isActive);
 
     /**

@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="system-config">
       <el-card class="box-card">
       <template #header>
@@ -86,14 +85,12 @@
       </el-tabs>
     </el-card>
   </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const activeTab = ref('sidebar')
 const saving = ref(false)

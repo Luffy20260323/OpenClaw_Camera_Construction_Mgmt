@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 /**
  * 角色权限调整实体
  * 对应表：role_permission_adjustment
- * 记录角色权限的增减
+ * 用于记录角色级别的权限调整
  */
 @Data
 @TableName("role_permission_adjustment")
@@ -31,9 +31,24 @@ public class RolePermissionAdjustment {
     private Long resourceId;
     
     /**
-     * 操作类型：ADD/REMOVE
+     * 调整动作：ADD(增加)/REMOVE(移除)
      */
     private String action;
+    
+    /**
+     * 调整原因/备注
+     */
+    private String reason;
+    
+    /**
+     * 操作人 ID
+     */
+    private Long operatorId;
+    
+    /**
+     * 状态：1=生效，0=失效
+     */
+    private Integer status;
     
     /**
      * 创建时间
@@ -41,12 +56,12 @@ public class RolePermissionAdjustment {
     private LocalDateTime createdAt;
     
     /**
-     * 操作人 ID
+     * 更新时间
      */
-    private Long createdBy;
+    private LocalDateTime updatedAt;
     
     /**
-     * 操作类型常量
+     * 调整动作常量
      */
     public static final String ACTION_ADD = "ADD";
     public static final String ACTION_REMOVE = "REMOVE";

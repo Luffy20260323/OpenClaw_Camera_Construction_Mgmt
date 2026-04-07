@@ -76,7 +76,7 @@ export function getPermissionMatrix() {
  */
 export function getAuditLogs(params) {
   return request({
-    url: '/permission/audit-logs',
+    url: '/audit-logs/permission',
     method: 'get',
     params
   })
@@ -96,7 +96,7 @@ export function getAuditLogs(params) {
  */
 export function getPermissionAuditLogs(params) {
   return request({
-    url: '/permission/audit-logs',
+    url: '/audit-logs/permission',
     method: 'get',
     params
   })
@@ -109,7 +109,7 @@ export function getPermissionAuditLogs(params) {
  */
 export function exportPermissionAuditLogs(params) {
   return request({
-    url: '/permission/audit-logs/export',
+    url: '/audit-logs/permission/export',
     method: 'get',
     params,
     responseType: 'blob'
@@ -131,10 +131,11 @@ export function updatePermissionDescription(id, description) {
  * 获取角色权限树（带状态标记）
  * @param {number} roleId - 角色 ID
  * @returns {Promise} 权限树数据
+ * @deprecated 请使用 role.js 中的 getRolePermissionTree
  */
 export function getRolePermissionTree(roleId) {
   return request({
-    url: `/api/roles/${roleId}/permissions/tree`,
+    url: `/roles/${roleId}/permissions/tree`,
     method: 'get'
   })
 }
@@ -144,10 +145,11 @@ export function getRolePermissionTree(roleId) {
  * @param {number} roleId - 角色 ID
  * @param {object} data - 调整数据 { resourceId: Long, action: "ADD" | "REMOVE" }
  * @returns {Promise}
+ * @deprecated 请使用 role.js 中的 adjustRolePermission
  */
 export function adjustRolePermission(roleId, data) {
   return request({
-    url: `/api/roles/${roleId}/permissions/adjust`,
+    url: `/roles/${roleId}/permissions/adjust`,
     method: 'post',
     data: data
   })

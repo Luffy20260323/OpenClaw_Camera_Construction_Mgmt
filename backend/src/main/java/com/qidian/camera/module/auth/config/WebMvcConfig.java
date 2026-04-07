@@ -31,7 +31,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/v3/api-docs/**",                   // Swagger 文档
                     "/swagger-ui/**",                    // Swagger UI
                     "/webjars/**",                       // Webjars
-                    "/actuator/**"                       // 健康检查
+                    "/actuator/**",                      // 健康检查
+                    "/api/audit-logs/**"                 // 审计日志（暂时放行）
                 );
     }
 }

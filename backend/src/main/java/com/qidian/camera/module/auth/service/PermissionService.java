@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.qidian.camera.module.auth.config.PermissionCacheConfig;
 import com.qidian.camera.module.auth.entity.*;
 import com.qidian.camera.module.auth.mapper.*;
+import com.qidian.camera.module.role.entity.Role;
+import com.qidian.camera.module.role.mapper.RoleMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class PermissionService {
     
     private final ResourceMapper resourceMapper;
+    private final RoleMapper roleMapper;
     private final RolePermissionMapper rolePermissionMapper;
     private final RolePermissionAdjustmentMapper rolePermissionAdjustmentMapper;
     private final UserPermissionAdjustmentMapper userPermissionAdjustmentMapper;
@@ -34,7 +37,7 @@ public class PermissionService {
     
     /**
      * 计算角色的完整权限
-     * 公式：role_permissions(basic + default) + adjustments(ADD) - adjustments(REMOVE)
+     * 公式：role_permission(basic + default) + adjustments(ADD) - adjustments(REMOVE)
      * 
      * 缓存策略：
      * - 先查 Redis 缓存 (role:permission:{roleId})
@@ -65,9 +68,7 @@ public class PermissionService {
      */
     private Set<Long> doCalculateRolePermissions(Long roleId) {
         // 1. 获取角色的基础权限（basic + default）
-        List<RolePermission> basePermissions = rolePermissionMapper.selectList(
-            new LambdaQueryWrapper<RolePermission>().eq(RolePermission::getRoleId, roleId)
-        );
+        List<RolePermission> basePermissions = rolePermissionMapper.findByRoleId(roleId);
         Set<Long> baseResourceIds = basePermissions.stream()
             .map(RolePermission::getResourceId)
             .collect(Collectors.toSet());

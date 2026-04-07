@@ -813,7 +813,12 @@ public class UserService {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
-        // 2. 检查是否为系统保护用户
+        // 2. 检查是否为 admin 用户（特殊保护）
+        if ("admin".equals(user.getUsername())) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "admin 用户禁止删除");
+        }
+
+        // 3. 检查是否为系统保护用户
         if (Boolean.TRUE.equals(user.getIsSystemProtected())) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "系统保护用户不可删除");
         }
@@ -1088,6 +1093,14 @@ public class UserService {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new BusinessException(ErrorCode.USER_NOT_FOUND);
+        }
+
+        // 检查是否为 admin 用户（特殊保护）
+        if ("admin".equals(user.getUsername())) {
+            // admin 用户只允许更新审批状态、状态、拒绝原因，不允许更新其他信息
+            if (request.getRoleIds() != null) {
+                throw new BusinessException(ErrorCode.PARAM_ERROR, "admin 用户角色不可修改");
+            }
         }
 
         // 检查邮箱是否已被其他用户使用（仅在邮箱有变化时检查）

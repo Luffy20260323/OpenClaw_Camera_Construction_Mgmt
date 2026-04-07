@@ -1,30 +1,26 @@
 <template>
-  <AdminLayout>
     <div class="resource-list">
       <el-card class="header-card">
         <div class="page-header">
-          <h2>资源管理</h2>
+          <div class="header-top">
+            <h2>资源管理</h2>
+            <!-- 统计卡片（移动到标题后面） -->
+            <div class="header-stats">
+              <div class="stat-item">
+                <div class="stat-value">{{ totalCount }}</div>
+                <div class="stat-label">资源总数</div>
+              </div>
+              <div class="stat-item" v-for="stat in stats" :key="stat.type">
+                <div class="stat-value">{{ stat.totalCount }}</div>
+                <div class="stat-label">{{ getTypeLabel(stat.type) }}</div>
+              </div>
+            </div>
+          </div>
           <p class="description">管理系统所有资源（模块、菜单、页面、元素、API、权限），按层级结构展示。可编辑名称和显示顺序，可创建新模块。</p>
         </div>
       </el-card>
 
       <el-card class="content-card">
-        <!-- 统计卡片 -->
-        <div class="stats-row">
-          <el-card class="stat-card" shadow="hover">
-            <div class="stat-content">
-              <div class="stat-value">{{ totalCount }}</div>
-              <div class="stat-label">资源总数</div>
-            </div>
-          </el-card>
-          <el-card class="stat-card" shadow="hover" v-for="stat in stats" :key="stat.type">
-            <div class="stat-content">
-              <div class="stat-value">{{ stat.totalCount }}</div>
-              <div class="stat-label">{{ getTypeLabel(stat.type) }}</div>
-            </div>
-          </el-card>
-        </div>
-
         <!-- 工具栏 -->
         <div class="toolbar">
           <el-input
@@ -48,9 +44,24 @@
             <el-option v-for="t in resourceTypes" :key="t" :label="getTypeLabel(t)" :value="t" />
           </el-select>
 
-          <el-button type="primary" @click="showCreateDialog" style="margin-left: 12px">
+          <el-button 
+            v-permission="'system:resource:create:button'" 
+            type="primary" 
+            @click="showCreateDialog" 
+            style="margin-left: 12px"
+          >
             <el-icon><Plus /></el-icon>
             新建模块
+          </el-button>
+          
+          <el-button 
+            v-permission="'system:resource:create:button'" 
+            type="success" 
+            @click="showCreateMenuDialog" 
+            style="margin-left: 12px"
+          >
+            <el-icon><Plus /></el-icon>
+            新建菜单
           </el-button>
           
           <el-button @click="loadResources" style="margin-left: 12px">
@@ -90,12 +101,13 @@
             @selection-change="handleSelectionChange"
           >
             <el-table-column type="selection" width="55" :selectable="canSelect" />
-          <el-table-column label="拖拽" width="60" align="center">
-            <template #default>
-              <el-icon class="drag-handle" style="cursor: move"><Rank /></el-icon>
+          <el-table-column prop="component" label="组件" width="140">
+            <template #default="{ row }">
+              <span v-if="row.component" class="code-text">{{ row.component }}</span>
+              <span v-else class="empty-text">-</span>
             </template>
           </el-table-column>
-          <el-table-column prop="name" label="资源名称" width="220">
+          <el-table-column prop="name" label="资源名称" width="160">
             <template #default="{ row }">
               <span class="name-text">
                 <el-icon v-if="row.icon" style="margin-right: 4px"><component :is="row.icon" /></el-icon>
@@ -104,7 +116,7 @@
             </template>
           </el-table-column>
           
-          <el-table-column prop="type" label="类型" width="100">
+          <el-table-column prop="type" label="类型" width="80">
             <template #default="{ row }">
               <el-tag :type="getTypeTagType(row.type)" size="small">
                 {{ getTypeLabel(row.type) }}
@@ -112,7 +124,7 @@
             </template>
           </el-table-column>
           
-          <el-table-column prop="moduleCode" label="模块" width="100">
+          <el-table-column prop="moduleCode" label="模块" width="70">
             <template #default="{ row }">
               <el-tag v-if="row.moduleCode" type="info" size="small">
                 {{ getModuleLabel(row.moduleCode) }}
@@ -121,47 +133,49 @@
             </template>
           </el-table-column>
           
-          <el-table-column prop="sortOrder" label="顺序" width="80" align="center">
+          <el-table-column prop="sortOrder" label="顺序" width="60" align="center">
             <template #default="{ row }">
               <span>{{ row.sortOrder }}</span>
             </template>
           </el-table-column>
           
-          <el-table-column label="父资源" width="180">
+          <el-table-column label="顶级" width="60" align="center">
+            <template #default="{ row }">
+              <el-tag v-if="row.isTopLevel" type="success" size="small">顶级</el-tag>
+              <span v-else class="empty-text">-</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column prop="filePath" label="文件路径" min-width="150">
+            <template #default="{ row }">
+              <span v-if="row.filePath" class="code-text">{{ row.filePath }}</span>
+              <span v-else class="empty-text">-</span>
+            </template>
+          </el-table-column>
+          
+          <el-table-column label="父资源" width="120">
             <template #default="{ row }">
               <span v-if="row.parentId" class="code-text">{{ getParentName(row.parentId) }}</span>
               <span v-else class="empty-text">-</span>
             </template>
           </el-table-column>
           
-          <el-table-column prop="path" label="路径" width="180">
+          <el-table-column prop="path" label="路径" width="140">
             <template #default="{ row }">
               <span v-if="row.path" class="code-text">{{ row.path }}</span>
               <span v-else class="empty-text">-</span>
             </template>
           </el-table-column>
           
-          <el-table-column label="可见" width="80" align="center" v-if="showMenuColumns">
+          <el-table-column label="状态" width="60" align="center">
             <template #default="{ row }">
-              <el-switch
-                v-if="row.type === 'MENU'"
-                v-model="row.isVisible"
-                @change="updateMenuVisibility(row)"
-                size="small"
-              />
-              <span v-else class="empty-text">-</span>
+              <el-tag :type="row.status === 1 ? 'success' : 'danger'" size="small">
+                {{ row.status === 1 ? '启用' : '禁用' }}
+              </el-tag>
             </template>
           </el-table-column>
           
-          <el-table-column label="保护" width="80" align="center" v-if="showMenuColumns">
-            <template #default="{ row }">
-              <el-tag v-if="row.isSystemProtected" type="danger" size="small">保护</el-tag>
-              <el-tag v-else-if="row.type === 'MENU'" type="success" size="small">可编辑</el-tag>
-              <span v-else class="empty-text">-</span>
-            </template>
-          </el-table-column>
-          
-          <el-table-column prop="permissionKey" label="权限标识" width="200">
+          <el-table-column prop="permissionKey" label="权限标识" width="160">
             <template #default="{ row }">
               <span v-if="row.permissionKey" class="code-text">{{ row.permissionKey }}</span>
               <span v-else class="empty-text">-</span>
@@ -212,10 +226,11 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="操作" width="120" fixed="right">
+          <el-table-column label="操作" width="100" fixed="right">
             <template #default="{ row }">
               <!-- 所有资源类型都可以编辑名称 -->
               <el-button 
+                v-permission="'system:resource:edit:button'" 
                 type="primary" 
                 size="small" 
                 link 
@@ -223,9 +238,8 @@
               >
                 编辑
               </el-button>
-              <!-- 只有没有子资源的模块可以删除 -->
               <el-button 
-                v-if="row.type === 'MODULE' && (!row.children || row.children.length === 0)" 
+                v-permission="'system:resource:delete:button'" 
                 type="danger" 
                 size="small" 
                 link 
@@ -242,8 +256,8 @@
           <el-pagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
-            :page-sizes="[20, 50, 100, 200]"
-            :total="filteredResources.length"
+            :page-sizes="[10, 20, 50]"
+            :total="totalResources"
             layout="total, sizes, prev, pager, next, jumper"
             @size-change="handleSizeChange"
             @current-change="handleCurrentChange"
@@ -261,7 +275,7 @@
           <el-form-item label="资源名称">
             <el-input v-model="editForm.name" placeholder="请输入名称" />
           </el-form-item>
-          <el-form-item label="父资源" v-if="canModifyParent">
+          <el-form-item label="父资源" v-if="canModifyParent" v-permission="'system:resource:edit:button'">
             <el-select 
               v-model="editForm.parentId" 
               placeholder="选择父资源（可选）" 
@@ -293,6 +307,15 @@
           </el-form-item>
           <el-form-item label="描述">
             <el-input v-model="editForm.description" type="textarea" :rows="2" placeholder="可选" />
+          </el-form-item>
+          <!-- 是否顶级：只有 MODULE 类型才显示 -->
+          <el-form-item label="顶级资源" v-if="editForm.type === 'MODULE'">
+            <el-switch v-model="editForm.isTopLevel" />
+            <span class="form-tip" style="margin-left: 8px">顶级资源的父资源必须为空</span>
+          </el-form-item>
+          <!-- 文件路径：PAGE/ELEMENT/API 类型才显示 -->
+          <el-form-item label="文件路径" v-if="['PAGE', 'ELEMENT', 'API'].includes(editForm.type)">
+            <el-input v-model="editForm.filePath" placeholder="相对项目目录的完整路径，如 frontend/src/views/system/ResourceList.vue" />
           </el-form-item>
         </el-form>
         <template #footer>
@@ -336,8 +359,56 @@
           <el-button type="primary" @click="handleCreate" :loading="createLoading">创建</el-button>
         </template>
       </el-dialog>
+
+      <!-- 新建菜单对话框 -->
+      <el-dialog v-model="createMenuDialogVisible" title="新建菜单" width="450px">
+        <el-form :model="createMenuForm" label-width="80px">
+          <el-form-item label="菜单名称">
+            <el-input v-model="createMenuForm.name" placeholder="请输入菜单名称" />
+          </el-form-item>
+          <el-form-item label="菜单编码">
+            <el-input v-model="createMenuForm.code" placeholder="如：user_list, role_config" />
+          </el-form-item>
+          <el-form-item label="父模块/菜单">
+            <el-select v-model="createMenuForm.parentId" placeholder="选择父资源" filterable style="width: 100%">
+              <el-option label="顶级菜单" :value="null" />
+              <el-option 
+                v-for="m in allModulesAndMenus" 
+                :key="m.id" 
+                :label="`${m.name} (${getTypeLabel(m.type)})`" 
+                :value="m.id"
+              >
+                <span>{{ m.name }}</span>
+                <el-tag size="small" style="margin-left: 8px">{{ getTypeLabel(m.type) }}</el-tag>
+              </el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="路由路径">
+            <el-input 
+              v-model="createMenuForm.path" 
+              placeholder="可选，如：/system/users（如不填将自动匹配）" 
+              clearable
+            />
+            <div style="font-size: 12px; color: #999; margin-top: 4px">
+              💡 提示：MENU 资源不需要配置路径，系统会自动通过 code 匹配对应的 PAGE 资源路径
+            </div>
+          </el-form-item>
+          <el-form-item label="显示顺序">
+            <el-input-number v-model="createMenuForm.sortOrder" :min="0" :max="999" />
+          </el-form-item>
+          <el-form-item label="图标">
+            <el-input v-model="createMenuForm.icon" placeholder="Element Plus 图标名称" />
+          </el-form-item>
+          <el-form-item label="描述">
+            <el-input v-model="createMenuForm.description" type="textarea" :rows="2" placeholder="可选" />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="createMenuDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleCreateMenu" :loading="createMenuLoading">创建</el-button>
+        </template>
+      </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
@@ -345,7 +416,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Expand, Fold, Plus, Edit, Delete, Rank } from '@element-plus/icons-vue'
 import Sortable from 'sortablejs'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import request from '@/utils/request'
 import { useUserStore } from '@/stores/user'
 import { nextTick } from 'vue'
@@ -358,8 +428,12 @@ const tableMaxHeight = ref(700) // 最大高度
 
 // 分页
 const currentPage = ref(1)
-const pageSize = ref(50)
-const resources = ref([])
+const pageSize = ref(10)
+const totalResources = ref(0)  // 前端分页的总数量
+const totalPages = ref(1)  // 前端分页的总页数
+const allResources = ref([])  // 所有资源（树形结构）
+const pagedResources = ref([])  // 当前页显示的资源（扁平化）
+const resources = ref([])  // 当前页显示的资源（树形结构，用于表格显示）
 const stats = ref([])
 const moduleStats = ref([])
 const searchText = ref('')
@@ -392,6 +466,19 @@ const createForm = ref({
   description: ''
 })
 const createLoading = ref(false)
+
+// 新建菜单对话框
+const createMenuDialogVisible = ref(false)
+const createMenuForm = ref({
+  name: '',
+  code: '',
+  parentId: null,
+  path: '',
+  sortOrder: 0,
+  icon: '',
+  description: ''
+})
+const createMenuLoading = ref(false)
 
 // 资源类型列表
 const resourceTypes = ['MODULE', 'MENU', 'PAGE', 'ELEMENT', 'API', 'PERMISSION']
@@ -465,10 +552,8 @@ const availableParents = computed(() => {
 
 const canModifyParent = computed(() => {
   if (!editForm.value.type) return false
-  // MODULE 类型可以修改父资源
-  if (editForm.value.type === 'MODULE') return true
-  // 其他类型只有当前父资源是 MODULE 时才允许
-  return editParentType.value === 'MODULE'
+  // 统一规则：只有 MODULE、MENU、PAGE、PERMISSION 类型可以修改父资源
+  return ['MODULE', 'MENU', 'PAGE', 'PERMISSION'].includes(editForm.value.type)
 })
 
 // 模块标签映射
@@ -533,6 +618,23 @@ const allModules = computed(() => {
   return result.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
 })
 
+// 所有模块和菜单列表（用于新建菜单时选择父资源）
+const allModulesAndMenus = computed(() => {
+  const result = []
+  const traverse = (nodes) => {
+    for (const node of nodes) {
+      if (node.type === 'MODULE' || node.type === 'MENU') {
+        result.push(node)
+      }
+      if (node.children && node.children.length > 0) {
+        traverse(node.children)
+      }
+    }
+  }
+  traverse(resources.value)
+  return result.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0))
+})
+
 // 深拷贝树形数据
 const deepCloneTree = (tree) => {
   if (!tree) return []
@@ -541,11 +643,6 @@ const deepCloneTree = (tree) => {
     children: node.children ? deepCloneTree(node.children) : []
   }))
 }
-
-// 是否显示菜单专用列
-const showMenuColumns = computed(() => {
-  return !selectedType.value || selectedType.value === 'MENU'
-})
 
 // 过滤后的资源树（保持树形结构）
 // 扁平化树形数据（用于分页）
@@ -563,12 +660,9 @@ const flattenTree = (tree) => {
   return result
 }
 
-// 分页后的数据
+// 直接使用后端分页数据，不需要前端分页
 const paginatedResources = computed(() => {
-  const filtered = filteredResources.value
-  const start = (currentPage.value - 1) * pageSize.value
-  const end = start + pageSize.value
-  return filtered.slice(start, end)
+  return filteredResources.value
 })
 
 const filteredResources = computed(() => {
@@ -633,11 +727,13 @@ const getParentName = (parentId) => {
 }
 
 // 分页事件处理
-const handleSizeChange = () => {
+const handleSizeChange = async () => {
   currentPage.value = 1 // 重置到第一页
+  updatePagination() // 更新分页显示
 }
 
-const handleCurrentChange = () => {
+const handleCurrentChange = async () => {
+  updatePagination() // 更新分页显示
   // 滚动到表格顶部
   const tableContainer = document.querySelector('.table-container')
   if (tableContainer) {
@@ -645,20 +741,94 @@ const handleCurrentChange = () => {
   }
 }
 
+// 更新分页显示
+const updatePagination = () => {
+  // 1. 扁平化所有资源
+  const flatResources = flattenTree(allResources.value)
+  
+  // 2. 应用过滤条件（类型和搜索）
+  let filteredResources = flatResources
+  
+  if (selectedType.value) {
+    filteredResources = filteredResources.filter(r => r.type === selectedType.value)
+  }
+  
+  if (searchText.value) {
+    const search = searchText.value.toLowerCase()
+    filteredResources = filteredResources.filter(r => 
+      (r.name && r.name.toLowerCase().includes(search)) ||
+      (r.code && r.code.toLowerCase().includes(search))
+    )
+  }
+  
+  // 3. 计算分页
+  totalResources.value = filteredResources.length
+  totalPages.value = Math.ceil(totalResources.value / pageSize.value)
+  
+  // 4. 获取当前页数据
+  const startIndex = (currentPage.value - 1) * pageSize.value
+  const endIndex = startIndex + pageSize.value
+  pagedResources.value = filteredResources.slice(startIndex, endIndex)
+  
+  // 5. 将扁平化数据转换回树形结构（用于表格显示）
+  resources.value = buildTreeFromFlat(pagedResources.value)
+}
+
+// 从扁平化数据构建树形结构
+const buildTreeFromFlat = (flatResources) => {
+  // 创建一个节点映射
+  const nodeMap = {}
+  const roots = []
+  
+  // 第一遍：创建所有节点
+  flatResources.forEach(node => {
+    nodeMap[node.id] = { ...node, children: [] }
+  })
+  
+  // 第二遍：建立父子关系
+  flatResources.forEach(node => {
+    const currentNode = nodeMap[node.id]
+    if (node.parentId && nodeMap[node.parentId]) {
+      // 有父节点，添加到父节点的 children
+      nodeMap[node.parentId].children.push(currentNode)
+    } else {
+      // 没有父节点或父节点不在当前页，作为根节点
+      roots.push(currentNode)
+    }
+  })
+  
+  return roots
+}
+
 // 加载资源
 const loadResources = async () => {
   loading.value = true
   try {
-    const response = await request.get('/resource/overview')
+    // 加载所有资源（不分页），在前端进行分页
+    const response = await request.get('/resources', {
+      params: {
+        page: 1,
+        size: 1000  // 加载所有数据
+      }
+    })
     if (response.data) {
-      resources.value = response.data.tree || []
-      stats.value = response.data.stats || []
-      moduleStats.value = response.data.moduleStats || []
+      // 将所有资源存储到 allResources
+      allResources.value = response.data.content || []
+      
+      // 加载统计数据（单独请求）
+      const statsResponse = await request.get('/resource/stats')
+      stats.value = statsResponse.data || []
+      
+      const moduleStatsResponse = await request.get('/resource/module-stats')
+      moduleStats.value = moduleStatsResponse.data || []
       
       // 预加载所有 MODULE 类型资源的关联 API 数量
       await preloadRelatedApisForModules()
+      
+      // 更新分页信息
+      updatePagination()
     }
-    ElMessage.success('资源数据已刷新')
+    ElMessage.success(`资源数据已刷新（共${allResources.value.length}项）`)
     
     // 初始化拖拽排序
     nextTick(() => {
@@ -787,28 +957,6 @@ const batchDelete = async () => {
   }
 }
 
-// 更新菜单可见性
-const updateMenuVisibility = async (row) => {
-  try {
-    await request.put(`/resource/${row.id}`, {
-      ...row,
-      isVisible: row.isVisible
-    })
-    ElMessage.success('可见性已更新')
-    
-    // 刷新侧边栏菜单
-    try {
-      await userStore.refreshMenus()
-    } catch (e) {
-      console.warn('菜单刷新失败:', e)
-    }
-  } catch (error) {
-    ElMessage.error('更新失败')
-    row.isVisible = !row.isVisible
-    console.error(error)
-  }
-}
-
 // 拖拽排序相关
 let sortableInstance = null
 
@@ -868,7 +1016,9 @@ const showEditDialog = (row) => {
     parentId: row.parentId,
     sortOrder: row.sortOrder,
     icon: row.icon || '',
-    description: row.description || ''
+    description: row.description || '',
+    isTopLevel: row.isTopLevel || false,
+    filePath: row.filePath || ''
   }
   
   // 查找当前父资源类型
@@ -902,7 +1052,9 @@ const handleEdit = async () => {
       name: editForm.value.name,
       sortOrder: editForm.value.sortOrder,
       icon: editForm.value.icon,
-      description: editForm.value.description
+      description: editForm.value.description,
+      isTopLevel: editForm.value.isTopLevel,
+      filePath: editForm.value.filePath
     }
     // 只有 MENU、PAGE、PERMISSION 可以修改 parentId
     if (['MENU', 'PAGE', 'PERMISSION'].includes(editForm.value.type)) {
@@ -986,6 +1138,84 @@ const handleCreate = async () => {
     ElMessage.error(error.response?.data?.message || '创建失败')
   } finally {
     createLoading.value = false
+  }
+}
+
+// 显示新建菜单对话框
+const showCreateMenuDialog = () => {
+  createMenuForm.value = {
+    name: '',
+    code: '',
+    parentId: null,
+    path: '',
+    sortOrder: 0,
+    icon: '',
+    description: ''
+  }
+  createMenuDialogVisible.value = true
+}
+
+// 处理创建菜单
+const handleCreateMenu = async () => {
+  if (!createMenuForm.value.name) {
+    ElMessage.warning('请输入菜单名称')
+    return
+  }
+  if (!createMenuForm.value.code) {
+    ElMessage.warning('请输入菜单编码')
+    return
+  }
+  
+  createMenuLoading.value = true
+  try {
+    // 生成权限标识
+    const permissionKey = createMenuForm.value.parentId 
+      ? `menu:${createMenuForm.value.code}:view`
+      : `${createMenuForm.value.code}:view`
+    
+    // 获取父资源的 moduleCode
+    let moduleCode = null
+    if (createMenuForm.value.parentId) {
+      const parent = findResourceById(resources.value, createMenuForm.value.parentId)
+      if (parent) {
+        moduleCode = parent.moduleCode || parent.code
+      }
+    }
+    
+    const payload = {
+      name: createMenuForm.value.name,
+      code: createMenuForm.value.code,
+      type: 'MENU',
+      parentId: createMenuForm.value.parentId,
+      permissionKey: permissionKey,
+      moduleCode: moduleCode,
+      sortOrder: createMenuForm.value.sortOrder,
+      icon: createMenuForm.value.icon,
+      description: createMenuForm.value.description,
+      isTopLevel: false,
+      filePath: ''
+    }
+    // path 字段可选（MENU 资源不需要配置路径）
+    if (createMenuForm.value.path) {
+      payload.path = createMenuForm.value.path
+    }
+    
+    await request.post('/resources/menu', payload)
+    ElMessage.success('菜单创建成功')
+    createMenuDialogVisible.value = false
+    await loadResources()
+    
+    // 刷新侧边栏菜单
+    try {
+      await userStore.refreshMenus()
+      ElMessage.success('侧边栏菜单已同步刷新')
+    } catch (e) {
+      console.warn('菜单刷新失败:', e)
+    }
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '创建失败')
+  } finally {
+    createMenuLoading.value = false
   }
 }
 
@@ -1092,6 +1322,45 @@ onUnmounted(() => {
   margin-bottom: 20px;
 }
 
+/* 标题区域样式 */
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.header-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.stat-item {
+  text-align: center;
+  min-width: 70px;
+  padding: 8px 12px;
+  background-color: #f5f7fa;
+  border-radius: 6px;
+  border: 1px solid #e4e7ed;
+}
+
+.stat-item .stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #409EFF;
+  line-height: 1.2;
+}
+
+.stat-item .stat-label {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+  line-height: 1.2;
+}
+
+/* 旧的统计卡片样式（保留但不使用） */
 .stats-row {
   display: flex;
   flex-wrap: wrap;

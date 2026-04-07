@@ -281,6 +281,46 @@ public class ResourceService {
     }
     
     /**
+     * 创建菜单（仅支持创建 MENU 类型）
+     */
+    public Resource createMenu(Resource menu) {
+        if (!"MENU".equals(menu.getType())) {
+            throw new RuntimeException("只允许创建 MENU 类型资源");
+        }
+        
+        // 检查 code 是否已存在
+        if (menu.getCode() != null) {
+            Resource existing = resourceMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<Resource>()
+                    .eq("code", menu.getCode())
+            );
+            if (existing != null) {
+                throw new RuntimeException("资源编码已存在: " + menu.getCode());
+            }
+        }
+        
+        // 检查 permissionKey 是否已存在
+        if (menu.getPermissionKey() != null) {
+            Resource existing = resourceMapper.findByPermissionKey(menu.getPermissionKey());
+            if (existing != null) {
+                throw new RuntimeException("权限标识已存在: " + menu.getPermissionKey());
+            }
+        }
+        
+        menu.setStatus(1);
+        menu.setIsBasic(0);
+        menu.setIsTopLevel(false);
+        menu.setFilePath(null);
+        menu.setCreatedAt(java.time.LocalDateTime.now());
+        menu.setUpdatedAt(java.time.LocalDateTime.now());
+        
+        resourceMapper.insert(menu);
+        
+        log.info("创建菜单: id={}, name={}, parentId={}, path={}", menu.getId(), menu.getName(), menu.getParentId(), menu.getPath());
+        return menu;
+    }
+    
+    /**
      * 删除资源（仅允许删除 MODULE 类型）
      * 注意：删除模块前需要确保没有子资源
      */

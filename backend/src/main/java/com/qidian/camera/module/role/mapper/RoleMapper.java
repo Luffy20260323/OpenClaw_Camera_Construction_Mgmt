@@ -32,8 +32,8 @@ public interface RoleMapper extends BaseMapper<Role> {
      * @return 权限列表
      */
     @Select("SELECT DISTINCT r.permission_key FROM resource r " +
-            "INNER JOIN role_permissions rp ON r.id = rp.permission_id " +
-            "INNER JOIN user_roles ur ON rp.role_id = ur.role_id " +
+            "INNER JOIN permission p ON r.id = p.permission_id " +
+            "INNER JOIN user_roles ur ON p.role_id = ur.role_id " +
             "WHERE ur.user_id = #{userId} AND r.type IN ('PERMISSION', 'MODULE', 'MENU', 'PAGE', 'ELEMENT', 'API')")
     List<String> selectPermissionsByUserId(@Param("userId") Long userId);
     

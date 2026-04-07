@@ -9,6 +9,10 @@ spring:
     name: camera-lifecycle-system
   profiles:
     active: dev
+  web:
+    resources:
+      # 禁用默认静态资源路径，避免与 /resources API 冲突
+      add-mappings: false
 
 # MyBatis-Plus 配置
 mybatis-plus:
@@ -34,6 +38,12 @@ logging:
   level:
     root: INFO
     com.qidian.camera: DEBUG
+    org.springframework.jdbc: DEBUG
+    org.mybatis: DEBUG
+    org.apache.ibatis: DEBUG
+    com.qidian.camera.module.auth: DEBUG
+    com.qidian.camera.module.menu: DEBUG
+    com.qidian.camera.module.role: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n"
 

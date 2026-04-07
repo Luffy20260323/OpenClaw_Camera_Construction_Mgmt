@@ -1,5 +1,6 @@
 package com.qidian.camera.module.auth.service.impl;
 
+import com.qidian.camera.module.auth.constant.RoleConstants;
 import com.qidian.camera.module.auth.entity.UserContext;
 import com.qidian.camera.module.auth.entity.PermissionInfo;
 import com.qidian.camera.module.auth.service.DataPermissionService;
@@ -96,9 +97,9 @@ public class PermissionServiceImpl {
         log.debug("权限缓存未命中，查询数据库：userId={}", userId);
         String sql = "SELECT DISTINCT p.permission_code " +
                      "FROM user_roles ur " +
-                     "JOIN role_permissions rp ON ur.role_id = rp.role_id " +
-                     "JOIN permissions p ON rp.permission_id = p.id " +
-                     "WHERE ur.user_id = ?";
+                     "JOIN permission p ON ur.role_id = p.role_id " +
+                     "JOIN resource r ON rr.resource_id = r.id " +
+                     "WHERE ur.user_id = ? AND r.permission_key IS NOT NULL";
         
         List<String> permissions = jdbcTemplate.queryForList(sql, String.class, userId);
         
@@ -136,7 +137,8 @@ public class PermissionServiceImpl {
      * 获取所有权限列表
      */
     public List<PermissionInfo> getAllPermissions() {
-        String sql = "SELECT id, permission_code, permission_name FROM permissions ORDER BY id";
+        // 已废弃：从 resource 表查询
+        String sql = "SELECT id, code as permission_code, name as permission_name FROM resource WHERE permission_key IS NOT NULL ORDER BY id";
         
         return jdbcTemplate.query(sql, new RowMapper<PermissionInfo>() {
             @Override
@@ -151,15 +153,25 @@ public class PermissionServiceImpl {
     }
     
     /**
-     * 检查用户是否是系统管理员
+     * 检查用户是否是超级管理员
+     * 通过角色 Code 判断（使用常量，避免分散硬编码）
      */
-    public boolean isSystemAdmin(Long userId) {
+    public boolean isSuperAdmin(Long userId) {
         String sql = "SELECT COUNT(1) FROM user_roles ur " +
                      "JOIN roles r ON ur.role_id = r.id " +
-                     "WHERE ur.user_id = ? AND r.role_code = 'ROLE_SYSTEM_ADMIN'";
+                     "WHERE ur.user_id = ? AND r.role_code = ?";
         
-        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId);
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId, RoleConstants.ROLE_SUPER_ADMIN);
         return count != null && count > 0;
+    }
+    
+    /**
+     * 检查用户是否是系统管理员（保留方法，向后兼容）
+     * @deprecated 使用 isSuperAdmin() 代替
+     */
+    @Deprecated
+    public boolean isSystemAdmin(Long userId) {
+        return isSuperAdmin(userId);
     }
     
     /**

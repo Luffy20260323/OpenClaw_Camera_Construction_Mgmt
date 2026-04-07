@@ -619,19 +619,15 @@ const handleLogin = async () => {
         userStore.userInfo = userInfo
         
         // 保存完整的菜单对象数组到 userInfo（用于构建树形结构）
-        // 优先使用后端返回的 menus（MenuDTO 数组），其次使用 userInfo.menus（字符串数组）
-        const menuData = menus || userInfo?.menus || []
+        // menus: 菜单编码数组（字符串数组），用于路由权限检查
+        // menuTree: 菜单树（对象数组），用于侧边栏渲染
         const userInfoWithMenus = {
           ...userInfo,
-          menus: menuData
+          menus: userInfo?.menus || [],  // 使用 userInfo.menus（编码数组）
+          menuTree: menus || []           // 使用后端返回的 menus（菜单树）
         }
         
-        console.log('[Login] 处理后的菜单数据:', menuData?.slice(0, 3).map(m => ({
-          code: m.menuCode,
-          name: m.menuName,
-          parentId: m?.parentId,
-          parent_id: m?.parent_id
-        })))
+        console.log('[Login] menuTree 第一个元素的 children:', userInfoWithMenus.menuTree?.[0]?.children?.length)
         
         // 再保存到 localStorage
         localStorage.setItem('accessToken', accessToken)
@@ -645,18 +641,15 @@ const handleLogin = async () => {
         
         // 验证 localStorage 中的数据
         const savedUserInfo = JSON.parse(localStorage.getItem('userInfo'))
-        console.log('[Login] localStorage 中的菜单数据:', savedUserInfo?.menus?.slice(0, 3).map(m => ({
+        console.log('[Login] localStorage 中的 menuTree:', savedUserInfo?.menuTree?.slice(0, 3).map(m => ({
           code: m.menuCode,
-          parentId: m?.parentId
+          children: m?.children?.length
         })))
         
         // 等待响应式更新完成后再跳转
         await new Promise(resolve => setTimeout(resolve, 100))
         
-        console.log('[Login] userStore.menus:', userStore.menus?.slice(0, 3).map(m => ({
-          code: m.menuCode,
-          parentId: m?.parentId
-        })))
+        console.log('[Login] userStore.userInfo.menuTree 第一个元素的 children:', userStore.userInfo?.menuTree?.[0]?.children?.length)
         
         // 跳转到首页
         router.push('/')

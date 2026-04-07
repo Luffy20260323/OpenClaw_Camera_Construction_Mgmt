@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <el-card class="filter-card">
         <template #header>
           <div class="card-header">
@@ -84,9 +83,29 @@
           </el-table-column>
           <el-table-column label="操作" width="280" fixed="right">
             <template #default="{ row }">
-              <el-button size="small" @click="showEditDialog(row)">编辑</el-button>
-              <el-button size="small" type="warning" @click="showResetPasswordDialog(row)">重置密码</el-button>
-              <el-button size="small" type="danger" @click="confirmDelete(row)">删除</el-button>
+              <el-button 
+                size="small" 
+                @click="showEditDialog(row)"
+                :disabled="row.username === 'admin'"
+              >
+                编辑
+              </el-button>
+              <el-button 
+                size="small" 
+                type="warning" 
+                @click="showResetPasswordDialog(row)"
+                :disabled="row.username === 'admin'"
+              >
+                重置密码
+              </el-button>
+              <el-button 
+                size="small" 
+                type="danger" 
+                @click="confirmDelete(row)"
+                :disabled="row.username === 'admin'"
+              >
+                删除
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -103,7 +122,6 @@
           style="margin-top: 20px; justify-content: flex-end"
         />
       </el-card>
-  </AdminLayout>
   
   <!-- 创建用户对话框 -->
   <el-dialog v-model="createDialogVisible" title="创建用户" width="600px">
@@ -167,9 +185,25 @@
         <el-input v-model="editForm.phone" placeholder="请输入手机号" maxlength="11" />
       </el-form-item>
       <el-form-item label="角色">
-        <el-select v-model="editForm.roleIds" multiple placeholder="请选择角色" style="width: 100%">
+        <el-select 
+          v-model="editForm.roleIds" 
+          multiple 
+          placeholder="请选择角色" 
+          style="width: 100%"
+          :disabled="editForm.username === 'admin'"
+        >
           <el-option v-for="role in filteredRoleList" :key="role.id" :label="role.roleName" :value="role.id" />
         </el-select>
+        <el-alert
+          v-if="editForm.username === 'admin'"
+          type="warning"
+          title="admin 用户角色不可修改"
+          description="admin 用户始终拥有超级管理员角色"
+          :closable="false"
+          show-icon
+          class="mt-2"
+          style="font-size: 12px;"
+        />
       </el-form-item>
       <el-form-item label="作业区" prop="workAreaIds" v-if="showEditWorkAreaField">
         <el-select v-model="editForm.workAreaIds" multiple placeholder="请选择作业区" style="width: 100%">
@@ -238,13 +272,13 @@
 </template>
 
 <script setup>
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Download, UploadFilled } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 import { useUserStore } from '@/stores/user'
+import { ROLE_SUPER_ADMIN } from '@/constants/roles'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -254,10 +288,10 @@ const approving = ref(false)
 const importing = ref(false)
 const pendingCount = ref(0)
 
-// 判断是否为系统管理员
+// 判断是否为超级管理员（使用常量）
 const isSystemAdmin = computed(() => {
   const roles = userStore.roles || []
-  return roles.some(r => r.includes('SYSTEM_ADMIN')) || false
+  return roles.includes(ROLE_SUPER_ADMIN) || false
 })
 
 const queryForm = reactive({
@@ -451,9 +485,9 @@ const loadUsers = async () => {
     if (queryForm.companyTypeId) params.companyTypeId = queryForm.companyTypeId
     if (queryForm.approvalStatus !== null && queryForm.approvalStatus !== undefined) params.approvalStatus = queryForm.approvalStatus
     
-    // 非系统管理员自动过滤公司类型
-    // 注意：后端返回的角色编码格式是 ROLE_XXX，如 ROLE_SYSTEM_ADMIN
-    const isSystemAdmin = userStore.roles?.some(r => r.includes('SYSTEM_ADMIN')) || false
+    // 非超级管理员自动过滤公司类型
+    // 通过角色 Code 判断（使用常量）
+    const isSystemAdmin = userStore.roles?.some(r => r === ROLE_SUPER_ADMIN) || false
     console.log('loadUsers - isSystemAdmin:', isSystemAdmin, 'roles:', userStore.roles)
     if (!isSystemAdmin && userStore.companyId) {
       params.companyId = userStore.companyId

@@ -11,7 +11,7 @@ import request from '@/utils/request'
  */
 export function getList(params) {
   return request({
-    url: '/api/component-attr-set-instances',
+    url: '/component-attr-set-instances',
     method: 'get',
     params
   })
@@ -24,7 +24,7 @@ export function getList(params) {
  */
 export function getDetail(id) {
   return request({
-    url: `/api/component-attr-set-instances/${id}`,
+    url: `/component-attr-set-instances/${id}`,
     method: 'get'
   })
 }
@@ -39,7 +39,7 @@ export function getDetail(id) {
  */
 export function create(data) {
   return request({
-    url: '/api/component-attr-set-instances',
+    url: '/component-attr-set-instances',
     method: 'post',
     data
   })
@@ -56,7 +56,7 @@ export function create(data) {
  */
 export function update(id, data) {
   return request({
-    url: `/api/component-attr-set-instances/${id}`,
+    url: `/component-attr-set-instances/${id}`,
     method: 'put',
     data
   })
@@ -69,7 +69,7 @@ export function update(id, data) {
  */
 export function remove(id) {
   return request({
-    url: `/api/component-attr-set-instances/${id}`,
+    url: `/component-attr-set-instances/${id}`,
     method: 'delete'
   })
 }
@@ -81,7 +81,7 @@ export function remove(id) {
  */
 export function getAttrSetDetail(id) {
   return request({
-    url: `/api/component-attr-sets/${id}`,
+    url: `/component-attr-sets/${id}`,
     method: 'get'
   })
 }
@@ -94,7 +94,7 @@ export function getAttrSetDetail(id) {
  */
 export function getAttrSetList(params) {
   return request({
-    url: '/api/component-attr-sets',
+    url: '/component-attr-sets',
     method: 'get',
     params
   })

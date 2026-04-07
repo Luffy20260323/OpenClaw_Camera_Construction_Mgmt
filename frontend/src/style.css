@@ -3,9 +3,9 @@
   line-height: 1.5;
   font-weight: 400;
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+  color-scheme: light;
+  color: #213547;
+  background-color: #ffffff;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -15,65 +15,118 @@
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: #409EFF;
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: #66b1ff;
 }
 
+/* 重置 Vite 默认模板样式 - 后台管理系统需要全屏布局 */
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
   min-width: 320px;
   min-height: 100vh;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
-
-.card {
-  padding: 2em;
+  /* 不使用 flex 居中，让布局组件控制全屏 */
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  width: 100%;
+  height: 100vh;
+  /* 不限制宽度，不居中，不添加 padding */
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
-  }
+/* ========== AdminLayout 关键布局样式（全局） ========== */
+/* 确保布局样式在 Element Plus 之后加载，具有最高优先级 */
+
+.admin-layout {
+  height: 100vh !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: row !important;
+  overflow: hidden !important;
+}
+
+.admin-layout.sidebar-right,
+.admin-layout.sidebar-right .main-wrapper {
+  flex-direction: row-reverse !important;
+}
+
+.admin-layout .main-wrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.admin-layout .sidebar {
+  flex-shrink: 0 !important;
+  background-color: #304156 !important;
+  overflow: hidden !important;
+}
+
+.admin-layout .header {
+  flex-shrink: 0 !important;
+  height: 60px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background: linear-gradient(135deg, #667eea, #764ba2) !important;
+  padding: 0 24px !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.admin-layout .main-content {
+  flex: 1 !important;
+  min-height: 0 !important;
+  background: #f5f7fa !important;
+  padding: 24px !important;
+  overflow-y: auto !important;
+}
+
+.admin-layout .footer {
+  flex-shrink: 0 !important;
+  height: 48px !important;
+  background: #fff !important;
+  border-top: 1px solid #e4e7ed !important;
+  padding: 12px 24px !important;
+  text-align: center !important;
+  color: #909399 !important;
+  font-size: 13px !important;
+}
+
+/* ========== Element Plus 组件样式修复 ========== */
+/* 确保 el-container 作为 flex 容器正常工作 */
+
+.el-container {
+  display: flex !important;
+  box-sizing: border-box !important;
+  flex: auto !important;
+  min-width: 0 !important;
+}
+
+.el-container.is-vertical {
+  flex-direction: column !important;
+}
+
+.el-aside {
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.el-header {
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.el-main {
+  flex: 1 !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.el-footer {
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
 }

@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="user-permission-page">
       <el-card class="header-card">
       <div class="page-header">
@@ -138,13 +137,11 @@
         </el-alert>
     </el-card>
   </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { getAllMenus, getUserPermissions, updateUserPermission, deleteUserPermission } from '@/api/menu'
 import request from '@/utils/request'
 import { useUserStore } from '@/stores/user'

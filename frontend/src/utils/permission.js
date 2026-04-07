@@ -88,12 +88,52 @@ export const menuOperateDirective = {
 
 /**
  * Vue 指令：检查权限点
- * 用法：v-permission="'user:create'"
+ * 用法：v-permission="'user:create'" 或 v-permission="['user:create', 'user:edit']"
+ * 支持通配符：v-permission="'system:user:*:button'"
  */
 export const permissionDirective = {
   mounted(el, binding) {
     const { value } = binding
-    if (value && !hasPermission(value)) {
+    const userStore = useUserStore()
+    const permissions = userStore.permissions || []
+    
+    if (!value) return
+    
+    // 支持单个权限或权限数组
+    const requiredPermissions = Array.isArray(value) ? value : [value]
+    
+    // 检查是否有任一权限（支持通配符匹配）
+    const hasPermission = requiredPermissions.some(requiredPerm => {
+      // 精确匹配
+      if (permissions.includes(requiredPerm)) {
+        return true
+      }
+      
+      // 通配符匹配（支持 *）
+      if (requiredPerm.includes('*')) {
+        const pattern = requiredPerm.replace(/\*/g, '.*')
+        const regex = new RegExp(`^${pattern}$`)
+        return permissions.some(perm => regex.test(perm))
+      }
+      
+      // 层级权限匹配（兼容旧格式）
+      if (requiredPerm.split(':').length === 2) {
+        const [module, action] = requiredPerm.split(':')
+        return permissions.some(perm => {
+          const parts = perm.split(':')
+          if (parts.length >= 3) {
+            return parts[0] === module && parts[2] === action
+          } else if (parts.length === 2) {
+            return parts[0] === module && parts[1] === action
+          }
+          return false
+        })
+      }
+      
+      return false
+    })
+    
+    if (!hasPermission) {
       el.parentNode && el.parentNode.removeChild(el)
     }
   }

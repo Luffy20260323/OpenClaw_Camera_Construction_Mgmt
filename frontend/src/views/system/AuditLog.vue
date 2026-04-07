@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="audit-log-container">
       <el-card>
         <template #header>
@@ -101,14 +100,12 @@
         </template>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { getAuditLogs } from '@/api/permission'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 
 const loading = ref(false)
 const auditLogs = ref([])
@@ -132,16 +129,17 @@ const loadAuditLogs = async () => {
   loading.value = true
   try {
     const params = {
-      page: pagination.page,
-      size: pagination.size,
+      pageNum: pagination.page,
+      pageSize: pagination.size,
       ...filters
     }
     
     const res = await getAuditLogs(params)
     const data = res.data
     
-    auditLogs.value = data.content || []
-    pagination.total = data.total || 0
+    // 后端返回 List 而不是 Page，直接使用数组
+    auditLogs.value = Array.isArray(data) ? data : (data.content || [])
+    pagination.total = data.totalElements || (Array.isArray(data) ? data.length : 0)
   } catch (error) {
     ElMessage.error('加载审计日志失败：' + error.message)
   } finally {

@@ -79,16 +79,6 @@ public class Resource {
      * 状态：1=启用, 0=禁用
      */
     private Integer status;
-
-    /**
-     * 是否可见（用于菜单资源）
-     */
-    private Boolean isVisible;
-    
-    /**
-     * 是否系统保护（用于菜单资源）
-     */
-    private Boolean isSystemProtected;
     
     /**
      * 所需权限（用于菜单资源）
@@ -109,6 +99,20 @@ public class Resource {
      * 描述
      */
     private String description;
+    
+    /**
+     * 是否顶级资源
+     * 顶级资源的父资源必须为空，不被认定为孤儿资源
+     * 只有 MODULE 类型才允许设置为顶级
+     */
+    private Boolean isTopLevel;
+    
+    /**
+     * 文件路径
+     * PAGE/ELEMENT/API 资源的源代码文件相对项目目录的完整路径
+     * 便于排错
+     */
+    private String filePath;
     
     /**
      * 创建时间

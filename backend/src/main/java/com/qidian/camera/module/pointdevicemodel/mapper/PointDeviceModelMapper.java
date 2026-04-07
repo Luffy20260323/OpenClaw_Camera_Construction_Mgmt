@@ -20,14 +20,16 @@ public interface PointDeviceModelMapper extends BaseMapper<PointDeviceModel> {
      * @param isActive 是否启用
      * @return 模型列表
      */
-    @Select("SELECT pdm.*, u.real_name AS creator_name " +
+    @Select("<script>" +
+            "SELECT pdm.*, u.real_name AS creator_name " +
             "FROM point_device_models pdm " +
             "LEFT JOIN users u ON pdm.created_by = u.id " +
             "WHERE 1=1 " +
             "<if test='isActive != null'>" +
             "AND pdm.is_active = #{isActive} " +
             "</if>" +
-            "ORDER BY pdm.id ASC")
+            "ORDER BY pdm.id ASC" +
+            "</script>")
     List<PointDeviceModel> selectListWithCreator(@Param("isActive") Boolean isActive);
 
     /**

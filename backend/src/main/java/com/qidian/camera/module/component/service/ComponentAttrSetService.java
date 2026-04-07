@@ -50,4 +50,13 @@ public interface ComponentAttrSetService {
      * @param id 属性集 ID
      */
     void deleteAttrSet(Long id);
+
+    /**
+     * 更新属性集序号
+     *
+     * @param id 属性集 ID
+     * @param sequenceNo 新的序号
+     * @return 更新后的属性集
+     */
+    ComponentAttrSetDTO updateAttrSetSequence(Long id, Integer sequenceNo);
 }

@@ -1,5 +1,4 @@
 <template>
-  <AdminLayout>
     <div class="component-attr-set-page">
       <!-- 页面标题 -->
       <div class="page-header">
@@ -351,14 +350,12 @@
         </el-table>
       </el-dialog>
     </div>
-  </AdminLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, Refresh, Check } from '@element-plus/icons-vue'
-import AdminLayout from '@/layouts/AdminLayout.vue'
 import { 
   getList, 
   getDetail, 

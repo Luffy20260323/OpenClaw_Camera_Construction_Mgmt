@@ -16,6 +16,7 @@ public class UserRole {
     /**
      * 用户 ID
      */
+    @TableId
     private Long userId;
     
     /**

@@ -15,26 +15,40 @@ import java.util.List;
 public interface UserPermissionAdjustmentMapper extends BaseMapper<UserPermissionAdjustment> {
     
     /**
-     * 查询用户的所有权限调整（包括未过期的）
+     * 根据用户 ID 查询调整记录
      */
-    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND (expire_at IS NULL OR expire_at > NOW())")
+    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} ORDER BY created_at DESC")
     List<UserPermissionAdjustment> findByUserId(@Param("userId") Long userId);
     
     /**
-     * 查询用户增加的权限
+     * 根据用户 ID 和资源 ID 查询调整记录
      */
-    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND action = 'ADD' AND (expire_at IS NULL OR expire_at > NOW())")
-    List<UserPermissionAdjustment> findAddByUserId(@Param("userId") Long userId);
+    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND resource_id = #{resourceId} ORDER BY created_at DESC")
+    List<UserPermissionAdjustment> findByUserIdAndResourceId(@Param("userId") Long userId, @Param("resourceId") Long resourceId);
     
     /**
-     * 查询用户移除的权限
+     * 查询用户的有效调整记录（在有效期内）
      */
-    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND action = 'REMOVE' AND (expire_at IS NULL OR expire_at > NOW())")
-    List<UserPermissionAdjustment> findRemoveByUserId(@Param("userId") Long userId);
+    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} " +
+            "AND (expire_at IS NULL OR expire_at >= NOW()) " +
+            "ORDER BY created_at DESC")
+    List<UserPermissionAdjustment> findValidByUserId(@Param("userId") Long userId);
     
     /**
-     * 查询用户的临时权限（有过期时间）
+     * 查询用户的增加权限调整
      */
-    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND expire_at IS NOT NULL AND expire_at > NOW()")
-    List<UserPermissionAdjustment> findTemporaryByUserId(@Param("userId") Long userId);
+    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND action = 'ADD' ORDER BY created_at DESC")
+    List<UserPermissionAdjustment> findAddActionsByUserId(@Param("userId") Long userId);
+    
+    /**
+     * 查询用户的移除权限调整
+     */
+    @Select("SELECT * FROM user_permission_adjustment WHERE user_id = #{userId} AND action = 'REMOVE' ORDER BY created_at DESC")
+    List<UserPermissionAdjustment> findRemoveActionsByUserId(@Param("userId") Long userId);
+    
+    /**
+     * 删除用户的调整记录
+     */
+    @Select("DELETE FROM user_permission_adjustment WHERE user_id = #{userId} AND resource_id = #{resourceId}")
+    void deleteByUserIdAndResourceId(@Param("userId") Long userId, @Param("resourceId") Long resourceId);
 }

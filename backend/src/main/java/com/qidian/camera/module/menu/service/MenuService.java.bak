@@ -1,0 +1,267 @@
+package com.qidian.camera.module.menu.service;
+
+import com.qidian.camera.module.menu.dto.MenuDTO;
+import com.qidian.camera.module.auth.service.ResourceService;
+import com.qidian.camera.module.auth.service.ResourceService.ResourceTreeNode;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+
+/**
+ * 菜单服务（已整合到资源服务）
+ * 注意：此类仅作为向后兼容的包装器，实际数据从 resource 表读取
+ * 
+ * 改进点：
+ * 1. 模块/菜单作为容器，不承载权限
+ * 2. 菜单可见性基于子页面权限自动计算
+ */
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class MenuService {
+    
+    private final ResourceService resourceService;
+    private final JdbcTemplate jdbcTemplate;
+    
+    /**
+     * 获取用户的可见菜单列表
+     * 可见性自动计算：用户有子页面权限则菜单可见
+     */
+    public List<MenuDTO> getUserMenus(Long userId) {
+        log.info("获取用户 {} 的菜单列表（自动计算可见性）", userId);
+        
+        // 1. 获取用户的所有权限
+        Set<String> userPermissions = getUserPermissionKeys(userId);
+        log.info("用户 {} 的权限数量: {}", userId, userPermissions.size());
+        
+        // 2. 获取完整的菜单树
+        List<ResourceTreeNode> tree = resourceService.getMenuTree();
+        log.info("菜单树节点数量: {}", tree.size());
+        
+        // 3. 过滤并计算可见性
+        List<MenuDTO> visibleMenus = filterVisibleMenus(tree, userPermissions);
+        
+        log.info("用户 {} 可见菜单: {}", userId, visibleMenus.stream().map(MenuDTO::getMenuCode).toList());
+        return visibleMenus;
+    }
+    
+    /**
+     * 获取所有菜单（系统管理员使用）
+     * 返回完整的菜单树，不做权限过滤
+     */
+    public List<MenuDTO> getAllMenus() {
+        log.info("获取所有菜单");
+        List<ResourceTreeNode> tree = resourceService.getMenuTree();
+        return convertTree(tree, null);
+    }
+    
+    /**
+     * 过滤可见菜单（基于用户权限自动计算）
+     */
+    private List<MenuDTO> filterVisibleMenus(List<ResourceTreeNode> nodes, Set<String> userPermissions) {
+        List<MenuDTO> result = new ArrayList<>();
+        
+        for (ResourceTreeNode node : nodes) {
+            log.info("处理节点: name={}, code={}, id={}, type={}, permissionKey={}", 
+                node.getName(), node.getCode(), node.getId(), node.getType(), node.getPermissionKey());
+            
+            // 递归处理子节点
+            List<MenuDTO> visibleChildren = new ArrayList<>();
+            if (node.getChildren() != null && !node.getChildren().isEmpty()) {
+                visibleChildren = filterVisibleMenus(node.getChildren(), userPermissions);
+            }
+            
+            // 计算当前节点的可见性
+            boolean isVisible = calculateVisibility(node, visibleChildren, userPermissions);
+            log.info("节点 {} 可见性: {}", node.getName(), isVisible);
+            
+            if (isVisible) {
+                MenuDTO dto = MenuDTO.builder()
+                    .id(node.getId())
+                    .menuName(node.getMenuName())
+                    .menuCode(node.getMenuCode())
+                    .menuPath(node.getMenuPath())
+                    .sortOrder(node.getSortOrder())
+                    .icon(node.getIcon())
+                    .isVisible(true)
+                    .requiredPermission(node.getPermissionKey())
+                    .userCanView(true)
+                    .userCanOperate(false)
+                    .children(visibleChildren.isEmpty() ? null : visibleChildren)
+                    .build();
+                result.add(dto);
+                log.info("添加可见菜单: {}", node.getMenuCode());
+            }
+        }
+        
+        return result;
+    }
+    
+    /**
+     * 计算菜单/模块的可见性
+     * 规则（支持多级结构）：
+     * 0. 首页（home 或 path="/"）始终可见 - 所有登录用户都能访问
+     * 1. 如果有可见的子节点（子 MODULE 或子 MENU），则可见
+     * 2. 如果有子页面/权限且用户有权限，则可见
+     * 3. 如果菜单本身有 permissionKey 且用户有该权限，则可见
+     * 4. MODULE 类型：作为容器，只要有任何子资源可访问就可见
+     */
+    private boolean calculateVisibility(ResourceTreeNode node, List<MenuDTO> visibleChildren, Set<String> userPermissions) {
+        String nodeCode = node.getCode() != null ? node.getCode() : node.getMenuCode();
+        log.debug("计算可见性: node={}, code={}, type={}, permissionKey={}, visibleChildren={}", 
+            node.getName(), nodeCode, node.getType(), node.getPermissionKey(), visibleChildren.size());
+        
+        // 0. 首页始终可见（所有登录用户都能访问）
+        if ("home".equals(nodeCode) || "/".equals(node.getMenuPath())) {
+            log.debug("首页 {} 始终可见", node.getName());
+            return true;
+        }
+        
+        // 1. 有可见的子节点（子 MODULE 或子 MENU）- 这是多级结构的核心
+        if (!visibleChildren.isEmpty()) {
+            log.debug("节点 {} 有 {} 个可见子节点，判定可见", node.getName(), visibleChildren.size());
+            return true;
+        }
+        
+        // 2. MODULE 类型特殊处理：递归检查所有子资源（包括嵌套的 MODULE/MENU）
+        if ("MODULE".equals(node.getType())) {
+            if (hasAnyAccessibleDescendant(node.getId(), userPermissions)) {
+                log.debug("MODULE {} 有可访问的后代资源，判定可见", node.getName());
+                return true;
+            }
+        }
+        
+        // 3. 检查菜单本身的权限
+        if (node.getPermissionKey() != null && userPermissions.contains(node.getPermissionKey())) {
+            log.debug("节点 {} 本身权限 {} 用户拥有，判定可见", node.getName(), node.getPermissionKey());
+            return true;
+        }
+        
+        // 4. MENU 类型：检查直接子页面/API 权限
+        if ("MENU".equals(node.getType())) {
+            if (hasAccessibleChildren(node.getId(), userPermissions)) {
+                log.debug("MENU {} 有可访问子资源，判定可见", node.getName());
+                return true;
+            }
+        }
+        
+        log.debug("节点 {} 不满足任何可见条件，判定不可见", node.getName());
+        return false;
+    }
+    
+    /**
+     * 递归检查 MODULE 是否有任何可访问的后代资源
+     * 支持多级结构：MODULE -> MODULE -> MENU -> PAGE/ELEMENT/PERMISSION
+     */
+    private boolean hasAnyAccessibleDescendant(Long resourceId, Set<String> userPermissions) {
+        // 查询所有后代资源的 permission_key（递归查询）
+        String sql = """
+            WITH RECURSIVE descendants AS (
+                -- 基础查询：直接子节点
+                SELECT id, code, name, type, parent_id, permission_key
+                FROM resource
+                WHERE parent_id = ? AND status = 1
+                
+                UNION ALL
+                
+                -- 递归查询：子节点的子节点
+                SELECT r.id, r.code, r.name, r.type, r.parent_id, r.permission_key
+                FROM resource r
+                INNER JOIN descendants d ON r.parent_id = d.id
+                WHERE r.status = 1
+            )
+            SELECT permission_key FROM descendants
+            WHERE permission_key IS NOT NULL
+        """;
+        
+        List<String> descendantPermissions = jdbcTemplate.queryForList(sql, String.class, resourceId);
+        log.debug("hasAnyAccessibleDescendant: resourceId={}, descendantPermissions={}", resourceId, descendantPermissions);
+        
+        // 检查是否有任何后代权限用户拥有
+        for (String perm : descendantPermissions) {
+            if (userPermissions.contains(perm)) {
+                log.debug("用户拥有后代权限 {}，返回 true", perm);
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 检查菜单下是否有用户可访问的子资源（页面/API）
+     */
+    private boolean hasAccessibleChildren(Long parentId, Set<String> userPermissions) {
+        // 查询该菜单下的所有子资源（PAGE/API 类型）
+        String sql = """
+            SELECT permission_key FROM resource 
+            WHERE parent_id = ? 
+            AND type IN ('PAGE', 'API', 'ELEMENT', 'PERMISSION')
+            AND status = 1
+            AND permission_key IS NOT NULL
+        """;
+        
+        List<String> childPermissions = jdbcTemplate.queryForList(sql, String.class, parentId);
+        log.info("hasAccessibleChildren: parentId={}, childPermissions={}, userPermissions={}", parentId, childPermissions, userPermissions);
+        
+        // 检查是否有任何子权限用户拥有
+        for (String perm : childPermissions) {
+            if (userPermissions.contains(perm)) {
+                log.info("用户拥有子权限 {}，返回 true", perm);
+                return true;
+            }
+        }
+        
+        log.info("用户不拥有任何子权限，返回 false");
+        return false;
+    }
+    
+    /**
+     * 获取用户的所有权限标识
+     * 根据 V4.3 权限设计，使用 permission 表（role_id + resource_id）
+     */
+    private Set<String> getUserPermissionKeys(Long userId) {
+        // 从 permission 表获取用户的资源权限（V4.3 设计）
+        String sql = """
+            SELECT DISTINCT r.permission_key 
+            FROM permission p
+            JOIN resource r ON p.permission_id = r.id
+            JOIN user_roles ur ON p.role_id = ur.role_id
+            WHERE ur.user_id = ? 
+            AND r.permission_key IS NOT NULL
+            AND r.status = 1
+        """;
+        
+        List<String> permissions = jdbcTemplate.queryForList(sql, String.class, userId);
+        log.info("用户 {} 的权限列表：{}", userId, permissions);
+        return new HashSet<>(permissions);
+    }
+    
+    /**
+     * 将 ResourceTreeNode 树转换为 MenuDTO 树（不过滤）
+     */
+    private List<MenuDTO> convertTree(List<ResourceTreeNode> nodes, Long parentId) {
+        List<MenuDTO> result = new ArrayList<>();
+        for (ResourceTreeNode node : nodes) {
+            MenuDTO dto = MenuDTO.builder()
+                .id(node.getId())
+                .menuName(node.getMenuName())
+                .menuCode(node.getMenuCode())
+                .menuPath(node.getMenuPath())
+                .parentId(parentId)
+                .sortOrder(node.getSortOrder())
+                .icon(node.getIcon())
+                .isVisible(node.getIsVisible() != null ? node.getIsVisible() : true)
+                .requiredPermission(node.getPermissionKey())
+                .userCanView(true)
+                .userCanOperate(false)
+                .children(node.getChildren() != null ? convertTree(node.getChildren(), node.getId()) : null)
+                .build();
+            result.add(dto);
+        }
+        return result;
+    }
+}

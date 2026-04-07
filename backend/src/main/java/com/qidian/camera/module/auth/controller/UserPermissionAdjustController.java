@@ -2,6 +2,7 @@ package com.qidian.camera.module.auth.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.qidian.camera.common.response.Result;
+import com.qidian.camera.module.auth.constant.RoleConstants;
 import com.qidian.camera.module.auth.dto.RolePermissionAdjustDTO;
 import com.qidian.camera.module.auth.entity.PermissionAuditLog;
 import com.qidian.camera.module.auth.entity.Resource;
@@ -10,6 +11,8 @@ import com.qidian.camera.module.auth.mapper.PermissionAuditLogMapper;
 import com.qidian.camera.module.auth.mapper.UserPermissionAdjustmentMapper;
 import com.qidian.camera.module.auth.service.PermissionService;
 import com.qidian.camera.module.auth.service.ResourceService;
+import com.qidian.camera.module.user.entity.User;
+import com.qidian.camera.module.user.mapper.UserMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +27,7 @@ import org.springframework.web.bind.annotation.*;
 @Slf4j
 @Tag(name = "用户权限调整", description = "调整用户个人权限（增加/移除）")
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @RequiredArgsConstructor
 public class UserPermissionAdjustController {
     
@@ -32,6 +35,7 @@ public class UserPermissionAdjustController {
     private final ResourceService resourceService;
     private final PermissionService permissionService;
     private final PermissionAuditLogMapper auditLogMapper;
+    private final UserMapper userMapper;
     
     /**
      * 调整用户权限
@@ -46,6 +50,12 @@ public class UserPermissionAdjustController {
     public Result<Void> adjustUserPermission(
             @PathVariable Long userId,
             @RequestBody RolePermissionAdjustDTO dto) {
+        
+        // 检查是否为 admin 用户（特殊保护）
+        User user = userMapper.selectById(userId);
+        if (user != null && "admin".equals(user.getUsername())) {
+            return Result.error("admin 用户权限不可调整");
+        }
         
         Long resourceId = dto.getResourceId();
         String action = dto.getAction();
@@ -80,7 +90,7 @@ public class UserPermissionAdjustController {
             adjustment.setResourceId(resourceId);
             adjustment.setAction(action);
             // TODO: 从上下文获取当前用户 ID
-            adjustment.setCreatedBy(0L);
+            // adjustment.setCreatedBy(0L); // 字段不存在
             userPermissionAdjustmentMapper.insert(adjustment);
         }
         

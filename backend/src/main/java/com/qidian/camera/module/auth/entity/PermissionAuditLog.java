@@ -82,6 +82,16 @@ public class PermissionAuditLog {
     private String userAgent;
     
     /**
+     * 授权级别：0=不可传递，1=一级授权
+     */
+    private Short grantLevel;
+    
+    /**
+     * 操作人所属公司类型 ID
+     */
+    private Long operatorCompanyTypeId;
+    
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

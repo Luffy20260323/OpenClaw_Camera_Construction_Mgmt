@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 /**
  * 权限复制控制器
  * 提供角色权限复制、批量授权等功能
+ * 注意：permission 表只有 role_id + permission_id + grant_level 等字段
  */
 @Tag(name = "权限复制", description = "角色权限复制和批量授权")
 @RestController
@@ -46,10 +47,7 @@ public class PermissionCopyController {
             }
             
             // 获取源角色的所有权限
-            List<RolePermission> sourcePermissions = rolePermissionMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RolePermission>()
-                    .eq(RolePermission::getRoleId, sourceRoleId)
-            );
+            List<RolePermission> sourcePermissions = rolePermissionMapper.findByRoleId(sourceRoleId);
             
             Map<String, Object> result = new HashMap<>();
             int totalCopied = 0;
@@ -63,22 +61,20 @@ public class PermissionCopyController {
                 }
                 
                 // 删除目标角色现有权限
-                rolePermissionMapper.delete(
-                    new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RolePermission>()
-                        .eq(RolePermission::getRoleId, targetRoleId)
-                );
+                rolePermissionMapper.deleteByRoleId(targetRoleId);
                 
                 // 复制权限
                 int copied = 0;
                 for (RolePermission rp : sourcePermissions) {
-                    RolePermission newRp = new RolePermission();
-                    newRp.setRoleId(targetRoleId);
-                    newRp.setResourceId(rp.getResourceId());
-                    newRp.setPermissionType(rp.getPermissionType());
-                    newRp.setCreatedAt(LocalDateTime.now());
-                    newRp.setCreatedBy(rp.getCreatedBy());
-                    
-                    rolePermissionMapper.insert(newRp);
+                    // 使用 insertPermission 方法插入
+                    rolePermissionMapper.insertPermission(
+                        targetRoleId,
+                        rp.getResourceId(),
+                        rp.getGrantLevel() != null ? rp.getGrantLevel() : (short) 0,
+                        rp.getGrantable() != null ? rp.getGrantable() : false,
+                        rp.getGrantedBy(),
+                        rp.getGrantedAt()
+                    );
                     copied++;
                 }
                 
@@ -105,7 +101,7 @@ public class PermissionCopyController {
         }
     }
     
-    @Operation(summary = "批量授权", description = "批量给用户或角色分配权限")
+    @Operation(summary = "批量授权", description = "批量给角色分配权限")
     @PostMapping("/batch")
     @Transactional(rollbackFor = Exception.class)
     public Result<Map<String, Object>> batchGrantPermissions(
@@ -132,19 +128,17 @@ public class PermissionCopyController {
                     int granted = 0;
                     for (Long resourceId : permissionIds) {
                         // 检查是否已存在
-                        RolePermission existing = rolePermissionMapper.selectOne(
-                            new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RolePermission>()
-                                .eq(RolePermission::getRoleId, roleId)
-                                .eq(RolePermission::getResourceId, resourceId)
-                        );
+                        boolean exists = rolePermissionMapper.hasPermission(roleId, resourceId);
                         
-                        if (existing == null) {
-                            RolePermission rp = new RolePermission();
-                            rp.setRoleId(roleId);
-                            rp.setResourceId(resourceId);
-                            rp.setPermissionType("default");
-                            rp.setCreatedAt(LocalDateTime.now());
-                            rolePermissionMapper.insert(rp);
+                        if (!exists) {
+                            rolePermissionMapper.insertPermission(
+                                roleId,
+                                resourceId,
+                                (short) 0,  // grant_level = 0
+                                false,      // grantable = false
+                                1L,         // granted_by = admin
+                                LocalDateTime.now()
+                            );
                             granted++;
                         }
                     }
@@ -152,7 +146,6 @@ public class PermissionCopyController {
                 }
             } else if ("user".equals(targetType)) {
                 // 批量给用户授权（需要调用用户权限服务）
-                // 这里简化处理，实际应该调用 UserPermissionService
                 result.put("message", "用户批量授权需要调用用户权限服务");
             }
             
@@ -172,10 +165,7 @@ public class PermissionCopyController {
     @GetMapping("/role/{roleId}")
     public Result<List<Long>> getRolePermissions(@PathVariable Long roleId) {
         try {
-            List<RolePermission> rolePermissions = rolePermissionMapper.selectList(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<RolePermission>()
-                    .eq(RolePermission::getRoleId, roleId)
-            );
+            List<RolePermission> rolePermissions = rolePermissionMapper.findByRoleId(roleId);
             
             List<Long> resourceIds = rolePermissions.stream()
                 .map(RolePermission::getResourceId)
